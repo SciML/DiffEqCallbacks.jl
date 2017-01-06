@@ -2,4 +2,6 @@ using DiffEqCallbacks
 using Base.Test
 
 # write your own tests here
-@test 1 == 2
+tic()
+@time @testset "AutoAbstol" begin include("autoabstol_tests.jl") end
+toc()
