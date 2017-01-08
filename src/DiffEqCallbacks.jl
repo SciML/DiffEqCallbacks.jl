@@ -13,7 +13,7 @@ module DiffEqCallbacks
   end
 
   function AutoAbstol(save=true;init_curmax=1e-6)
-    affect! = AutoAbstolAffect(1e-6)
+    affect! = AutoAbstolAffect(init_curmax)
     condtion = true
     interp_points = 0
     rootfind = false
