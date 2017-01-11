@@ -14,11 +14,9 @@ module DiffEqCallbacks
 
   function AutoAbstol(save=true;init_curmax=1e-6)
     affect! = AutoAbstolAffect(init_curmax)
-    condtion = true
-    interp_points = 0
-    rootfind = false
-    save_positions = (true,false)
-    Callback(condtion,affect!,rootfind,interp_points,save_positions)
+    condtion = (t,u,integrator) -> true
+    save_positions = (save,false)
+    DiscreteCallback(condtion,affect!,save_positions)
   end
 
   export AutoAbstol
