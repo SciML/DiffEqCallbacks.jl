@@ -1,10 +1,12 @@
 # DiffEqCallbacks.jl
 
 [![Build Status](https://travis-ci.org/JuliaDiffEq/DiffEqCallbacks.jl.svg?branch=master)](https://travis-ci.org/JuliaDiffEq/DiffEqCallbacks.jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/a3o1a4l4xqcwuw86?svg=true)](https://ci.appveyor.com/project/ChrisRackauckas/diffeqcallbacks-jl-ufx45)
 [![Coverage Status](https://coveralls.io/repos/JuliaDiffEq/DiffEqCallbacks.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiffEq/DiffEqCallbacks.jl?branch=master)
 [![codecov.io](http://codecov.io/github/JuliaDiffEq/DiffEqCallbacks.jl/coverage.svg?branch=master)](http://codecov.io/github/JuliaDiffEq/DiffEqCallbacks.jl?branch=master)
 
-This is a library of callbacks for extending the solvers of DifferentialEquaitons.jl
+This is a library of callbacks for extending the solvers of DifferentialEquaitons.jl.
+
 Currently only one callback is implemented.
 
 ## Usage
