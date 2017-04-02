@@ -18,7 +18,7 @@ module DiffEqCallbacks
     affect! = AutoAbstolAffect(init_curmax)
     condtion = (t,u,integrator) -> true
     save_positions = (save,false)
-    DiscreteCallback(condtion,affect!,save_positions)
+    DiscreteCallback(condtion,affect!,save_positions=save_positions)
   end
 
   export AutoAbstol
