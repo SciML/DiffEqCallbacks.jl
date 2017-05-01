@@ -21,6 +21,20 @@ sol = solve(prob,alg;callback=cb)
 
 For more information on using callbacks, [see the manual page](http://docs.juliadiffeq.org/latest/features/callback_functions.html).
 
+## ManifoldProjection
+
+This projects the solution to a manifold, conserving a property while
+conserving the order.
+
+```julia
+ManifoldProjection(g;nlsolve=NLSOLVEJL_SETUP(),save=true)
+```
+
+- `g`: The residual function for the manifold: `g(u,resid)`. This is an inplace function
+  which writes to the residual the difference from the manifold components.
+- `nlsolve`: A nonlinear solver as defined [in the nlsolve format](linear_nonlinear.html)
+- `save`: Whether to do the standard saving (applied after the callback)
+
 ## AutoAbstol
 
 Many problem solving environments [such as MATLAB](https://www.mathworks.com/help/simulink/gui/absolute-tolerance.html)
