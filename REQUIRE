@@ -1,4 +1,4 @@
 julia 0.5
 DiffEqBase 0.6.0
 NLsolve
-ForwardDiff
+ForwardDiff 0.3.0
