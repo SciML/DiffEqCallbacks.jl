@@ -3,8 +3,18 @@ type AutoAbstolAffect{T}
 end
 # Now make `affect!` for this:
 function (p::AutoAbstolAffect)(integrator)
-  p.curmax = max(p.curmax,integrator.u)
-  integrator.opts.abstol = p.curmax * integrator.opts.reltol
+  if typeof(p.curmax) <: AbstractArray
+    p.curmax .= max.(p.curmax,integrator.u)
+  else
+    p.curmax = max(p.curmax,maximum(integrator.u))
+  end
+
+  if typeof(integrator.opts.abstol) <: AbstractArray
+    integrator.opts.abstol .= p.curmax .* integrator.opts.reltol
+  else
+    integrator.opts.abstol = p.curmax .* integrator.opts.reltol
+  end
+  
   u_modified!(integrator,false)
 end
 
