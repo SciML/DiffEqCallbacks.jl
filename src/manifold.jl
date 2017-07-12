@@ -10,9 +10,9 @@ Base.@pure function determine_chunksize(u,CS)
   end
 end
 
-function autodiff_setup{CS}(f!, initial_x::Vector,chunk_size::Type{Val{CS}})
+function autodiff_setup{CS}(f!, initial_x,chunk_size::Type{Val{CS}})
 
-    permf! = (fx, x) -> f!(x, fx)
+    permf! = (fx, x) -> f!(reshape(x,size(initial_x)...), fx)
 
     fx2 = copy(initial_x)
     jac_cfg = ForwardDiff.JacobianConfig(f!, initial_x, ForwardDiff.Chunk{CS}())
@@ -27,8 +27,8 @@ function autodiff_setup{CS}(f!, initial_x::Vector,chunk_size::Type{Val{CS}})
     return DifferentiableMultivariateFunction(f!, g!, fg!)
 end
 
-function non_autodiff_setup(f!, initial_x::Vector)
-  DifferentiableMultivariateFunction(f!)
+function non_autodiff_setup(f!, initial_x)
+  DifferentiableMultivariateFunction((resid,x)->f!(resid,reshape(x,size(initial_x)...)))
 end
 
 immutable NLSOLVEJL_SETUP{CS,AD} end
@@ -53,12 +53,15 @@ type ManifoldProjection{NL}
 end
 # Now make `affect!` for this:
 function (p::ManifoldProjection)(integrator)
-  nlres = p.nlsolve(p.nl_rhs,integrator.u)::typeof(integrator.u)
+  nlres = reshape(p.nlsolve(p.nl_rhs,vec(integrator.u)),size(integrator.u)...)::typeof(integrator.u)
   integrator.u .= nlres
 end
 
 function Manifold_initialize(cb,t,u,integrator)
-  cb.affect!.nl_rhs = cb.affect!.nlsolve(Val{:init},cb.affect!.nl_rhs,integrator.u)
+  cb.affect!.nl_rhs = cb.affect!.nlsolve(
+                      Val{:init},
+                      cb.affect!.nl_rhs,
+                      integrator.u)
 end
 
 function ManifoldProjection(g;nlsolve=NLSOLVEJL_SETUP(),save=true)
