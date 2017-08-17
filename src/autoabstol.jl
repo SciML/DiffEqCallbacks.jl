@@ -1,4 +1,4 @@
-type AutoAbstolAffect{T}
+mutable struct AutoAbstolAffect{T}
   curmax::T
 end
 # Now make `affect!` for this:
