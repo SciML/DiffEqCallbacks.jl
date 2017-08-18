@@ -12,12 +12,17 @@ struct PositiveDomainAffect{T,S,uType} <: AbstractDomainAffect{T,S,uType}
     u::uType
 end
 
-struct GeneralDomainAffect{F,T,S,uType} <: AbstractDomainAffect{T,S,uType}
+struct GeneralDomainAffect{autonomous,F,T,S,uType} <: AbstractDomainAffect{T,S,uType}
     g::F
     abstol::T
     scalefactor::S
     u::uType
     resid::uType
+
+    function GeneralDomainAffect{autonomous}(g::F, abstol::T, scalefactor::S, u::uType,
+                                             resid::uType) where {autonomous,F,T,S,uType}
+        new{autonomous,F,T,S,uType}(g, abstol, scalefactor, u, resid)
+    end
 end
 
 # definitions of callback functions
@@ -39,15 +44,16 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     u_modified!(integrator, modify_u!(integrator, f))
 
     # define array of next time step, absolute tolerance, and scale factor
-    u = typeof(f.u) <: Void ? similar(integrator.u) : f.u
-    abstol = typeof(f.abstol) <: Void ? integrator.opts.abstol : f.abstol
-    scalefactor = typeof(f.scalefactor) <: Void ? integrator.opts.qmin : f.scalefactor
+    u = uType <: Void ? similar(integrator.u) : f.u
+    abstol = T <: Void ? integrator.opts.abstol : f.abstol
+    scalefactor = S <: Void ? 1//2 : f.scalefactor
 
     # setup callback and save addtional arguments for checking next time step
     args = setup(f, integrator)
 
     # cache current time step
     dt = integrator.dt
+    dt_modified = false
 
     # update time step of integrator to proposed next time step
     integrator.dt = get_proposed_dt(integrator)
@@ -55,19 +61,24 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     # adjust time step to bounds and time stops
     fix_dt_at_bounds!(integrator)
     modify_dt_for_tstops!(integrator)
+    t = integrator.t + integrator.dt
 
     while integrator.tdir * integrator.dt > 0
         # calculate estimated value of next step and its residuals
-        integrator(u, integrator.t + integrator.dt)
+        integrator(u, t)
 
         # check whether time step is accepted
-        isaccepted(u, abstol, f, args...) && break
+        isaccepted(t, u, abstol, f, args...) && break
 
-        # adjust time step
+        # reduce time step
         dtcache = integrator.dt
         integrator.dt *= scalefactor
+        dt_modified = true
+
+        # adjust new time step to bounds and time stops
         fix_dt_at_bounds!(integrator)
         modify_dt_for_tstops!(integrator)
+        t = integrator.t + integrator.dt
 
         # abort iteration when time step is not changed
         if dtcache == integrator.dt
@@ -80,7 +91,11 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     end
 
     # update current and next time step
-    set_proposed_dt!(integrator, integrator.dt)
+    if dt_modified # add safety factor since guess is based on extrapolation
+        set_proposed_dt!(integrator, 9//10*integrator.dt)
+    else
+        set_proposed_dt!(integrator, integrator.dt)
+    end
     integrator.dt = dt
 end
 
@@ -106,7 +121,7 @@ setup(::AbstractDomainAffect, integrator) = ()
 Return whether `u` is an acceptable state vector at the next time point given absolute
 tolerance `abstol`, callback `f`, and other optional arguments.
 """
-isaccepted(u, tolerance, ::AbstractDomainAffect, args...) = true
+isaccepted(t, u, tolerance, ::AbstractDomainAffect, args...) = true
 
 # specific method definitions for positive domain callback
 
@@ -125,8 +140,8 @@ function modify_u!(integrator, f::PositiveDomainAffect)
 end
 
 # state vector is accepted if its entries are greater than -abstol
-isaccepted(u, abstol::Number, ::PositiveDomainAffect) = all(x -> x + abstol > 0, u)
-isaccepted(u, abstol, ::PositiveDomainAffect) = all(x + y > 0 for (x,y) in zip(u, abstol))
+isaccepted(t, u, abstol::Number, ::PositiveDomainAffect) = all(x -> x + abstol > 0, u)
+isaccepted(t, u, abstol, ::PositiveDomainAffect) = all(x + y > 0 for (x,y) in zip(u, abstol))
 
 # specific method definitions for general domain callback
 
@@ -134,9 +149,14 @@ isaccepted(u, abstol, ::PositiveDomainAffect) = all(x + y > 0 for (x,y) in zip(u
 setup(f::GeneralDomainAffect, integrator) =
     typeof(f.resid) <: Void ? (similar(integrator.u),) : (f.resid,)
 
-function isaccepted(u, abstol, f::GeneralDomainAffect, resid)
+function isaccepted(t, u, abstol, f::GeneralDomainAffect{autonomous,F,T,S,uType},
+                    resid) where {autonomous,F,T,S,uType}
     # calculate residuals
-    f.g(u, resid)
+    if autonomous
+        f.g(u, resid)
+    else
+        f.g(t, u, resid)
+    end
 
     # accept time step if residuals are smaller than the tolerance
     if typeof(abstol) <: Number
@@ -150,14 +170,17 @@ end
 # callback definitions
 
 function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                       abstol=nothing, scalefactor=nothing)
+                       abstol=nothing, scalefactor=nothing, autonomous=numargs(g)==2,
+                       nlopts=Dict(:ftol => 10*eps()))
     if typeof(u) <: Void
-        affect! = GeneralDomainAffect(g, abstol, scalefactor, nothing, nothing)
+        affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
     else
-        affect! = GeneralDomainAffect(g, abstol, scalefactor, deepcopy(u), deepcopy(u))
+        affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, deepcopy(u),
+                                                  deepcopy(u))
     end
     condition = (t,u,integrator) -> true
-    CallbackSet(ManifoldProjection(g; nlsolve=nlsolve, save=false),
+    CallbackSet(ManifoldProjection(g; nlsolve=nlsolve, save=false,
+                                   autonomous=autonomous, nlopts=nlopts),
                 DiscreteCallback(condition, affect!; save_positions=(false, save)))
 end
 
