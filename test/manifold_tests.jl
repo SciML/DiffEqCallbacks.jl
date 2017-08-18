@@ -14,8 +14,21 @@ function g(u,resid)
   resid[4] = 0
 end
 
-cb = ManifoldProjection(g)
+g_t(t,u,resid) = g(u,resid)
+
+isautonomous(p::ManifoldProjection{autonomous,NL}) where {autonomous,NL} = autonomous
+
 sol = solve(prob,Vern7())
 @test !(sol[end][1]^2 + sol[end][2]^2 ≈ 2)
-sol = solve(prob,Vern7(),callback=cb)
+
+cb = ManifoldProjection(g)
+@test isautonomous(cb.affect!)
+solve(prob,Vern7(),callback=cb)
+@time sol=solve(prob,Vern7(),callback=cb)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+cb_t = ManifoldProjection(g_t)
+@test !isautonomous(cb_t.affect!)
+solve(prob,Vern7(),callback=cb_t)
+@time sol_t = solve(prob,Vern7(),callback=cb_t)
+@test sol_t.u == sol.u && sol_t.t == sol.t
