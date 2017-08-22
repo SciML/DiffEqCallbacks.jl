@@ -12,8 +12,6 @@
 
 This is a library of callbacks for extending the solvers of DifferentialEquations.jl.
 
-Currently only one callback is implemented.
-
 ## Usage
 
 
