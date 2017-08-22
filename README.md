@@ -60,3 +60,39 @@ AutoAbstol(save=true;init_curmax=1e-6)
 the initial `abstol`. If this callback is used in isolation, `save=true` is required
 for normal saving behavior. Otherwise, `save=false` should be set to ensure
 extra saves do not occur.
+
+## Domain Controls
+
+The domain controls are efficient methods for preserving a domain relation for
+the solution value `u`. Unlike the `isoutofdomain` method, these methods use
+interpolations and extrapolations to more efficiently choose stepsizes, but
+require that the solution is well defined slightly outside of the domain.
+
+### PositiveDomain
+
+```julia
+PositiveDomain(u=nothing; save=true, abstol=nothing, scalefactor=nothing)
+```
+
+### GeneralDomain
+
+```julia
+GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
+                       abstol=nothing, scalefactor=nothing, autonomous=numargs(g)==2,
+                       nlopts=Dict(:ftol => 10*eps()))
+```
+
+## StepsizeLimiter
+
+The stepsize limiter lets you define a function `dtFE(t,u)` which changes the
+allowed maximal stepsize throughout the computation. The constructor is:
+
+```julia
+StepsizeLimiter(dtFE;safety_factor=9//10,max_step=false,cached_dtcache=0.0)
+```
+
+`dtFE` is the maximal timestep and is calculated using the previous `t` and `u`.
+`safety_factor` is the factor below the true maximum that will be stepped to
+which defaults to `9//10`. `max_step=true` makes every step equal to
+`safety_factor*dtFE(t,u)` when the solver is set to `adaptive=false`. `cached_dtcache`
+should be set to match the type for time when not using Float64 values.

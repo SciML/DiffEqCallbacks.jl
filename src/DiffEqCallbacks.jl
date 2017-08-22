@@ -10,5 +10,6 @@ module DiffEqCallbacks
   include("autoabstol.jl")
   include("manifold.jl")
   include("domain.jl")
+  include("stepsizelimiters.jl")
 
 end # module
