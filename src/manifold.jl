@@ -10,12 +10,12 @@ Base.@pure function determine_chunksize(u,CS)
   end
 end
 
-function autodiff_setup(f!, initial_x,chunk_size::Type{Val{CS}}) where CS
+function autodiff_setup(f!, initial_x, chunk_size::Type{Val{CS}}) where CS
 
     permf! = (fx, x) -> f!(reshape(x,size(initial_x)...), fx)
 
     fx2 = copy(initial_x)
-    jac_cfg = ForwardDiff.JacobianConfig(f!, initial_x, ForwardDiff.Chunk{CS}())
+    jac_cfg = ForwardDiff.JacobianConfig(nothing, initial_x, initial_x, ForwardDiff.Chunk{CS}())
     g! = (x, gx) -> ForwardDiff.jacobian!(gx, permf!, fx2, x, jac_cfg)
 
     fg! = (x, fx, gx) -> begin
@@ -38,9 +38,9 @@ Base.@pure NLSOLVEJL_SETUP(;chunk_size=0,autodiff=true) = NLSOLVEJL_SETUP{chunk_
 (p::NLSOLVEJL_SETUP)(f, u0; kwargs...) = (res=NLsolve.nlsolve(f, u0; kwargs...); res.zero)
 function (p::NLSOLVEJL_SETUP{CS,AD})(::Type{Val{:init}},f,u0_prototype) where {CS,AD}
   if AD
-    return non_autodiff_setup(f,u0_prototype)
+    return autodiff_setup(f, u0_prototype, Val{determine_chunksize(u0_prototype, CS)})
   else
-    return autodiff_setup(f,u0_prototype,Val{determine_chunksize(initial_x,CS)})
+    return non_autodiff_setup(f, u0_prototype)
   end
 end
 

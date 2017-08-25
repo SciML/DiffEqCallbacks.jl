@@ -42,7 +42,7 @@ general_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g, [1.0]))
 @test all(x -> x[1] ≥ -10*eps(), general_sol_absval.u)
 @test general_sol_absval.errors[:l∞] < 9.9e-5
 @test general_sol_absval.errors[:l2] < 4.3e-5
-@test general_sol_absval.errors[:final] < 4.4e-18
+@test general_sol_absval.errors[:final] < 4.3e-18
 
 # test non-autonomous function
 g_t(t, u, resid) = g(u, resid)
@@ -55,9 +55,7 @@ general_t_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g_t, [1.
 # can guarantee non-negative values
 positive_sol_absval = solve(prob_absval, BS3(); callback=PositiveDomain([1.0]))
 @test all(x -> x[1] ≥ 0, positive_sol_absval.u)
-@test positive_sol_absval.errors[:l∞] < 9.9e-5
-@test positive_sol_absval.errors[:l2] < 4.3e-5
-@test positive_sol_absval.errors[:final] < 4.3e-18 # slightly better than general approach
+@test general_sol_absval.errors == positive_sol_absval.errors
 @test general_sol_absval.t == positive_sol_absval.t
 
 # specify abstol as array or scalar
