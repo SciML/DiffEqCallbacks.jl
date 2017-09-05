@@ -11,7 +11,6 @@ Base.@pure function determine_chunksize(u,CS)
 end
 
 function autodiff_setup(f!, initial_x, chunk_size::Type{Val{CS}}) where CS
-
     fvec! = NLsolve.reshape_f(f!, initial_x)
     permf! = (fx::AbstractVector, x::AbstractVector) -> fvec!(x, fx)
 
@@ -31,8 +30,6 @@ function autodiff_setup(f!, initial_x, chunk_size::Type{Val{CS}}) where CS
     return DifferentiableMultivariateFunction(fvec!, g!, fg!)
 end
 
-non_autodiff_setup(f!, initial_x) = DifferentiableMultivariateFunction(f!, initial_x)
-
 struct NLSOLVEJL_SETUP{CS,AD} end
 Base.@pure NLSOLVEJL_SETUP(;chunk_size=0,autodiff=true) = NLSOLVEJL_SETUP{chunk_size,autodiff}()
 (p::NLSOLVEJL_SETUP)(f, u0; kwargs...) = (res=NLsolve.nlsolve(f, u0; kwargs...); res.zero)
@@ -40,7 +37,7 @@ function (p::NLSOLVEJL_SETUP{CS,AD})(::Type{Val{:init}},f,u0_prototype) where {C
   if AD
     return autodiff_setup(f, u0_prototype, Val{determine_chunksize(u0_prototype, CS)})
   else
-    return non_autodiff_setup(f, u0_prototype)
+    return DifferentiableMultivariateFunction(f!, initial_x)
   end
 end
 
