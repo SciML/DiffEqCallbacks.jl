@@ -12,26 +12,26 @@ end
 
 function autodiff_setup(f!, initial_x, chunk_size::Type{Val{CS}}) where CS
 
-    permf! = (fx, x) -> f!(reshape(x,size(initial_x)...), fx)
+    fvec! = NLsolve.reshape_f(f!, initial_x)
+    permf! = (fx::AbstractVector, x::AbstractVector) -> fvec!(x, fx)
 
-    fx2 = copy(initial_x)
-    jac_cfg = ForwardDiff.JacobianConfig(nothing, initial_x, initial_x, ForwardDiff.Chunk{CS}())
-    g! = (x, gx) -> ForwardDiff.jacobian!(gx, permf!, fx2, x, jac_cfg)
+    fx2 = vec(copy(initial_x))
+    jac_cfg = ForwardDiff.JacobianConfig(nothing, vec(initial_x), vec(initial_x),
+                                         ForwardDiff.Chunk{CS}())
+    function g!(x::AbstractVector, gx::AbstractMatrix)
+        ForwardDiff.jacobian!(gx, permf!, fx2, x, jac_cfg)
+    end
 
-    fg! = (x, fx, gx) -> begin
+    fg! = (x::AbstractVector, fx::AbstractVector, gx::AbstractMatrix) -> begin
         jac_res = DiffBase.DiffResult(fx, gx)
         ForwardDiff.jacobian!(jac_res, permf!, fx2, x, jac_cfg)
         DiffBase.value(jac_res)
     end
 
-    return DifferentiableMultivariateFunction((x,resid)->f!(reshape(x,size(initial_x)...),
-                                                            resid),
-                                              g!, fg!)
+    return DifferentiableMultivariateFunction(fvec!, g!, fg!)
 end
 
-function non_autodiff_setup(f!, initial_x)
-  DifferentiableMultivariateFunction((x,resid)->f!(reshape(x,size(initial_x)...), resid))
-end
+non_autodiff_setup(f!, initial_x) = DifferentiableMultivariateFunction(f!, initial_x)
 
 struct NLSOLVEJL_SETUP{CS,AD} end
 Base.@pure NLSOLVEJL_SETUP(;chunk_size=0,autodiff=true) = NLSOLVEJL_SETUP{chunk_size,autodiff}()
