@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, Base.Test, DiffEqBase, DiffEqCallbacks
+using DiffEqCallbacks, OrdinaryDiffEq, RecursiveArrayTools, Base.Test
 
 u0 = ones(2,2)
 f = function (t,u,du)
@@ -32,3 +32,11 @@ cb_t = ManifoldProjection(g_t)
 solve(prob,Vern7(),callback=cb_t)
 @time sol_t = solve(prob,Vern7(),callback=cb_t)
 @test sol_t.u == sol.u && sol_t.t == sol.t
+
+# test array partitions
+
+u₀ = ArrayPartition(ones(2), ones(2))
+prob = ODEProblem(f, u₀, (0.0, 100.0))
+
+sol = solve(prob,Vern7(),callback=cb)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
