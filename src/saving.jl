@@ -18,7 +18,7 @@ function SavedValues(tType::DataType, savevalType::DataType)
     SavedValues{tType, savevalType}(Vector{tType}(), Vector{savevalType}())
 end
 
-function show(io::IO, saved_values::SavedValues)
+function Base.show(io::IO, saved_values::SavedValues)
     tType = eltype(saved_values.t)
     savevalType = eltype(saved_values.saveval)
     print(io, "SavedValues{tType=", tType, ", savevalType=", savevalType, "}",
