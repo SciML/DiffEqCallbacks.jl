@@ -28,7 +28,7 @@ saveat = linspace(prob.tspan..., 10)
 cb = SavingCallback((t,u,integrator)->u, saved_values, saveat=saveat)
 sol = solve(prob, Tsit5(), callback=cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> sol(saveat[idx]) == saved_values.saveval[idx], eachindex(saved_values.t))
+@test all(idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 5.e-15, eachindex(saved_values.t))
 
 # saveat, inplace problem
 saved_values = SavedValues(eltype(prob2D.tspan), typeof(prob2D.u0))
