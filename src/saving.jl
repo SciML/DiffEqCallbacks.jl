@@ -25,6 +25,10 @@ function Base.show(io::IO, saved_values::SavedValues)
                 "\nt:\n", saved_values.t, "\nsaveval:\n", saved_values.saveval)
 end
 
+@recipe function plot(saved_values::SavedValues)
+    (saved_values.t, saved_values.saveval)
+end
+
 
 mutable struct SavingAffect{SaveFunc, tType, savevalType, saveatType}
     save_func::SaveFunc
