@@ -11,7 +11,6 @@ Base.@pure function determine_chunksize(u,CS)
 end
 
 function autodiff_setup(f!, initial_x, chunk_size::Type{Val{CS}}) where CS
-
     permf! = (fx, x) -> f!(reshape(x,size(initial_x)...), fx)
 
     fx2 = copy(initial_x)
@@ -19,9 +18,9 @@ function autodiff_setup(f!, initial_x, chunk_size::Type{Val{CS}}) where CS
     g! = (x, gx) -> ForwardDiff.jacobian!(gx, permf!, fx2, x, jac_cfg)
 
     fg! = (x, fx, gx) -> begin
-        jac_res = DiffResults.DiffResult(fx, gx)
+        jac_res = DiffBase.DiffResult(fx, gx)
         ForwardDiff.jacobian!(jac_res, permf!, fx2, x, jac_cfg)
-        DiffResults.value(jac_res)
+        DiffBase.value(jac_res)
     end
 
     return DifferentiableMultivariateFunction((x,resid)->f!(reshape(x,size(initial_x)...),
