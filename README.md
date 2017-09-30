@@ -97,7 +97,7 @@ should be set to match the type for time when not using Float64 values.
 
 ## SavingCallback
 
-The aving callback lets you define a function `save_func(t, u, integrator)` which
+The saving callback lets you define a function `save_func(t, u, integrator)` which
 returns quantities of interest that shall be saved. The constructor is:
 
 ```julia
