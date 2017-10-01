@@ -1,5 +1,5 @@
 using Base.Test, OrdinaryDiffEq, DiffEqProblemLibrary, DiffEqCallbacks
-@static Int==Int64
+@static if Int==Int64
     # NOTE: Only on 64 bit machines due to
     # - https://github.com/JuliaPlots/Plots.jl/issues/968
     # - https://github.com/JuliaPlots/Plots.jl/issues/963
@@ -13,7 +13,7 @@ saved_values = SavedValues(Float64, Float64)
 cb = SavingCallback((t,u,integrator)->u, saved_values)
 sol = solve(prob, Tsit5(), callback=cb)
 print("\n", saved_values, "\n")
-@static Int==Int64
+@static if Int==Int64
     plot(saved_values)
 end
 @test all(idx -> sol.t[idx] == saved_values.t[idx], eachindex(saved_values.t))
