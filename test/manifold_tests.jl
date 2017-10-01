@@ -21,6 +21,7 @@ isautonomous(p::ManifoldProjection{autonomous,NL}) where {autonomous,NL} = auton
 sol = solve(prob,Vern7())
 @test !(sol[end][1]^2 + sol[end][2]^2 ≈ 2)
 
+# autodiff=true
 cb = ManifoldProjection(g)
 @test isautonomous(cb.affect!)
 solve(prob,Vern7(),callback=cb)
@@ -31,4 +32,17 @@ cb_t = ManifoldProjection(g_t)
 @test !isautonomous(cb_t.affect!)
 solve(prob,Vern7(),callback=cb_t)
 @time sol_t = solve(prob,Vern7(),callback=cb_t)
+@test sol_t.u == sol.u && sol_t.t == sol.t
+
+# autodiff=false
+cb_false = ManifoldProjection(g, nlsolve=NLSOLVEJL_SETUP(autodiff=false))
+@test isautonomous(cb_false.affect!)
+solve(prob,Vern7(),callback=cb_false)
+@time sol=solve(prob,Vern7(),callback=cb_false)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+cb_t_false = ManifoldProjection(g_t, nlsolve=NLSOLVEJL_SETUP(autodiff=false))
+@test !isautonomous(cb_t_false.affect!)
+solve(prob,Vern7(),callback=cb_t_false)
+@time sol_t = solve(prob,Vern7(),callback=cb_t_false)
 @test sol_t.u == sol.u && sol_t.t == sol.t

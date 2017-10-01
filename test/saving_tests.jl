@@ -1,4 +1,5 @@
 using Base.Test, OrdinaryDiffEq, DiffEqProblemLibrary, DiffEqCallbacks
+using Plots; unicodeplots()
 
 # save_everystep, scalar problem
 prob = prob_ode_linear
@@ -6,6 +7,7 @@ saved_values = SavedValues(Float64, Float64)
 cb = SavingCallback((t,u,integrator)->u, saved_values)
 sol = solve(prob, Tsit5(), callback=cb)
 print("\n", saved_values, "\n")
+plot(saved_values)
 @test all(idx -> sol.t[idx] == saved_values.t[idx], eachindex(saved_values.t))
 @test all(idx -> sol.u[idx] == saved_values.saveval[idx], eachindex(saved_values.t))
 

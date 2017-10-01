@@ -6,3 +6,4 @@ DiffBase
 OrdinaryDiffEq
 RecursiveArrayTools
 DataStructures
+RecipesBase
