@@ -26,7 +26,7 @@ function Base.show(io::IO, saved_values::SavedValues)
 end
 
 @recipe function plot(saved_values::SavedValues)
-    (saved_values.t, saved_values.saveval)
+    DiffEqArray(saved_values.t, saved_values.saveval)
 end
 
 
