@@ -1,5 +1,11 @@
 using Base.Test, OrdinaryDiffEq, DiffEqProblemLibrary, DiffEqCallbacks
-using Plots; unicodeplots()
+@static Int==Int64
+    # NOTE: Only on 64 bit machines due to
+    # - https://github.com/JuliaPlots/Plots.jl/issues/968
+    # - https://github.com/JuliaPlots/Plots.jl/issues/963
+    # Fixed for julia v0.7 (https://github.com/JuliaLang/julia/pull/22644)
+    using Plots; unicodeplots()
+end
 
 # save_everystep, scalar problem
 prob = prob_ode_linear
@@ -7,7 +13,9 @@ saved_values = SavedValues(Float64, Float64)
 cb = SavingCallback((t,u,integrator)->u, saved_values)
 sol = solve(prob, Tsit5(), callback=cb)
 print("\n", saved_values, "\n")
-plot(saved_values)
+@static Int==Int64
+    plot(saved_values)
+end
 @test all(idx -> sol.t[idx] == saved_values.t[idx], eachindex(saved_values.t))
 @test all(idx -> sol.u[idx] == saved_values.saveval[idx], eachindex(saved_values.t))
 
