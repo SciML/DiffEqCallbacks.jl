@@ -2,24 +2,28 @@ function PeriodicCallback(f, Δt::Number; kwargs...)
     @assert Δt > 0
 
     # Value of `t` at which `f` should be called next:
-    t_next = Ref(typemax(Δt))
-    condition = (t, u, integrator) -> t == t_next[]
+    tnext = Ref(typemax(Δt))
+    condition = (t, u, integrator) -> t == tnext[]
 
-    # Call f, update t_next, and make sure we stop at the new t_next
+    # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
         f(integrator)
 
         # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
-        t_new = t_next[] + Δt
-        if any(t -> t > t_new, integrator.opts.tstops.valtree) # TODO: accessing internal data...
-            t_next[] = t_new
-            add_tstop!(integrator, t_new)
+        tnew = tnext[] + Δt
+        tstops = integrator.opts.tstops
+        for i in length(tstops) : -1 : 1 # reverse iterate to encounter large elements earlier
+            if tstops.valtree[i] > tnew # TODO: relying on implementation detail
+                tnext[] = tnew
+                add_tstop!(integrator, tnew)
+                break
+            end
         end
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize = function (c, t, u, integrator)
-        t_next[] = t
+        tnext[] = t
         affect!(integrator)
     end
 
