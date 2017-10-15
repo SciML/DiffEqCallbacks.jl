@@ -107,10 +107,22 @@ SavingCallback(save_func, saved_values::SavedValues;
                tdir=1)
 ```
 - `save_func(t, u, integrator)` returns the quantities which shall be saved.
-- `saved_values::SavedValues` contains vectors `t::Vector{tType}`, 
-  `saveval::Vector{savevalType}` of the saved quantities. Here, 
+- `saved_values::SavedValues` contains vectors `t::Vector{tType}`,
+  `saveval::Vector{savevalType}` of the saved quantities. Here,
   `save_func(t, u, integrator)::savevalType`.
 - `saveat` Mimicks `saveat` in `solve` for ODEs.
 - `save_everystep` Mimicks `save_everystep` in `solve` for ODEs.
 - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
   be adapted if `tspan[1] > tspan[end]`.
+
+## PeriodicCallback
+
+`PeriodicCallback` can be used when a function should be called periodically in terms of integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`, `t = tspan[1] + 2Δt`, and so on. This callback can, for example, be used to model a digital controller for an analog system, running at a fixed rate.
+
+A `PeriodicCallback` can be constructed as follows:
+
+```julia
+PeriodicCallback(f, Δt::Number; kwargs...)
+```
+
+where `f` is the function to be called periodically, `Δt` is the period, and `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
