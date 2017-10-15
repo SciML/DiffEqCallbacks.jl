@@ -23,7 +23,9 @@ for tmax_problem in [tmax; Inf]
     # Callbacks periodically increase the input to the integrators:
     Δt1 = 0.5
     increase_du_1 = integrator -> du[1] += 1
-    periodic1 = PeriodicCallback(increase_du_1, Δt1)
+    periodic1_initialized = Ref(false)
+    initialize1 = (c, t, u, integrator) -> periodic1_initialized[] = true
+    periodic1 = PeriodicCallback(increase_du_1, Δt1; initialize = initialize1)
 
     Δt2 = 1.
     increase_du_2 = integrator -> du[2] += 1
@@ -34,6 +36,9 @@ for tmax_problem in [tmax; Inf]
 
     # Solve.
     sol = solve(prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2), tstops = [tmax])
+
+    # Ensure that initialize1 has been called
+    @test periodic1_initialized[]
 
     # Make sure we haven't integrated past tmax:
     @test sol.t[end] == tmax

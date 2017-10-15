@@ -1,4 +1,4 @@
-function PeriodicCallback(f, Δt::Number; kwargs...)
+function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEFAULT, kwargs...)
     @assert Δt > 0
 
     # Value of `t` at which `f` should be called next:
@@ -22,12 +22,13 @@ function PeriodicCallback(f, Δt::Number; kwargs...)
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize = function (c, t, u, integrator)
+    initialize_periodic = function (c, t, u, integrator)
+        initialize(c, t, u, integrator)
         tnext[] = t
         affect!(integrator)
     end
 
-    DiscreteCallback(condition, affect!; initialize = initialize, kwargs...)
+    DiscreteCallback(condition, affect!; initialize = initialize_periodic, kwargs...)
 end
 
 export PeriodicCallback
