@@ -86,6 +86,7 @@ end
 
 function Manifold_initialize(cb,t,u,integrator)
   cb.affect!.nl_rhs = cb.affect!.nlsolve(Val{:init}, cb.affect!.g, u)
+  u_modified!(integrator,false)
 end
 
 function ManifoldProjection(g; nlsolve=NLSOLVEJL_SETUP(), save=true,
