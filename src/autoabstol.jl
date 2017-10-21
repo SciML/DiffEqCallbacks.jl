@@ -22,6 +22,7 @@ function AutoAbstol_initialize(cb,t,u,integrator)
   if cb.affect!.curmax == zero(integrator.opts.abstol)
     cb.affect!.curmax = integrator.opts.abstol
   end
+  u_modified!(integrator,false)
 end
 
 function AutoAbstol(save=true;init_curmax=0.0)
