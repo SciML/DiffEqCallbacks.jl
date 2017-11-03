@@ -1,53 +1,3 @@
-###########
-
-# NLsolve utils
-
-Base.@pure function determine_chunksize(u,CS)
-  if CS != 0
-    return CS
-  else
-    return ForwardDiff.pickchunksize(length(u))
-  end
-end
-
-function autodiff_setup(f!, initial_x, chunk_size::Type{Val{CS}}) where CS
-    permf! = (fx, x) -> f!(reshape(x,size(initial_x)...), fx)
-
-    fx2 = copy(initial_x)
-    jac_cfg = ForwardDiff.JacobianConfig(permf!, initial_x, initial_x, ForwardDiff.Chunk{CS}())
-    g! = (x, gx) -> ForwardDiff.jacobian!(gx, permf!, fx2, x, jac_cfg)
-
-    fg! = (x, fx, gx) -> begin
-        jac_res = DiffBase.DiffResult(fx, gx)
-        ForwardDiff.jacobian!(jac_res, permf!, fx2, x, jac_cfg)
-        DiffBase.value(jac_res)
-    end
-
-    return DifferentiableMultivariateFunction((x,resid)->f!(reshape(x,size(initial_x)...),
-                                                            resid),
-                                              g!, fg!)
-end
-
-function non_autodiff_setup(f!, initial_x)
-  DifferentiableMultivariateFunction((x,resid)->f!(reshape(x,size(initial_x)...), resid))
-end
-
-struct NLSOLVEJL_SETUP{CS,AD} end
-Base.@pure NLSOLVEJL_SETUP(;chunk_size=0,autodiff=true) = NLSOLVEJL_SETUP{chunk_size,autodiff}()
-(p::NLSOLVEJL_SETUP)(f, u0; kwargs...) = (res=NLsolve.nlsolve(f, u0; kwargs...); res.zero)
-function (p::NLSOLVEJL_SETUP{CS,AD})(::Type{Val{:init}},f,u0_prototype) where {CS,AD}
-  if AD
-    return autodiff_setup(f, u0_prototype, Val{determine_chunksize(u0_prototype, CS)})
-  else
-    return non_autodiff_setup(f, u0_prototype)
-  end
-end
-
-get_chunksize(x) = 0
-get_chunksize(x::NLSOLVEJL_SETUP{CS,AD}) where {CS,AD} = CS
-
-#########################
-
 # wrapper for non-autonomous functions
 mutable struct NonAutonomousFunction{F}
   f::F
@@ -79,9 +29,7 @@ function (p::ManifoldProjection{autonomous,NL})(integrator) where {autonomous,NL
     p.g.t = integrator.t
   end
 
-  nlres = reshape(p.nlsolve(p.nl_rhs, vec(integrator.u); p.nlopts...),
-                  size(integrator.u)...)::typeof(integrator.u)
-  integrator.u .= nlres
+  integrator.u .= p.nlsolve(p.nl_rhs, integrator.u; p.nlopts...)
 end
 
 function Manifold_initialize(cb,t,u,integrator)

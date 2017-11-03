@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, Base.Test, DiffEqBase, DiffEqCallbacks
+using OrdinaryDiffEq, Base.Test, DiffEqBase, DiffEqCallbacks, RecursiveArrayTools
 
 u0 = ones(2,2)
 f = function (t,u,du)
@@ -46,3 +46,25 @@ cb_t_false = ManifoldProjection(g_t, nlsolve=NLSOLVEJL_SETUP(autodiff=false))
 solve(prob,Vern7(),callback=cb_t_false)
 @time sol_t = solve(prob,Vern7(),callback=cb_t_false)
 @test sol_t.u == sol.u && sol_t.t == sol.t
+
+# test array partitions
+u₀ = ArrayPartition(ones(2), ones(2))
+prob = ODEProblem(f, u₀, (0.0, 100.0))
+
+sol = solve(prob,Vern7(),callback=cb)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+sol = solve(prob,Vern7(),callback=cb_t)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+# does not work since Calculus.jl (on which NLsolve.jl depends)
+# implements only Jacobians of vectors
+@test_throws MethodError begin
+  sol = solve(prob,Vern7(),callback=cb_false)
+  sol[end][1]^2 + sol[end][2]^2 ≈ 2
+end
+
+@test_throws MethodError begin
+  sol = solve(prob,Vern7(),callback=cb_t_false)
+  sol[end][1]^2 + sol[end][2]^2 ≈ 2
+end
