@@ -115,6 +115,23 @@ SavingCallback(save_func, saved_values::SavedValues;
 - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
   be adapted if `tspan[1] > tspan[end]`.
 
+## IterativeCallback
+
+`IterativeCallback` is a callback to be used to iteratively apply some affect.
+For example, if given the first effect at `t₁`, you can define `t₂` to apply
+the next effect.
+
+A `IterativeCallback` is constructed as follows:
+
+```julia
+function IterativeCallback(time_choice, user_affect!,tType = Float64;
+                           initialize = DiffEqBase.INITIALIZE_DEFAULT,
+                           initial_affect = false, kwargs...)
+```
+
+where `time_choice(integrator)` determines the time of the next callback and
+`user_affect!` is the effect applied to the integrator at the stopping points.
+
 ## PeriodicCallback
 
 `PeriodicCallback` can be used when a function should be called periodically in terms of integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`, `t = tspan[1] + 2Δt`, and so on. This callback can, for example, be used to model a digital controller for an analog system, running at a fixed rate.

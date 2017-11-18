@@ -12,6 +12,6 @@ module DiffEqCallbacks
   include("domain.jl")
   include("stepsizelimiters.jl")
   include("saving.jl")
-  include("periodic.jl")
+  include("iterative_and_periodic.jl")
 
 end # module
