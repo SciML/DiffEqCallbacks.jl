@@ -30,10 +30,11 @@ end
 end
 
 
-mutable struct SavingAffect{SaveFunc, tType, savevalType, saveatType}
+mutable struct SavingAffect{SaveFunc, tType, savevalType, saveatType, saveatCacheType}
     save_func::SaveFunc
     saved_values::SavedValues{tType, savevalType}
     saveat::saveatType
+    saveat_cache::saveatCacheType
     save_everystep::Bool
     saveiter::Int
 end
@@ -63,7 +64,15 @@ function (affect!::SavingAffect)(integrator)
 end
 
 function saving_initialize(cb, t, u, integrator)
-  cb.affect!(integrator)
+    if cb.affect!.saveiter != 0
+        if integrator.tdir > 0
+            cb.affect!.saveat = binary_minheap(cb.affect!.saveat_cache)
+        else
+            cb.affect!.saveat = binary_maxheap(cb.affect!.saveat_cache)
+        end
+        cb.affect!.saveiter = 0
+    end
+    cb.affect!(integrator)
 end
 
 
@@ -93,7 +102,7 @@ function SavingCallback(save_func, saved_values::SavedValues;
     else
         saveat_internal = binary_maxheap(saveat_vec)
     end
-    affect! = SavingAffect(save_func, saved_values, saveat_internal, save_everystep, 0)
+    affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_vec, save_everystep, 0)
     condtion = (t, u, integrator) -> true
     DiscreteCallback(condtion, affect!;
                      initialize = saving_initialize,
