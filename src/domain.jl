@@ -44,7 +44,15 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     u_modified!(integrator, modify_u!(integrator, f))
 
     # define array of next time step, absolute tolerance, and scale factor
-    u = uType <: Void ? similar(integrator.u) : f.u
+    if uType <: Void
+        if typeof(integrator.u) <: Union{Number,SArray}
+            u = integrator.u
+        else
+            u = similar(integrator.u)
+        end
+    else
+        u = f.u
+    end
     abstol = T <: Void ? integrator.opts.abstol : f.abstol
     scalefactor = S <: Void ? 1//2 : f.scalefactor
 
@@ -65,7 +73,11 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
 
     while integrator.tdir * integrator.dt > 0
         # calculate estimated value of next step and its residuals
-        integrator(u, t)
+        if typeof(u) <: Union{Number,SArray}
+            u = integrator(t)
+        else
+            integrator(u, t)
+        end
 
         # check whether time step is accepted
         isaccepted(t, u, abstol, f, args...) && break
@@ -126,16 +138,39 @@ isaccepted(t, u, tolerance, ::AbstractDomainAffect, args...) = true
 # specific method definitions for positive domain callback
 
 function modify_u!(integrator, f::PositiveDomainAffect)
-    modified = false
-
     # set all negative values to zero
+    _set_neg_zero!(integrator,integrator.u) # Returns true if modified
+end
+
+function _set_neg_zero!(integrator,u::AbstractArray)
+    modified = false
     @inbounds for i in eachindex(integrator.u)
         if integrator.u[i] < 0
             integrator.u[i] = 0
             modified = true
         end
     end
+    modified
+end
 
+function _set_neg_zero!(integrator,u::Number)
+    modified = false
+    if integrator.u < 0
+        integrator.u = 0
+        modified = true
+    end
+    modified
+end
+
+function _set_neg_zero!(integrator,u::SArray)
+    modified = false
+    @inbounds for i in eachindex(integrator.u)
+        if u[i] < 0
+            u = setindex(u,zero(first(u)),i)
+            modified = true
+        end
+    end
+    modified && (integrator.u = u)
     modified
 end
 

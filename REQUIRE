@@ -4,3 +4,4 @@ OrdinaryDiffEq 2.21.3
 RecursiveArrayTools
 DataStructures
 RecipesBase
+StaticArrays
