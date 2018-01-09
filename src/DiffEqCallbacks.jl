@@ -5,7 +5,7 @@ module DiffEqCallbacks
   using DiffEqBase, RecursiveArrayTools, DataStructures, RecipesBase, StaticArrays
 
   import OrdinaryDiffEq: fix_dt_at_bounds!, modify_dt_for_tstops!, ode_addsteps!,
-                         ode_interpolant, NLSOLVEJL_SETUP
+                         ode_interpolant, NLSOLVEJL_SETUP, ODEIntegrator
 
   include("autoabstol.jl")
   include("manifold.jl")

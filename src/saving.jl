@@ -45,20 +45,27 @@ function (affect!::SavingAffect)(integrator)
         affect!.saveiter += 1
         curt = pop!(affect!.saveat) # current time
         if curt != integrator.t # If <t, interpolate
-            ode_addsteps!(integrator)
-            Θ = (curt - integrator.tprev)/integrator.dt
-            curu = ode_interpolant(Θ, integrator, nothing, Val{0}) # out of place, but no force copy later
+            if typeof(integrator) <: ODEIntegrator
+                # Expand lazy dense for interpolation
+                ode_addsteps!(integrator)
+            end
+            if typeof(integrator.u) <: Union{Number,SArray}
+                curu = integrator(curt)
+            else
+                curu = first(get_tmp_cache(integrator))
+                integrator(curu,curt) # inplace since save_func allocates
+            end
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, curt)
-            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(curt, curu, integrator))
+            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(curt, curu, integrator),Val{false})
         else # ==t, just save
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
-            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator))
+            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator),Val{false})
         end
     end
     if affect!.save_everystep
         affect!.saveiter += 1
         copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
-        copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator))
+        copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator),Val{false})
     end
     u_modified!(integrator, false)
 end
