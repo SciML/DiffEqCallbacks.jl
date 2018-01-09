@@ -36,10 +36,11 @@ mutable struct SavingAffect{SaveFunc, tType, savevalType, saveatType, saveatCach
     saveat::saveatType
     saveat_cache::saveatCacheType
     save_everystep::Bool
+    save_start::Bool
     saveiter::Int
 end
 
-function (affect!::SavingAffect)(integrator)
+function (affect!::SavingAffect)(integrator,force_save = false)
     # see OrdinaryDiffEq.jl -> integrator_utils.jl, function savevalues!
     while !isempty(affect!.saveat) && integrator.tdir*top(affect!.saveat) <= integrator.tdir*integrator.t # Perform saveat
         affect!.saveiter += 1
@@ -62,7 +63,7 @@ function (affect!::SavingAffect)(integrator)
             copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator),Val{false})
         end
     end
-    if affect!.save_everystep
+    if affect!.save_everystep || force_save
         affect!.saveiter += 1
         copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
         copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator),Val{false})
@@ -79,7 +80,7 @@ function saving_initialize(cb, t, u, integrator)
         end
         cb.affect!.saveiter = 0
     end
-    cb.affect!(integrator)
+    cb.affect!.save_start && cb.affect!(integrator)
 end
 
 
@@ -87,6 +88,7 @@ end
     SavingCallback(save_func, saved_values::SavedValues;
                     saveat=Vector{eltype(saved_values.t)}(),
                     save_everystep=isempty(saveat),
+                    save_start = true,
                     tdir=1)
 
 A `DiscreteCallback` applied after every step, saving the time `t` and the value
@@ -101,6 +103,7 @@ If the time `tdir` direction is not positive, i.e. `tspan[1] > tspan[2]`,
 function SavingCallback(save_func, saved_values::SavedValues;
                         saveat=Vector{eltype(saved_values.t)}(),
                         save_everystep=isempty(saveat),
+                        save_start = true,
                         tdir=1)
     # saveat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     saveat_vec = collect(saveat)
@@ -109,7 +112,7 @@ function SavingCallback(save_func, saved_values::SavedValues;
     else
         saveat_internal = binary_maxheap(saveat_vec)
     end
-    affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_vec, save_everystep, 0)
+    affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_vec, save_everystep, save_start, 0)
     condtion = (t, u, integrator) -> true
     DiscreteCallback(condtion, affect!;
                      initialize = saving_initialize,

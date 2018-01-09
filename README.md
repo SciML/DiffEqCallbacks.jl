@@ -114,8 +114,10 @@ SavingCallback(save_func, saved_values::SavedValues;
   type that `save_func` will output (or higher compatible type).
 - `saveat` Mimicks `saveat` in `solve` from `solve`.
 - `save_everystep` Mimicks `save_everystep` from `solve`.
+- `save_start` Mimicks `save_start` from `solve`.
 - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
   be adapted if `tspan[1] > tspan[end]`.
+
 
 ## IterativeCallback
 
