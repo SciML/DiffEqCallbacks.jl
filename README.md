@@ -107,7 +107,7 @@ SavingCallback(save_func, saved_values::SavedValues;
                tdir=1)
 ```
 - `save_func(t, u, integrator)` returns the quantities which shall be saved.
-  Note that this should allocate the output and not overwrite internal caches.
+  Note that this should allocate the output (not as a view to `u`).
 - `saved_values::SavedValues` is the types that `save_func` will return, i.e.
   `save_func(t, u, integrator)::savevalType`. It's specified via
   `SavedValues(typeof(t),savevalType)`, i.e. give the type for time and the
@@ -117,6 +117,9 @@ SavingCallback(save_func, saved_values::SavedValues;
 - `save_start` Mimicks `save_start` from `solve`.
 - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
   be adapted if `tspan[1] > tspan[end]`.
+  
+The outputted values are saved into `saved_values`. Time points are found via
+`saved_values.t` and the values are `saved_values.saveval`.
 
 
 ## IterativeCallback
