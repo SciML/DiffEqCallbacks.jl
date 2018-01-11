@@ -14,7 +14,7 @@ end
 
 Return `SavedValues{tType, savevalType}` with empty storage vectors.
 """
-function SavedValues(tType::DataType, savevalType::DataType)
+function SavedValues(::Type{tType}, ::Type{savevalType}) where {tType,savevalType}
     SavedValues{tType, savevalType}(Vector{tType}(), Vector{savevalType}())
 end
 
