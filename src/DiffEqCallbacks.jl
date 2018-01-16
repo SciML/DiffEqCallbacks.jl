@@ -11,6 +11,7 @@ module DiffEqCallbacks
   include("manifold.jl")
   include("domain.jl")
   include("stepsizelimiters.jl")
+  include("function_caller.jl")
   include("saving.jl")
   include("iterative_and_periodic.jl")
 

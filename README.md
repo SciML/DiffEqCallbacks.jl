@@ -95,6 +95,25 @@ which defaults to `9//10`. `max_step=true` makes every step equal to
 `safety_factor*dtFE(t,u)` when the solver is set to `adaptive=false`. `cached_dtcache`
 should be set to match the type for time when not using Float64 values.
 
+## FunctionCallingCallback
+
+The function calling callback lets you define a function `func(t,u,integrator)`
+which gets calls at the time points of interest. The constructor is:
+
+```julia
+FunctionCallingCallback(func;
+               funcat=Vector{Float64}(),
+               func_everystep=isempty(funcat),
+               func_start = true
+               tdir=1)
+```
+- `func(t, u, integrator)` is the function to be called.
+- `funcat` values that the function is sure to be evaluated at.
+- `func_everystep` whether to call the function after each integrator step.
+- `func_start` whether the function is called the initial condition.
+- `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
+  be adapted if `tspan[1] > tspan[end]`.
+
 ## SavingCallback
 
 The saving callback lets you define a function `save_func(t, u, integrator)` which
@@ -104,6 +123,7 @@ returns quantities of interest that shall be saved. The constructor is:
 SavingCallback(save_func, saved_values::SavedValues;
                saveat=Vector{eltype(saved_values.t)}(),
                save_everystep=isempty(saveat),
+               func_start = true,
                tdir=1)
 ```
 - `save_func(t, u, integrator)` returns the quantities which shall be saved.
@@ -117,7 +137,7 @@ SavingCallback(save_func, saved_values::SavedValues;
 - `save_start` Mimicks `save_start` from `solve`.
 - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
   be adapted if `tspan[1] > tspan[end]`.
-  
+
 The outputted values are saved into `saved_values`. Time points are found via
 `saved_values.t` and the values are `saved_values.saveval`.
 
