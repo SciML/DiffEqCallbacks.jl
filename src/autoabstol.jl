@@ -18,7 +18,7 @@ function (p::AutoAbstolAffect)(integrator)
   u_modified!(integrator,false)
 end
 
-function AutoAbstol_initialize(cb,t,u,integrator)
+function AutoAbstol_initialize(cb,u,t,integrator)
   if cb.affect!.curmax == zero(integrator.opts.abstol)
     cb.affect!.curmax = integrator.opts.abstol
   end
@@ -27,7 +27,7 @@ end
 
 function AutoAbstol(save=true;init_curmax=0.0)
   affect! = AutoAbstolAffect(abs.(init_curmax))
-  condtion = (t,u,integrator) -> true
+  condtion = (u,t,integrator) -> true
   save_positions = (save,false)
   DiscreteCallback(condtion,affect!;
                    initialize = AutoAbstol_initialize,

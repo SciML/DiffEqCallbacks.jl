@@ -17,14 +17,14 @@ for tmax_problem in [tmax; Inf]
     # Dynamics: two independent single integrators:
     du = [0; 0]
     u0 = [0.; 0.]
-    dynamics = (t, u) -> eltype(u).(du)
+    dynamics = (u, p, t) -> eltype(u).(du)
     prob = ODEProblem(dynamics, u0, (tmin, tmax_problem))
 
     # Callbacks periodically increase the input to the integrators:
     Δt1 = 0.5
     increase_du_1 = integrator -> du[1] += 1
     periodic1_initialized = Ref(false)
-    initialize1 = (c, t, u, integrator) -> periodic1_initialized[] = true
+    initialize1 = (c, u, t, integrator) -> periodic1_initialized[] = true
     periodic1 = PeriodicCallback(increase_du_1, Δt1; initialize = initialize1)
 
     Δt2 = 1.
@@ -32,7 +32,7 @@ for tmax_problem in [tmax; Inf]
     periodic2 = PeriodicCallback(increase_du_2, Δt2)
 
     # Terminate at tmax (regardless of whether the tspan of the ODE problem is infinite).
-    terminator = DiscreteCallback((t, u, integrator) -> t == tmax, terminate!)
+    terminator = DiscreteCallback((u, t, integrator) -> t == tmax, terminate!)
 
     # Solve.
     sol = solve(prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2), tstops = [tmax])

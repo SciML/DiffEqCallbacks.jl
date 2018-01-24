@@ -23,19 +23,19 @@ function (affect!::FunctionCallingAffect)(integrator,force_func = false)
                 curu = first(get_tmp_cache(integrator))
                 integrator(curu,curt) # inplace since func_func allocates
             end
-            affect!.func(curt, curu, integrator)
+            affect!.func(curu, curt, integrator)
         else # ==t, just func
-            affect!.func(integrator.t, integrator.u, integrator)
+            affect!.func(integrator.u, integrator.t, integrator)
         end
     end
     if affect!.func_everystep || force_func
         affect!.funciter += 1
-        affect!.func(integrator.t, integrator.u, integrator)
+        affect!.func(integrator.u, integrator.t, integrator)
     end
     u_modified!(integrator, false)
 end
 
-function functioncalling_initialize(cb, t, u, integrator)
+function functioncalling_initialize(cb, u, t, integrator)
     if cb.affect!.funciter != 0
         if integrator.tdir > 0
             cb.affect!.funcat = binary_minheap(cb.affect!.funcat_cache)
@@ -55,7 +55,7 @@ end
                     func_start = true,
                     tdir=1)
 
-A `DiscreteCallback` applied after every step to call `func(t,u,integrator)`
+A `DiscreteCallback` applied after every step to call `func(u,t,integrator)`
 If `func_everystep`, every step of the integrator gives a `func` call.
 If `funcat` is specified, the function is called at the given times, using
 interpolation if necessary.
@@ -76,7 +76,7 @@ function FunctionCallingCallback(func;
     end
     affect! = FunctionCallingAffect(func, funcat_internal,
                                     funcat_vec, func_everystep, func_start, 0)
-    condtion = (t, u, integrator) -> true
+    condtion = (u, t, integrator) -> true
     DiscreteCallback(condtion, affect!;
                      initialize = functioncalling_initialize,
                      save_positions=(false,false))

@@ -57,21 +57,22 @@ function (affect!::SavingAffect)(integrator,force_save = false)
                 integrator(curu,curt) # inplace since save_func allocates
             end
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, curt)
-            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(curt, curu, integrator),Val{false})
+            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter,
+                            affect!.save_func(curu, curt, integrator),Val{false})
         else # ==t, just save
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
-            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator),Val{false})
+            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.u, integrator.t, integrator),Val{false})
         end
     end
     if affect!.save_everystep || force_save
         affect!.saveiter += 1
         copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
-        copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.t, integrator.u, integrator),Val{false})
+        copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter, affect!.save_func(integrator.u, integrator.t, integrator),Val{false})
     end
     u_modified!(integrator, false)
 end
 
-function saving_initialize(cb, t, u, integrator)
+function saving_initialize(cb, u, t, integrator)
     if cb.affect!.saveiter != 0
         if integrator.tdir > 0
             cb.affect!.saveat = binary_minheap(cb.affect!.saveat_cache)
@@ -92,7 +93,7 @@ end
                     tdir=1)
 
 A `DiscreteCallback` applied after every step, saving the time `t` and the value
-of `save_func(t, u, integrator)` in `saved_values`.
+of `save_func(u, t, integrator)` in `saved_values`.
 
 If `save_everystep`, every step of the integrator is saved.
 If `saveat` is specified, the values are saved at the given times, using
@@ -113,7 +114,7 @@ function SavingCallback(save_func, saved_values::SavedValues;
         saveat_internal = binary_maxheap(saveat_vec)
     end
     affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_vec, save_everystep, save_start, 0)
-    condtion = (t, u, integrator) -> true
+    condtion = (u, t, integrator) -> true
     DiscreteCallback(condtion, affect!;
                      initialize = saving_initialize,
                      save_positions=(false,false))

@@ -6,7 +6,7 @@ type StepsizeLimiterAffect{F,T,T2,T3}
 end
 # Now make `affect!` for this:
 function (p::StepsizeLimiterAffect)(integrator)
-  integrator.opts.dtmax = p.safety_factor*p.dtFE(integrator.t,integrator.u)
+  integrator.opts.dtmax = p.safety_factor*p.dtFE(integrator.u,integrator.p,integrator.t)
   if !integrator.opts.adaptive
     if integrator.opts.dtmax < integrator.dtcache
       integrator.dtcache = integrator.opts.dtmax
@@ -21,14 +21,14 @@ function (p::StepsizeLimiterAffect)(integrator)
   u_modified!(integrator,false)
 end
 
-function StepsizeLimiter_initialize(cb,t,u,integrator)
+function StepsizeLimiter_initialize(cb,u,t,integrator)
   cb.affect!.cached_dtcache = integrator.dtcache
   cb.affect!(integrator)
 end
 
 function StepsizeLimiter(dtFE;safety_factor=9//10,max_step=false,cached_dtcache=0.0)
   affect! = StepsizeLimiterAffect(dtFE,cached_dtcache,safety_factor,max_step)
-  condtion = (t,u,integrator) -> true
+  condtion = (u,t,integrator) -> true
   DiscreteCallback(condtion,affect!;
                    initialize = StepsizeLimiter_initialize,
                    save_positions=(false,false))

@@ -3,7 +3,7 @@ function IterativeCallback(time_choice, user_affect!,tType = Float64;
                            initial_affect = false, kwargs...)
     # Value of `t` at which `f` should be called next:
     tnext = Ref(typemax(tType))
-    condition = (t, u, integrator) -> t == tnext[]
+    condition = (u, t, integrator) -> t == tnext[]
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
@@ -22,8 +22,8 @@ function IterativeCallback(time_choice, user_affect!,tType = Float64;
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize_iterative = function (c, t, u, integrator)
-        initialize(c, t, u, integrator)
+    initialize_iterative = function (c, u, t, integrator)
+        initialize(c, u, t, integrator)
         if initial_affect
             tnext[] = t
             affect!(integrator)
@@ -41,7 +41,7 @@ function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEF
                                          initial_affect = true, kwargs...)
     # Value of `t` at which `f` should be called next:
     tnext = Ref(typemax(Δt))
-    condition = (t, u, integrator) -> t == tnext[]
+    condition = (u, t, integrator) -> t == tnext[]
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
@@ -60,9 +60,9 @@ function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEF
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize_periodic = function (c, t, u, integrator)
+    initialize_periodic = function (c, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
-        initialize(c, t, u, integrator)
+        initialize(c, u, t, integrator)
         if initial_affect
             tnext[] = t
             affect!(integrator)
