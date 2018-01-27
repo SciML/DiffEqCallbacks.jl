@@ -51,10 +51,10 @@ cb_t_false = ManifoldProjection(g_t, nlsolve=OrdinaryDiffEq.NLSOLVEJL_SETUP(auto
 u₀ = ArrayPartition(ones(2), ones(2))
 prob = ODEProblem(f, u₀, (0.0, 100.0))
 
-sol = solve(prob,Vern7(),callback=cb)
+@test_broken sol = solve(prob,Vern7(),callback=cb)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
-sol = solve(prob,Vern7(),callback=cb_t)
+@test_broken sol = solve(prob,Vern7(),callback=cb_t)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
 # does not work since Calculus.jl (on which NLsolve.jl depends)
