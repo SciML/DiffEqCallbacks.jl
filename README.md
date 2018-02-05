@@ -33,7 +33,7 @@ conserving the order.
 ManifoldProjection(g;nlsolve=NLSOLVEJL_SETUP(),save=true)
 ```
 
-- `g`: The residual function for the manifold: `g(u,resid)`. This is an inplace function
+- `g`: The residual function for the manifold: `g(resid,u)`. This is an inplace function
   which writes to the residual the difference from the manifold components.
 - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](linear_nonlinear.html)
 - `save`: Whether to do the standard saving (applied after the callback)
@@ -82,7 +82,7 @@ GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
 
 ## StepsizeLimiter
 
-The stepsize limiter lets you define a function `dtFE(t,u)` which changes the
+The stepsize limiter lets you define a function `dtFE(u,p,t)` which changes the
 allowed maximal stepsize throughout the computation. The constructor is:
 
 ```julia
@@ -92,12 +92,12 @@ StepsizeLimiter(dtFE;safety_factor=9//10,max_step=false,cached_dtcache=0.0)
 `dtFE` is the maximal timestep and is calculated using the previous `t` and `u`.
 `safety_factor` is the factor below the true maximum that will be stepped to
 which defaults to `9//10`. `max_step=true` makes every step equal to
-`safety_factor*dtFE(t,u)` when the solver is set to `adaptive=false`. `cached_dtcache`
+`safety_factor*dtFE(u,p,t)` when the solver is set to `adaptive=false`. `cached_dtcache`
 should be set to match the type for time when not using Float64 values.
 
 ## FunctionCallingCallback
 
-The function calling callback lets you define a function `func(t,u,integrator)`
+The function calling callback lets you define a function `func(u,t,integrator)`
 which gets calls at the time points of interest. The constructor is:
 
 ```julia
@@ -116,7 +116,7 @@ FunctionCallingCallback(func;
 
 ## SavingCallback
 
-The saving callback lets you define a function `save_func(t, u, integrator)` which
+The saving callback lets you define a function `save_func(u, t, integrator)` which
 returns quantities of interest that shall be saved. The constructor is:
 
 ```julia
@@ -126,7 +126,7 @@ SavingCallback(save_func, saved_values::SavedValues;
                func_start = true,
                tdir=1)
 ```
-- `save_func(t, u, integrator)` returns the quantities which shall be saved.
+- `save_func(u, t, integrator)` returns the quantities which shall be saved.
   Note that this should allocate the output (not as a view to `u`).
 - `saved_values::SavedValues` is the types that `save_func` will return, i.e.
   `save_func(t, u, integrator)::savevalType`. It's specified via
