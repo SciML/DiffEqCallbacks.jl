@@ -1,6 +1,6 @@
 using OrdinaryDiffEq, Base.Test, DiffEqBase, DiffEqCallbacks
 
-function f(du, u, p, t)
+function testfunction(du, u, p, t)
     du[1] = p[1] - (1 - p[1])*u[1]
     return nothing
 end
@@ -18,7 +18,7 @@ passed = fill(false, length(algs))
 
 for (i, alg) in enumerate(algs)
     display("testing $alg")
-    prob = ODEProblem(f, [0.], (0.,10.), [1.])
+    prob = ODEProblem(testfunction, [0.], (0.,10.), [1.])
     sol = solve(prob, alg(); callback=cb)
 
     passed[i] = all(isapprox(sol(t)[1], t; atol=0.05) for t in testtimes)
