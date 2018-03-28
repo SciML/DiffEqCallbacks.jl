@@ -123,7 +123,7 @@ returns quantities of interest that shall be saved. The constructor is:
 SavingCallback(save_func, saved_values::SavedValues;
                saveat=Vector{eltype(saved_values.t)}(),
                save_everystep=isempty(saveat),
-               func_start = true,
+               save_start = true,
                tdir=1)
 ```
 - `save_func(u, t, integrator)` returns the quantities which shall be saved.
@@ -132,9 +132,9 @@ SavingCallback(save_func, saved_values::SavedValues;
   `save_func(t, u, integrator)::savevalType`. It's specified via
   `SavedValues(typeof(t),savevalType)`, i.e. give the type for time and the
   type that `save_func` will output (or higher compatible type).
-- `saveat` Mimicks `saveat` in `solve` from `solve`.
-- `save_everystep` Mimicks `save_everystep` from `solve`.
-- `save_start` Mimicks `save_start` from `solve`.
+- `saveat` mimics `saveat` in `solve` from `solve`.
+- `save_everystep` mimics `save_everystep` from `solve`.
+- `save_start` mimics `save_start` from `solve`.
 - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
   be adapted if `tspan[1] > tspan[end]`.
 
