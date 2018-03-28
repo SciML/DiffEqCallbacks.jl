@@ -12,4 +12,5 @@ tic()
 @time @testset "Saving tests" begin include("saving_tests.jl") end
 @time @testset "Iterative tests" begin include("iterative_tests.jl") end
 @time @testset "Periodic tests" begin include("periodic_tests.jl") end
+@time @testset "ODE interpolation tests" begin include("ode_interpolation_tests.jl") end
 toc()
