@@ -1,4 +1,3 @@
-
 # Check if a cache for du can be used inside allDerivPass
 Base.@pure usecache(z) = true
 Base.@pure usecache(z::Number) = false
@@ -15,7 +14,7 @@ function allDerivPass(integrator, abstol, reltol)
         du = get_du(integrator)
     end
     any(abs(d) > abstol && abs(d) > reltol*abs(u) for (d,abstol, reltol, u) =
-           zip(du, cycle(abstol), cycle(reltol), integrator.u)) && (return false)
+           zip(du, Iterators.cycle(abstol), Iterators.cycle(reltol), integrator.u)) && (return false)
     return true
 end
 
