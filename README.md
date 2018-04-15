@@ -170,3 +170,23 @@ PeriodicCallback(f, Δt::Number; kwargs...)
 ```
 
 where `f` is the function to be called periodically, `Δt` is the period, and `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
+
+## TerminateSteadyState
+
+`TerminateSteadyState` can be used to solve the problem for the steady-state
+by running the solver until the derivatives of the problem converge to 0 or
+`tspan[2]` is reached. This is an alternative approach to root finding (see
+the [Steady State Solvers](@ref) section). The constructor of this callback is:
+
+```julia
+TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass)
+```
+
+where `abstol` and `reltol` are the absolute and relative tolerance, respectively.
+These tolerances may be specified as scalars or as arrays of the same length
+as the states of the problem. `test` represents the function that evaluates the
+condition for termination. The default condition is that all derivatives should
+become smaller than `abstol` and the states times `reltol`. The user
+can pass any other function to implement a different termination condition. Such
+function should take four arguments: `integrator` (see [Integrator Interface](@ref)
+for details), `abstol` and `reltol`.
