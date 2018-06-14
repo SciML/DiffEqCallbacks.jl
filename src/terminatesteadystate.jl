@@ -1,13 +1,8 @@
-# Check if a cache for du can be used inside allDerivPass
-Base.@pure usecache(z) = true
-Base.@pure usecache(z::Number) = false
-Base.@pure usecache(z::StaticArrays.SArray) = false
-
 # Default test function
 # Terminate when all derivatives fall below a threshold or
 #   when derivatives are smaller than a fraction of state
 function allDerivPass(integrator, abstol, reltol)
-    if usecache(integrator.u)
+    if DiffEqBase.isinplace(integrator.sol.prob)
         du = first(get_tmp_cache(integrator))
         DiffEqBase.get_du!(du, integrator)
     else
