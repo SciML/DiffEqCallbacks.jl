@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, Base.Test, DiffEqBase, DiffEqCallbacks, RecursiveArrayTools
+using OrdinaryDiffEq, Test, DiffEqBase, DiffEqCallbacks, RecursiveArrayTools
 
 u0 = ones(2,2)
 f = function (du,u,p,t)

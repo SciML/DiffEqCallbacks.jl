@@ -1,4 +1,4 @@
-using Base.Test, OrdinaryDiffEq, DiffEqCallbacks
+using Test, OrdinaryDiffEq, DiffEqCallbacks
 
 tmin = 0.1
 tmax = 5.2

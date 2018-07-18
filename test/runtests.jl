@@ -1,5 +1,5 @@
 using DiffEqCallbacks
-using Base.Test
+using Test
 
 # write your own tests here
 tic()

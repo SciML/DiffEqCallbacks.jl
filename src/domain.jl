@@ -44,7 +44,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     u_modified!(integrator, modify_u!(integrator, f))
 
     # define array of next time step, absolute tolerance, and scale factor
-    if uType <: Void
+    if uType <: Nothing
         if typeof(integrator.u) <: Union{Number,SArray}
             u = integrator.u
         else
@@ -53,8 +53,8 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     else
         u = f.u
     end
-    abstol = T <: Void ? integrator.opts.abstol : f.abstol
-    scalefactor = S <: Void ? 1//2 : f.scalefactor
+    abstol = T <: Nothing ? integrator.opts.abstol : f.abstol
+    scalefactor = S <: Nothing ? 1//2 : f.scalefactor
 
     # setup callback and save addtional arguments for checking next time step
     args = setup(f, integrator)
@@ -183,7 +183,7 @@ isaccepted(u, p, t, abstol, ::PositiveDomainAffect) = all(x + y > 0 for (x,y) in
 
 # create array of residuals
 setup(f::GeneralDomainAffect, integrator) =
-    typeof(f.resid) <: Void ? (similar(integrator.u),) : (f.resid,)
+    typeof(f.resid) <: Nothing ? (similar(integrator.u),) : (f.resid,)
 
 function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous,F,T,S,uType},
                     resid) where {autonomous,F,T,S,uType}
@@ -208,7 +208,7 @@ end
 function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
                        abstol=nothing, scalefactor=nothing, autonomous=DiffEqBase.numargs(g)==2,
                        nlopts=Dict(:ftol => 10*eps()))
-    if typeof(u) <: Void
+    if typeof(u) <: Nothing
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
     else
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, deepcopy(u),
@@ -221,7 +221,7 @@ function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
 end
 
 function PositiveDomain(u=nothing; save=true, abstol=nothing, scalefactor=nothing)
-    if typeof(u) <: Void
+    if typeof(u) <: Nothing
         affect! = PositiveDomainAffect(abstol, scalefactor, nothing)
     else
         affect! = PositiveDomainAffect(abstol, scalefactor, deepcopy(u))

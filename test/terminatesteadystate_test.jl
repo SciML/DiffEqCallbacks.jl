@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, Base.Test, DiffEqBase, DiffEqCallbacks, StaticArrays
+using OrdinaryDiffEq, Test, DiffEqBase, DiffEqCallbacks, StaticArrays
 
 # In-place modification of du (as array)
 model(du,u,t,p) = du .= -0.1.*u

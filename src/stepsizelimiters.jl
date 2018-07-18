@@ -1,4 +1,4 @@
-type StepsizeLimiterAffect{F,T,T2,T3}
+mutable struct StepsizeLimiterAffect{F,T,T2,T3}
   dtFE::F
   cached_dtcache::T
   safety_factor::T2

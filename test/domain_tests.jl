@@ -1,4 +1,4 @@
-using DiffEqCallbacks, OrdinaryDiffEq, Base.Test
+using DiffEqCallbacks, OrdinaryDiffEq, Test
 
 # Non-negative ODE examples
 #
