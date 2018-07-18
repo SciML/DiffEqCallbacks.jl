@@ -43,7 +43,7 @@ function Manifold_initialize(cb,u,t,integrator)
 end
 
 function ManifoldProjection(g; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                            autonomous=numargs(g)==2, nlopts=Dict{Symbol,Any}())
+                            autonomous=DiffEqBase.numargs(g)==2, nlopts=Dict{Symbol,Any}())
   affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
   condtion = (u,t,integrator) -> true
   save_positions = (false,save)

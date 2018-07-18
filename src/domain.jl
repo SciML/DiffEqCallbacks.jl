@@ -206,7 +206,7 @@ end
 # callback definitions
 
 function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                       abstol=nothing, scalefactor=nothing, autonomous=numargs(g)==2,
+                       abstol=nothing, scalefactor=nothing, autonomous=DiffEqBase.numargs(g)==2,
                        nlopts=Dict(:ftol => 10*eps()))
     if typeof(u) <: Void
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)

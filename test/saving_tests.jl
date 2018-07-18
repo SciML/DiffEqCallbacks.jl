@@ -7,6 +7,9 @@ using Base.Test, OrdinaryDiffEq, DiffEqProblemLibrary, DiffEqCallbacks
     using Plots; unicodeplots()
 end
 
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_2Dlinear, prob_ode_linear
+
 # save_everystep, scalar problem
 prob = prob_ode_linear
 saved_values = SavedValues(Float64, Float64)

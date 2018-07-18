@@ -1,4 +1,9 @@
 using OrdinaryDiffEq, DiffEqProblemLibrary, Base.Test, DiffEqBase, DiffEqCallbacks
+
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear
+
+
 prob = prob_ode_linear
 
 time_choice(integrator) = rand()+integrator.t
