@@ -2,7 +2,7 @@ using DiffEqCallbacks
 using Test
 
 # write your own tests here
-tic()
+@time begin
 @time @testset "AutoAbstol" begin include("autoabstol_tests.jl") end
 @time @testset "Domain tests" begin include("domain_tests.jl") end
 @time @testset "TerminateSteadyState tests" begin include("terminatesteadystate_test.jl") end
@@ -12,4 +12,4 @@ tic()
 @time @testset "Saving tests" begin include("saving_tests.jl") end
 @time @testset "Iterative tests" begin include("iterative_tests.jl") end
 @time @testset "Periodic tests" begin include("periodic_tests.jl") end
-toc()
+end
