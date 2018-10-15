@@ -50,7 +50,8 @@ function (affect!::SavingAffect)(integrator,force_save = false)
                 # Expand lazy dense for interpolation
                 ode_addsteps!(integrator)
             end
-            if typeof(integrator.u) <: Union{Number,SArray}
+            # it should really be a mutability trait
+            if typeof(integrator.u) <: Union{Number,SArray, ArrayPartition{T, Tuple{SArray{R, T, N, M}, SArray{R, T, N, M}}} where {T, R, N, M}}
                 curu = integrator(curt)
             else
                 curu = first(get_tmp_cache(integrator))
