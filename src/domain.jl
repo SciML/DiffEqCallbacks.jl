@@ -42,7 +42,6 @@ Apply domain callback `f` to `integrator`.
 function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uType}
     # modify u
     u_modified!(integrator, modify_u!(integrator, f))
-
     # define array of next time step, absolute tolerance, and scale factor
     if uType <: Nothing
         if typeof(integrator.u) <: Union{Number,SArray}

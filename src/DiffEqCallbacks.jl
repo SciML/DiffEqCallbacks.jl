@@ -6,8 +6,8 @@ module DiffEqCallbacks
 
   import Base.Iterators
 
-  import OrdinaryDiffEq: fix_dt_at_bounds!, modify_dt_for_tstops!, ode_addsteps!,
-                         ode_interpolant, NLSOLVEJL_SETUP, ODEIntegrator
+  import OrdinaryDiffEq: fix_dt_at_bounds!, modify_dt_for_tstops!,
+                         NLSOLVEJL_SETUP, ODEIntegrator
 
   include("autoabstol.jl")
   include("manifold.jl")

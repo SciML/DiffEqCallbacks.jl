@@ -37,34 +37,30 @@ solve(prob,Vern7(),callback=cb_t)
 # autodiff=false
 cb_false = ManifoldProjection(g, nlsolve=OrdinaryDiffEq.NLSOLVEJL_SETUP(autodiff=false))
 @test isautonomous(cb_false.affect!)
-@test_broken solve(prob,Vern7(),callback=cb_false)
-@test_broken sol=solve(prob,Vern7(),callback=cb_false)
+solve(prob,Vern7(),callback=cb_false)
+sol=solve(prob,Vern7(),callback=cb_false)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
 cb_t_false = ManifoldProjection(g_t, nlsolve=OrdinaryDiffEq.NLSOLVEJL_SETUP(autodiff=false))
 @test !isautonomous(cb_t_false.affect!)
-@test_broken solve(prob,Vern7(),callback=cb_t_false)
-@test_broken sol_t = solve(prob,Vern7(),callback=cb_t_false)
+solve(prob,Vern7(),callback=cb_t_false)
+sol_t = solve(prob,Vern7(),callback=cb_t_false)
 @test sol_t.u == sol.u && sol_t.t == sol.t
 
 # test array partitions
 u₀ = ArrayPartition(ones(2), ones(2))
 prob = ODEProblem(f, u₀, (0.0, 100.0))
 
-@test_broken sol = solve(prob,Vern7(),callback=cb)
+sol = solve(prob,Vern7(),callback=cb)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
-@test_broken sol = solve(prob,Vern7(),callback=cb_t)
+sol = solve(prob,Vern7(),callback=cb_t)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
 # does not work since Calculus.jl (on which NLsolve.jl depends)
 # implements only Jacobians of vectors
-@test_broken begin
-  sol = solve(prob,Vern7(),callback=cb_false)
-  sol[end][1]^2 + sol[end][2]^2 ≈ 2
-end
+sol = solve(prob,Vern7(),callback=cb_false)
+sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
-@test_broken begin
-  sol = solve(prob,Vern7(),callback=cb_t_false)
-  sol[end][1]^2 + sol[end][2]^2 ≈ 2
-end
+sol = solve(prob,Vern7(),callback=cb_t_false)
+sol[end][1]^2 + sol[end][2]^2 ≈ 2

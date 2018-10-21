@@ -15,7 +15,7 @@ function (affect!::FunctionCallingAffect)(integrator,force_func = false)
         if curt != integrator.t # If <t, interpolate
             if typeof(integrator) <: ODEIntegrator
                 # Expand lazy dense for interpolation
-                ode_addsteps!(integrator)
+                DiffEqBase.addsteps!(integrator)
             end
             if typeof(integrator.u) <: Union{Number,SArray}
                 curu = integrator(curt)
