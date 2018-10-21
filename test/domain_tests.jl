@@ -38,9 +38,7 @@ function g(resid,u)
     resid[1] = u[1] < 0 ? -u[1] : 0
 end
 general_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g, [1.0]))
-# https://github.com/JuliaNLSolvers/NLsolve.jl/issues/189
 @test_broken all(x -> x[1] ≥ -10*eps(), general_sol_absval.u)
-@test_broken all(x -> x[1] ≥ 1e-9, general_sol_absval.u)
 @test general_sol_absval.errors[:l∞] < 9.9e-5
 @test general_sol_absval.errors[:l2] < 4.3e-5
 @test general_sol_absval.errors[:final] < 4.3e-18
