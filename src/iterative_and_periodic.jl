@@ -67,7 +67,7 @@ function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEF
             tnext[] = t
             affect!(integrator)
         else
-            tnext[] = time_choice(integrator)
+            tnext[] = t + Δt
             add_tstop!(integrator, tnext[])
         end
     end
