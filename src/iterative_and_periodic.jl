@@ -2,8 +2,10 @@ function IterativeCallback(time_choice, user_affect!,tType = Float64;
                            initialize = DiffEqBase.INITIALIZE_DEFAULT,
                            initial_affect = false, kwargs...)
     # Value of `t` at which `f` should be called next:
-    tnext = Ref(typemax(tType))
-    condition = (u, t, integrator) -> t == tnext[]
+    tnext = Ref{Union{Nothing,eltype(tType)}}(typemax(tType))
+    condition = function (u, t, integrator)
+      t == tnext[]
+    end
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
@@ -11,14 +13,19 @@ function IterativeCallback(time_choice, user_affect!,tType = Float64;
 
         # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
         tnew = time_choice(integrator)
+        tnew === nothing && (tnext[] = tnew; return)
         tstops = integrator.opts.tstops
         for i in length(tstops) : -1 : 1 # reverse iterate to encounter large elements earlier
             if DataStructures.compare(tstops.comparer, tnew, tstops.valtree[i]) # TODO: relying on implementation details
                 tnext[] = tnew
                 add_tstop!(integrator, tnew)
                 break
+            elseif tstops.valtree[i] == tnew
+              # If it's already a tstop, no need to re-add! This is for the final point
+              tnext[] = tnew
             end
         end
+        nothing
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
