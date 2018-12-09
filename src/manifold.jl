@@ -1,3 +1,6 @@
+# TODO is this necessary and should it be added to REQUIRE?
+using ManifoldProjections
+
 # wrapper for non-autonomous functions
 mutable struct NonAutonomousFunction{F,autonomous}
   f::F
@@ -50,6 +53,14 @@ function ManifoldProjection(g; nlsolve=NLSOLVEJL_SETUP(), save=true,
   DiscreteCallback(condtion, affect!;
                    initialize = Manifold_initialize,
                    save_positions=save_positions)
+end
+
+function ManifoldProjection(M::Mfd; save=true) where {Mfd <: Manifold}
+    affect!(integrator) = retract!(M, integrator.u)
+    condition = (u, t, integrator) -> true
+    save_positions = (false,save)
+    DiscreteCallback(condition, affect!,
+                     save_positions=save_positions)
 end
 
 export ManifoldProjection
