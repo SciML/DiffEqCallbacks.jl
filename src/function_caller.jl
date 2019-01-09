@@ -38,9 +38,9 @@ end
 function functioncalling_initialize(cb, u, t, integrator)
     if cb.affect!.funciter != 0
         if integrator.tdir > 0
-            cb.affect!.funcat = binary_minheap(cb.affect!.funcat_cache)
+            cb.affect!.funcat = BinaryMinHeap(cb.affect!.funcat_cache)
         else
-            cb.affect!.funcat = binary_maxheap(cb.affect!.funcat_cache)
+            cb.affect!.funcat = BinaryMaxHeap(cb.affect!.funcat_cache)
         end
         cb.affect!.funciter = 0
     end
@@ -70,9 +70,9 @@ function FunctionCallingCallback(func;
     # funcat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     funcat_vec = collect(funcat)
     if tdir > 0
-        funcat_internal = binary_minheap(funcat_vec)
+        funcat_internal = BinaryMinHeap(funcat_vec)
     else
-        funcat_internal = binary_maxheap(funcat_vec)
+        funcat_internal = BinaryMaxHeap(funcat_vec)
     end
     affect! = FunctionCallingAffect(func, funcat_internal,
                                     funcat_vec, func_everystep, func_start, 0)

@@ -76,9 +76,9 @@ end
 function saving_initialize(cb, u, t, integrator)
     if cb.affect!.saveiter != 0
         if integrator.tdir > 0
-            cb.affect!.saveat = binary_minheap(cb.affect!.saveat_cache)
+            cb.affect!.saveat = BinaryMinHeap(cb.affect!.saveat_cache)
         else
-            cb.affect!.saveat = binary_maxheap(cb.affect!.saveat_cache)
+            cb.affect!.saveat = BinaryMaxHeap(cb.affect!.saveat_cache)
         end
         cb.affect!.saveiter = 0
     end
@@ -110,9 +110,9 @@ function SavingCallback(save_func, saved_values::SavedValues;
     # saveat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     saveat_vec = collect(saveat)
     if tdir > 0
-        saveat_internal = binary_minheap(saveat_vec)
+        saveat_internal = BinaryMinHeap(saveat_vec)
     else
-        saveat_internal = binary_maxheap(saveat_vec)
+        saveat_internal = BinaryMaxHeap(saveat_vec)
     end
     affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_vec, save_everystep, save_start, 0)
     condtion = (u, t, integrator) -> true
