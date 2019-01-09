@@ -95,7 +95,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
         # abort iteration when time step is not changed
         if dtcache == integrator.dt
             if integrator.opts.verbose
-                warn("Could not restrict values to domain. Iteration was canceled since ",
+                @warn("Could not restrict values to domain. Iteration was canceled since ",
                      "time step dt = ", integrator.dt, " could not be reduced.")
             end
             break
