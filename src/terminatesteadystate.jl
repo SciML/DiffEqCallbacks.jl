@@ -19,7 +19,7 @@ end
 function TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass)
     condition = (u, t, integrator) -> test(integrator, abstol, reltol)
     affect! = (integrator) -> terminate!(integrator)
-    DiscreteCallback(condition, affect!)
+    DiscreteCallback(condition, affect!; save_positions = (true, false))
 end
 
 export TerminateSteadyState
