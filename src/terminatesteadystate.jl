@@ -3,13 +3,21 @@
 #   when derivatives are smaller than a fraction of state
 function allDerivPass(integrator, abstol, reltol)
     if DiffEqBase.isinplace(integrator.sol.prob)
-        du = first(get_tmp_cache(integrator))
-        DiffEqBase.get_du!(du, integrator)
+        testval = first(get_tmp_cache(integrator))
+        DiffEqBase.get_du!(testval, integrator)
+        if typeof(integrator.sol.prob) <: DiffEqBase.DiscreteProblem
+            @. testval =  testval - integrator.u
+        end
     else
-        du = get_du(integrator)
+        testval = get_du(integrator)
+        if typeof(integrator.sol.prob) <: DiffEqBase.DiscreteProblem
+            testval =  testval - integrator.u
+        end
     end
+
     any(abs(d) > abstol && abs(d) > reltol*abs(u) for (d,abstol, reltol, u) =
-           zip(du, Iterators.cycle(abstol), Iterators.cycle(reltol), integrator.u)) && (return false)
+           zip(testval, Iterators.cycle(abstol), Iterators.cycle(reltol), integrator.u)) && (return false)
+    end
     return true
 end
 
