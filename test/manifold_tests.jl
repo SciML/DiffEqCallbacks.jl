@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, Test, DiffEqBase, DiffEqCallbacks, RecursiveArrayTools
+using OrdinaryDiffEq, Test, DiffEqBase, DiffEqCallbacks, RecursiveArrayTools, ManifoldProjections
 
 u0 = ones(2,2)
 f = function (du,u,p,t)
@@ -64,3 +64,31 @@ sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
 sol = solve(prob,Vern7(),callback=cb_t_false)
 sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+# Test using ManifoldProjections.jl
+# Test the equations above now transformed to the complex plane
+u0 = (1+1im) * ones(ComplexF64, 2)
+function f(du,u,p,t)
+  @. du[:] = im * u
+end
+prob = ODEProblem(f,u0,(0.0,100.0))
+
+# Each of the
+S = Sphere(sqrt(2))
+M = PowerManifold(S, (1,), (2,))
+
+sol = solve(prob,Vern7())
+@test !(abs2(sol[end][1]) ≈ 2)
+
+cb = ManifoldProjection(M)
+# @test isautonomous(cb.affect!)
+solve(prob,Vern7(),callback=cb)
+@time sol=solve(prob,Vern7(),callback=cb)
+@test all(abs2.(sol[end]) .≈ 2)
+
+# test array partitions
+u₀ = ArrayPartition([1.0+im], [1.0+im])
+prob = ODEProblem(f, u₀, (0.0, 100.0))
+
+sol = solve(prob,Vern7(),callback=cb)
+@test all(abs2.(sol[end]) .≈ 2)
