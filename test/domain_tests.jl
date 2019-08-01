@@ -24,8 +24,9 @@ for positive initial values ``u₀``.
 function absval(du,u,p,t)
     du[1] = -abs(u[1])
 end
-(::typeof(absval))(::Type{Val{:analytic}}, u₀, p, t) = u₀*exp(-t)
-prob_absval = ODEProblem(absval, [1.0], (0.0, 40.0))
+analytic(u₀, p, t) = u₀*exp(-t)
+ff = ODEFunction(absval,analytic=analytic)
+prob_absval = ODEProblem(ff, [1.0], (0.0, 40.0))
 
 # naive approach leads to large errors
 naive_sol_absval = solve(prob_absval, BS3())

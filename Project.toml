@@ -1,7 +1,7 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "2.6.0"
+version = "2.7.0"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
@@ -14,6 +14,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 julia = "1"
 RecursiveArrayTools = ">=0.20.0"
+OrdinaryDiffEq = "5.13"
 
 [extras]
 DiffEqProblemLibrary = "a077e3f3-b75c-5d7f-a0c6-6bc4c8ec64a9"

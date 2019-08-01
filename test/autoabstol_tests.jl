@@ -21,7 +21,7 @@ solve(prob,BS3(),callback=cb)
 prob2D = prob_ode_2Dlinear
 cb2D = AutoAbstol(init_curmax=zeros(4,2))
 integrator2D_1 = init(prob2D,BS3(),callback=cb,abstol=1e-6)
-integrator2D_2 = init(prob2D,BS3(),callback=cb,abstol=[1e-6 1e-6])
+integrator2D_2 = init(prob2D,BS3(),callback=cb,abstol=fill(1e-6,4,2))
 @test all(integrator2D_2.opts.abstol .== integrator2D_1.opts.abstol)
 step!(integrator2D_1)
 step!(integrator2D_2)
