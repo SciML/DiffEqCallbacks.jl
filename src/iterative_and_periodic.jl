@@ -16,7 +16,13 @@ function IterativeCallback(time_choice, user_affect!,tType = Float64;
         tnew === nothing && (tnext[] = tnew; return)
         tstops = integrator.opts.tstops
         for i in length(tstops) : -1 : 1 # reverse iterate to encounter large elements earlier
-            if DataStructures.compare(tstops.comparer, tnew, tstops.valtree[i]) # TODO: relying on implementation details
+            #=
+            Okay yeah, this is nasty
+            the comparer is always less than for type stability, so in order
+            for this to actually check the correct direction we multiply by
+            tdir
+            =#
+            if DataStructures.compare(tstops.comparer, integrator.tdir*tnew, integrator.tdir*tstops.valtree[i]) # TODO: relying on implementation details
                 tnext[] = tnew
                 add_tstop!(integrator, tnew)
                 break
@@ -58,7 +64,13 @@ function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEF
         tnew = tnext[] + Δt
         tstops = integrator.opts.tstops
         for i in length(tstops) : -1 : 1 # reverse iterate to encounter large elements earlier
-            if DataStructures.compare(tstops.comparer, tnew, tstops.valtree[i]) # TODO: relying on implementation details
+            #=
+            Okay yeah, this is nasty
+            the comparer is always less than for type stability, so in order
+            for this to actually check the correct direction we multiply by
+            tdir
+            =#
+            if DataStructures.compare(tstops.comparer, integrator.tdir*tnew, integrator.tdir*tstops.valtree[i]) # TODO: relying on implementation details
                 tnext[] = tnew
                 add_tstop!(integrator, tnew)
                 break
