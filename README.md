@@ -162,7 +162,7 @@ If `nothing` is returned for the time choice then the iterator ends.
 
 ## PeriodicCallback
 
-`PeriodicCallback` can be used when a function should be called periodically in terms of integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`, `t = tspan[1] + 2Δt`, and so on. This callback can, for example, be used to model a digital controller for an analog system, running at a fixed rate.
+`PeriodicCallback` can be used when a function should be called periodically in terms of integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`, `t = tspan[1] + 2Δt`, and so on. This callback can, for example, be used to model a discrete-time controller for a continuous-time system, running at a fixed rate.
 
 A `PeriodicCallback` can be constructed as follows:
 
