@@ -13,7 +13,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 julia = "1"
-RecursiveArrayTools = ">=0.20.0"
+RecursiveArrayTools = "1"
 OrdinaryDiffEq = "5.13"
 
 [extras]
