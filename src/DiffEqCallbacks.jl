@@ -2,7 +2,8 @@ __precompile__()
 
 module DiffEqCallbacks
 
-  using DiffEqBase, RecursiveArrayTools, DataStructures, RecipesBase, StaticArrays
+  using DiffEqBase, RecursiveArrayTools, DataStructures, RecipesBase, StaticArrays,
+        NLsolve
 
   import Base.Iterators
 
