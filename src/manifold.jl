@@ -1,3 +1,21 @@
+Base.@pure determine_chunksize(u,alg::DiffEqBase.DEAlgorithm) = determine_chunksize(u,get_chunksize(alg))
+Base.@pure function determine_chunksize(u,CS)
+  if CS != 0
+    return CS
+  else
+    return ForwardDiff.pickchunksize(length(u))
+  end
+end  
+
+struct NLSOLVEJL_SETUP{CS,AD} end
+  Base.@pure NLSOLVEJL_SETUP(;chunk_size=0,autodiff=true) = NLSOLVEJL_SETUP{chunk_size,autodiff}()
+  (::NLSOLVEJL_SETUP)(f,u0; kwargs...) = (res=NLsolve.nlsolve(f,u0; kwargs...); res.zero)
+  function (p::NLSOLVEJL_SETUP{CS,AD})(::Type{Val{:init}},f,u0_prototype) where {CS,AD}
+    AD ? autodiff = :forward : autodiff = :central
+    OnceDifferentiable(f, u0_prototype, u0_prototype, autodiff,
+                       ForwardDiff.Chunk(determine_chunksize(u0_prototype,CS)))
+  end
+
 # wrapper for non-autonomous functions
 mutable struct NonAutonomousFunction{F,autonomous}
   f::F
