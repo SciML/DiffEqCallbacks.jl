@@ -18,5 +18,6 @@ module DiffEqCallbacks
   include("saving.jl")
   include("iterative_and_periodic.jl")
   include("terminatesteadystate.jl")
+  include("preset_time.jl")
 
 end # module
