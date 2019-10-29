@@ -152,13 +152,13 @@ A `IterativeCallback` is constructed as follows:
 
 ```julia
 function IterativeCallback(time_choice, user_affect!,tType = Float64;
-                           initialize = DiffEqBase.INITIALIZE_DEFAULT,
                            initial_affect = false, kwargs...)
 ```
 
 where `time_choice(integrator)` determines the time of the next callback and
 `user_affect!` is the effect applied to the integrator at the stopping points.
-If `nothing` is returned for the time choice then the iterator ends.
+If `nothing` is returned for the time choice then the iterator ends. `initial_affect` 
+is whether to apply the affect at `t=0` which defaults to `false`
 
 ## PeriodicCallback
 
@@ -167,10 +167,11 @@ If `nothing` is returned for the time choice then the iterator ends.
 A `PeriodicCallback` can be constructed as follows:
 
 ```julia
-PeriodicCallback(f, Δt::Number; kwargs...)
+PeriodicCallback(f, Δt::Number; initial_affect = true, kwargs...)
 ```
 
-where `f` is the function to be called periodically, `Δt` is the period, and `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
+where `f` is the function to be called periodically, `Δt` is the period, `initial_affect` is whether to apply
+the affect at `t=0` which defaults to `true`, and `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
 
 ## TerminateSteadyState
 
