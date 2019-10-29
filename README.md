@@ -7,9 +7,6 @@
 [![Coverage Status](https://coveralls.io/repos/JuliaDiffEq/DiffEqCallbacks.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiffEq/DiffEqCallbacks.jl?branch=master)
 [![codecov.io](http://codecov.io/github/JuliaDiffEq/DiffEqCallbacks.jl/coverage.svg?branch=master)](http://codecov.io/github/JuliaDiffEq/DiffEqCallbacks.jl?branch=master)
 
-[![DiffEqCallbacks](http://pkg.julialang.org/badges/DiffEqCallbacks_0.5.svg)](http://pkg.julialang.org/?pkg=DiffEqCallbacks)
-[![DiffEqCallbacks](http://pkg.julialang.org/badges/DiffEqCallbacks_0.6.svg)](http://pkg.julialang.org/?pkg=DiffEqCallbacks)
-
 This is a library of callbacks for extending the solvers of DifferentialEquations.jl.
 
 ## Usage
