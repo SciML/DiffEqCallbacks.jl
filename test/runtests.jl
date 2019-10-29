@@ -8,6 +8,7 @@ using Test
 @time @testset "StepsizeLimiter tests" begin include("stepsizelimiter_tests.jl") end
 @time @testset "Function Calling tests" begin include("funccall_tests.jl") end
 @time @testset "Saving tests" begin include("saving_tests.jl") end
+@time @testset "PresetTime tests" begin include("peset_time.jl") end
 @time @testset "Iterative tests" begin include("iterative_tests.jl") end
 @time @testset "Periodic tests" begin include("periodic_tests.jl") end
 @time @testset "Manifold tests" begin include("manifold_tests.jl") end

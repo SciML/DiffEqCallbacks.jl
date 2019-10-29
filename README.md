@@ -141,6 +141,20 @@ SavingCallback(save_func, saved_values::SavedValues;
 The outputted values are saved into `saved_values`. Time points are found via
 `saved_values.t` and the values are `saved_values.saveval`.
 
+## PresetTimeCallback
+
+`PresetTimeCallback` is a callback that adds callback `affect!` calls at preset
+times. No playing around with `tstops` or anything is required: this callback
+adds the triggers for you to make it automatic.
+
+```julia
+PresetTimeCallback(tstops,user_affect!;
+                            initialize = DiffEqBase.INITIALIZE_DEFAULT,
+                            kwargs...)
+```
+
+- `tstops`: the times for the `affect!` to trigger at.
+- `user_affect!`: an `affect!(integrator)` function to use at the time points.
 
 ## IterativeCallback
 
@@ -157,7 +171,7 @@ function IterativeCallback(time_choice, user_affect!,tType = Float64;
 
 where `time_choice(integrator)` determines the time of the next callback and
 `user_affect!` is the effect applied to the integrator at the stopping points.
-If `nothing` is returned for the time choice then the iterator ends. `initial_affect` 
+If `nothing` is returned for the time choice then the iterator ends. `initial_affect`
 is whether to apply the affect at `t=0` which defaults to `false`
 
 ## PeriodicCallback
