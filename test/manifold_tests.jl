@@ -35,13 +35,13 @@ solve(prob,Vern7(),callback=cb_t)
 @test sol_t.u == sol.u && sol_t.t == sol.t
 
 # autodiff=false
-cb_false = ManifoldProjection(g, nlsolve=OrdinaryDiffEq.NLSOLVEJL_SETUP(autodiff=false))
+cb_false = ManifoldProjection(g, nlsolve=DiffEqCallbacks.NLSOLVEJL_SETUP(autodiff=false))
 @test isautonomous(cb_false.affect!)
 solve(prob,Vern7(),callback=cb_false)
 sol=solve(prob,Vern7(),callback=cb_false)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
 
-cb_t_false = ManifoldProjection(g_t, nlsolve=OrdinaryDiffEq.NLSOLVEJL_SETUP(autodiff=false))
+cb_t_false = ManifoldProjection(g_t, nlsolve=DiffEqCallbacks.NLSOLVEJL_SETUP(autodiff=false))
 @test !isautonomous(cb_t_false.affect!)
 solve(prob,Vern7(),callback=cb_t_false)
 sol_t = solve(prob,Vern7(),callback=cb_t_false)
