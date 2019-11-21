@@ -16,7 +16,11 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 ForwardDiff = "0.10"
+DiffEqBase = "6.5"
+NLsolve = "4.2"
+DataStructures = "0.17"
 OrdinaryDiffEq = "5.13"
+RecipesBase = "0.7"
 RecursiveArrayTools = "1"
 julia = "1"
 
