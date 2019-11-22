@@ -19,7 +19,7 @@ just pass it to the solver via the `callback` keyword argument:
 sol = solve(prob,alg;callback=cb)
 ```
 
-For more information on using callbacks, [see the manual page](http://docs.juliadiffeq.org/latest/features/callback_functions.html).
+For more information on using callbacks, [see the manual page](http://docs.juliadiffeq.org/dev/features/callback_functions.html).
 
 ## ManifoldProjection
 
