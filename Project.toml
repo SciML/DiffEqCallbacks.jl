@@ -1,7 +1,7 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "2.10.0"
+version = "2.11.0"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
@@ -16,7 +16,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 ForwardDiff = "0.10"
-DiffEqBase = "6.5"
+DiffEqBase = "6.11"
 NLsolve = "4.2"
 DataStructures = "0.17"
 OrdinaryDiffEq = "5.13"
