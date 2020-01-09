@@ -21,7 +21,7 @@ NLsolve = "4.2"
 DataStructures = "0.17"
 OrdinaryDiffEq = "5.13"
 RecipesBase = "0.7"
-RecursiveArrayTools = "1"
+RecursiveArrayTools = "2"
 StaticArrays = "0.10, 0.11, 0.12"
 julia = "1"
 
