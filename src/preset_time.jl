@@ -1,5 +1,6 @@
 function PresetTimeCallback(tstops,user_affect!;
-                            initialize = DiffEqBase.INITIALIZE_DEFAULT, kwargs...)
+                            initialize = DiffEqBase.INITIALIZE_DEFAULT,
+                            filter_tstops = true, kwargs...)
     condition = function (u, t, integrator)
       t in tstops
     end
@@ -13,7 +14,13 @@ function PresetTimeCallback(tstops,user_affect!;
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_preset = function (c, u, t, integrator)
         initialize(c, u, t, integrator)
-        add_tstop!.((integrator,), tstops)
+        if filter_tstops
+            tdir = integrator.tdir
+            _tstops = tstops[@.((tdir*tstops >= tdir*integrator.sol.prob.tspan[1]) * (tdir*tstops < tdir*integrator.sol.prob.tspan[2]))]
+            add_tstop!.((integrator,), _tstops)
+        else
+            add_tstop!.((integrator,), tstops)
+        end
         if t ∈ tstops
             user_affect!(integrator)
         end
