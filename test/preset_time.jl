@@ -30,3 +30,16 @@ sol = solve(prob,Tsit5(),callback = cb)
 @test 0.3 ∈ sol.t
 @test 0.6 ∈ sol.t
 @test p != startp
+
+notcalled = true
+prob = ODEProblem(some_dynamics,u0,tspan,p)
+cb = PresetTimeCallback([1.2],integrator -> notcalled = false)
+sol = solve(prob,Tsit5(),callback = cb)
+@test notcalled
+
+cb = PresetTimeCallback([1.2],integrator -> begin
+    global notcalled
+    notcalled = false
+    end, filter_tstops = false)
+sol = solve(prob,Tsit5(),callback = cb)
+@test !notcalled
