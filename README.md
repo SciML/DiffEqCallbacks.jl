@@ -147,11 +147,14 @@ adds the triggers for you to make it automatic.
 ```julia
 PresetTimeCallback(tstops,user_affect!;
                             initialize = DiffEqBase.INITIALIZE_DEFAULT,
+                            filter_tstops = true,
                             kwargs...)
 ```
 
 - `tstops`: the times for the `affect!` to trigger at.
 - `user_affect!`: an `affect!(integrator)` function to use at the time points.
+- `filter_tstops`: Whether to filter out tstops beyond the end of the integration timespan.
+  Defaults to true. If false, then tstops can extend the interval of integration.
 
 ## IterativeCallback
 
