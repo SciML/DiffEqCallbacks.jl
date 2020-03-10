@@ -75,7 +75,7 @@ sol = solve(prob2D_inverse, Tsit5(), callback=cb)
 @test all(idx -> abs(sol(saveat[idx])[1] - saved_values.saveval[idx]) < 8.e-15, eachindex(saved_values.t))
 
 # Make sure it doesn't error with mutable in oop
-prob = ODEProblem((u,p,t) -> u, guess, (0.0,1.0))
+prob = ODEProblem((u,p,t) -> u, rand(4,4), (0.0,1.0))
 saved_values = SavedValues(Float64, Tuple{Float64,Float64})
 cb = SavingCallback((u,t,integrator)->(tr(u),norm(u)), saved_values, saveat=0.0:0.1:1.0)
 sol = solve(prob, Tsit5(), callback=cb)
