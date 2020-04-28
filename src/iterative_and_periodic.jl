@@ -53,15 +53,16 @@ export IterativeCallback
 function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEFAULT,
                                          initial_affect = true, kwargs...)
     # Value of `t` at which `f` should be called next:
-    tnext = Ref(typemax(Δt))
-    condition = (u, t, integrator) -> t == tnext[]
+    t0 = Ref(typemax(Δt))
+    index = Ref(0)
+    condition = (u, t, integrator) -> t == (t0[] + index[] * Δt)
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
         f(integrator)
 
         # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
-        tnew = tnext[] + Δt
+        tnew = t0[] + (index[] + 1) * Δt
         tstops = integrator.opts.tstops
         for i in length(tstops) : -1 : 1 # reverse iterate to encounter large elements earlier
             #=
@@ -71,7 +72,7 @@ function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEF
             tdir
             =#
             if DataStructures.compare(tstops.comparer, integrator.tdir*tnew, integrator.tdir*tstops.valtree[i]) # TODO: relying on implementation details
-                tnext[] = tnew
+                index[] += 1
                 add_tstop!(integrator, tnew)
                 break
             end
@@ -82,12 +83,13 @@ function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEF
     initialize_periodic = function (c, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
         initialize(c, u, t, integrator)
+        t0[] = t
         if initial_affect
-            tnext[] = t
+            index[] = 0
             affect!(integrator)
         else
-            tnext[] = t + Δt
-            add_tstop!(integrator, tnext[])
+            index[] = 1
+            add_tstop!(integrator, t0[] + Δt)
         end
     end
 
