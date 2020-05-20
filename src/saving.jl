@@ -4,7 +4,7 @@
 A struct used to save values of the time in `t::Vector{tType}` and
 additional values in `saveval::Vector{savevalType}`.
 """
-struct SavedValues{tType<:Real, savevalType}
+struct SavedValues{tType, savevalType}
     t::Vector{tType}
     saveval::Vector{savevalType}
 end
