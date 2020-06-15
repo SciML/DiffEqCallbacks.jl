@@ -1,7 +1,3 @@
-# Keep ODE solution in a domain specified by a function. Inspired by:
-# Shampine, L.F., S. Thompson, J.A. Kierzenka, and G.D. Byrne, "Non-negative solutions
-# of ODEs," Applied Mathematics and Computation Vol. 170, 2005, pp. 556-569.
-
 # type definitions
 
 abstract type AbstractDomainAffect{T,S,uType} end
@@ -204,6 +200,11 @@ end
 
 # callback definitions
 
+"""
+Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
+“Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
+(2005): 556-569.
+"""
 function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
                        abstol=nothing, scalefactor=nothing, autonomous=DiffEqBase.numargs(g)==2,
                        nlopts=Dict(:ftol => 10*eps()))
@@ -219,6 +220,11 @@ function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
                 DiscreteCallback(condition, affect!; save_positions=(false, save)))
 end
 
+"""
+Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
+“Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
+(2005): 556-569.
+"""
 function PositiveDomain(u=nothing; save=true, abstol=nothing, scalefactor=nothing)
     if typeof(u) <: Nothing
         affect! = PositiveDomainAffect(abstol, scalefactor, nothing)
