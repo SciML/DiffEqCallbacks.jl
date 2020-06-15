@@ -60,6 +60,11 @@ function Manifold_initialize(cb,u,t,integrator)
   u_modified!(integrator,false)
 end
 
+"""
+Ernst Hairer, Christian Lubich, Gerhard Wanner. Geometric Numerical Integration:
+Structure-Preserving Algorithms for Ordinary Differential Equations. Berlin ;
+New York :Springer, 2002.
+"""
 function ManifoldProjection(g; nlsolve=NLSOLVEJL_SETUP(), save=true,
                             autonomous=DiffEqBase.numargs(g)==2, nlopts=Dict{Symbol,Any}())
   affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
