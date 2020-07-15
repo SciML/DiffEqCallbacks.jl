@@ -1,6 +1,9 @@
+
+
 function IterativeCallback(time_choice, user_affect!,tType = Float64;
-                           initialize = DiffEqBase.INITIALIZE_DEFAULT,
-                           initial_affect = false, kwargs...)
+                           initial_affect = false,
+                           initialize = (cb,u,t,integrator) -> u_modified!(integrator, initial_affect),
+                           kwargs...)
     # Value of `t` at which `f` should be called next:
     tnext = Ref{Union{Nothing,eltype(tType)}}(typemax(tType))
     condition = function (u, t, integrator)
@@ -50,8 +53,11 @@ end
 
 export IterativeCallback
 
-function PeriodicCallback(f, Δt::Number; initialize = DiffEqBase.INITIALIZE_DEFAULT,
-                                         initial_affect = true, kwargs...)
+function PeriodicCallback(f, Δt::Number;
+                          initial_affect = false,
+                          initialize = (cb,u,t,integrator) -> u_modified!(integrator, initial_affect),
+                          kwargs...)
+
     # Value of `t` at which `f` should be called next:
     t0 = Ref(typemax(Δt))
     index = Ref(0)
