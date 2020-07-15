@@ -46,7 +46,7 @@ for tmax_problem in [tmax; Inf]
     # Make sure that the components of du have been incremented the appropriate number of times.
     Δts = [Δt1, Δt2]
     expected_num_calls = map(Δts) do Δt
-        floor(Int, (tmax - tmin) / Δt) + 1
+        floor(Int, (tmax - tmin) / Δt)
     end
     @test du == expected_num_calls
 
