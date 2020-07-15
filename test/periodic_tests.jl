@@ -55,3 +55,20 @@ for tmax_problem in [tmax; Inf]
         @test u_i ≈ Δt * sum(1 : du_i - 1) + rem(tmax - tmin, Δt) * du_i atol = 1e-5
     end
 end
+
+function f(du,u,p,t)
+  du[1] = -u[1]
+  du[2] = 0
+end
+
+u0 = [2.0, 0.0]
+function periodic(integrator)
+  integrator.u[2] = integrator.u[1]
+end
+cb = PeriodicCallback(periodic, 0.1, initial_affect = true, save_positions=(true,true))
+tspan = (0.0, 10.0)
+p = nothing
+
+prob = ODEProblem(f,u0,tspan,p)
+sol = solve(prob, Tsit5(), callback = cb)
+@test sol.u[2] == [2.0,2.0]
