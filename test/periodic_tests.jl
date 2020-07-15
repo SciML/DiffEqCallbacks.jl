@@ -56,7 +56,7 @@ for tmax_problem in [tmax; Inf]
     end
 end
 
-function f(du,u,p,t)
+function fff(du,u,p,t)
   du[1] = -u[1]
   du[2] = 0
 end
@@ -69,6 +69,6 @@ cb = PeriodicCallback(periodic, 0.1, initial_affect = true, save_positions=(true
 tspan = (0.0, 10.0)
 p = nothing
 
-prob = ODEProblem(f,u0,tspan,p)
+prob = ODEProblem(fff,u0,tspan,p)
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.u[2] == [2.0,2.0]
