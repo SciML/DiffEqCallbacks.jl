@@ -45,7 +45,9 @@ function IterativeCallback(time_choice, user_affect!,tType = Float64;
             affect!(integrator)
         else
             tnext[] = time_choice(integrator)
-            add_tstop!(integrator, tnext[])
+            if tnext[] != nothing
+                add_tstop!(integrator, tnext[])
+            end
         end
     end
     DiscreteCallback(condition, affect!; initialize = initialize_iterative, kwargs...)
