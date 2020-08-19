@@ -15,7 +15,7 @@ RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-DataStructures = "0.17"
+DataStructures = "0.18"
 DiffEqBase = "6.11"
 ForwardDiff = "0.10"
 NLsolve = "4.2"

@@ -9,7 +9,7 @@ end
 
 function (affect!::FunctionCallingAffect)(integrator,force_func = false)
     # see OrdinaryDiffEq.jl -> integrator_utils.jl, function funcvalues!
-    while !isempty(affect!.funcat) && integrator.tdir*top(affect!.funcat) <= integrator.tdir*integrator.t # Perform funcat
+    while !isempty(affect!.funcat) && integrator.tdir * first(affect!.funcat) <= integrator.tdir * integrator.t # Perform funcat
         affect!.funciter += 1
         curt = pop!(affect!.funcat) # current time
         if curt != integrator.t # If <t, interpolate

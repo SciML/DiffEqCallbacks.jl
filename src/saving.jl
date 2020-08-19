@@ -45,7 +45,7 @@ function (affect!::SavingAffect)(integrator,force_save = false)
 
     just_saved = false
     # see OrdinaryDiffEq.jl -> integrator_utils.jl, function savevalues!
-    while !isempty(affect!.saveat) && integrator.tdir*top(affect!.saveat) <= integrator.tdir*integrator.t # Perform saveat
+    while !isempty(affect!.saveat) && integrator.tdir * first(affect!.saveat) <= integrator.tdir * integrator.t # Perform saveat
         affect!.saveiter += 1
         curt = pop!(affect!.saveat) # current time
         if curt != integrator.t # If <t, interpolate
