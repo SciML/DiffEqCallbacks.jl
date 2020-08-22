@@ -1,5 +1,3 @@
-__precompile__()
-
 module DiffEqCallbacks
 
   using DiffEqBase, RecursiveArrayTools, DataStructures, RecipesBase, StaticArrays,
