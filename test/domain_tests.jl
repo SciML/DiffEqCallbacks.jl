@@ -55,7 +55,7 @@ general_t_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g_t, [1.
 # can guarantee non-negative values
 positive_sol_absval = solve(prob_absval, BS3(); callback=PositiveDomain([1.0]))
 @test_broken all(x -> x[1] ≥ 0, positive_sol_absval.u)
-@test_broken general_sol_absval.t ≈ positive_sol_absval.t
+@test general_sol_absval.t ≈ positive_sol_absval.t
 @test general_sol_absval.errors[:l∞] ≈ positive_sol_absval.errors[:l∞]
 
 # specify abstol as array or scalar
