@@ -5,6 +5,8 @@ module DiffEqCallbacks
 
   import Base.Iterators
 
+  using Parameters: @unpack
+
   import OrdinaryDiffEq: fix_dt_at_bounds!, modify_dt_for_tstops!,
                          ODEIntegrator
 
