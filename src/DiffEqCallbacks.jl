@@ -7,7 +7,7 @@ module DiffEqCallbacks
 
   using Parameters: @unpack
 
-  import SciMLBase: INITIALIZE_DEFAULT
+  import SciMLBase
 
   import OrdinaryDiffEq: fix_dt_at_bounds!, modify_dt_for_tstops!,
                          ODEIntegrator
