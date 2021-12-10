@@ -7,6 +7,8 @@ module DiffEqCallbacks
 
   using Parameters: @unpack
 
+  import DiffEqBase: INITIALIZE_DEFAULT
+
   import OrdinaryDiffEq: fix_dt_at_bounds!, modify_dt_for_tstops!,
                          ODEIntegrator
 
