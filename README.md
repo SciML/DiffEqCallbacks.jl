@@ -194,14 +194,15 @@ by running the solver until the derivatives of the problem converge to 0 or
 the [Steady State Solvers](@ref) section). The constructor of this callback is:
 
 ```julia
-TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass)
+TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass; min_t = nothing)
 ```
 
 where `abstol` and `reltol` are the absolute and relative tolerance, respectively.
 These tolerances may be specified as scalars or as arrays of the same length
 as the states of the problem. `test` represents the function that evaluates the
 condition for termination. The default condition is that all derivatives should
-become smaller than `abstol` and the states times `reltol`. The user
-can pass any other function to implement a different termination condition. Such
+become smaller than `abstol` and the states times `reltol`. `min_t` specifies an
+optional minimum `t` before the steady state calculations are allowed to terminate.
+The user can pass any other function to implement a different termination condition. Such
 function should take four arguments: `integrator` (see [Integrator Interface](@ref)
-for details), `abstol` and `reltol`.
+for details), `abstol`, `reltol`, and `min_t`.
