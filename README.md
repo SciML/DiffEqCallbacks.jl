@@ -194,7 +194,7 @@ by running the solver until the derivatives of the problem converge to 0 or
 the [Steady State Solvers](@ref) section). The constructor of this callback is:
 
 ```julia
-TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass; min_t = nothing)
+TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass, min_t = nothing)
 ```
 
 where `abstol` and `reltol` are the absolute and relative tolerance, respectively.
