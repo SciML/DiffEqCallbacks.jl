@@ -94,8 +94,8 @@ naive_sol_knee = solve(prob_knee, Rodas5())
 
 # positive domain approach
 positive_sol_knee = solve(prob_knee, Rodas5(); callback=PositiveDomain([1.0]))
-@test_broken all(x -> x[1] ≥ 0, positive_sol_knee.u)
-@test positive_sol_knee[1, end] ≈ 0.0
+@test all(x -> x[1] ≥ 0, positive_sol_knee.u)
+@test positive_sol_knee[1, end] ≈ 0.0 atol=1e-5
 
 ## Now test on out-of-place equations
 r, K = 1.1, 10.0
