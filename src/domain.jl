@@ -82,10 +82,6 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
         dtcache = integrator.dt
         integrator.dt *= scalefactor
         dt_modified = true
-
-        # adjust new time step to bounds and time stops
-        fix_dt_at_bounds!(integrator)
-        modify_dt_for_tstops!(integrator)
         t = integrator.t + integrator.dt
 
         # abort iteration when time step is not changed
@@ -101,10 +97,10 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     # update current and next time step
     if dt_modified # add safety factor since guess is based on extrapolation
         set_proposed_dt!(integrator, 9//10*integrator.dt)
+        change_t_via_interpolation!(integrator,t)
     else
         set_proposed_dt!(integrator, integrator.dt)
     end
-    integrator.dt = dt
 end
 
 """
