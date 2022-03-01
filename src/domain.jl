@@ -63,7 +63,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     integrator.dt = get_proposed_dt(integrator)
     t = integrator.t + dt
 
-    while integrator.tdir * integrator.dt > 0
+    while integrator.tdir * dt > 0
         # calculate estimated value of next step and its residuals
         if typeof(u) <: Union{Number,SArray}
             u = integrator(t)
