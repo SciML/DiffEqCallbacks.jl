@@ -78,7 +78,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
         dtcache = integrator.dt
         dt *= scalefactor
         dt_modified = true
-        t = integrator.t + integrator.dt
+        t = integrator.t + dt
 
         # abort iteration when time step is not changed
         if dtcache == integrator.dt
