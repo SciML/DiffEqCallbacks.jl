@@ -60,7 +60,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     p = integrator.p
 
     # update time step of integrator to proposed next time step
-    integrator.dt = get_proposed_dt(integrator)
+    dt = get_proposed_dt(integrator)
     t = integrator.t + dt
 
     while integrator.tdir * dt > 0
