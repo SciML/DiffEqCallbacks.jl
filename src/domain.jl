@@ -61,10 +61,6 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
 
     # update time step of integrator to proposed next time step
     integrator.dt = get_proposed_dt(integrator)
-
-    # adjust time step to bounds and time stops
-    fix_dt_at_bounds!(integrator)
-    modify_dt_for_tstops!(integrator)
     t = integrator.t + integrator.dt
 
     while integrator.tdir * integrator.dt > 0
@@ -80,7 +76,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
 
         # reduce time step
         dtcache = integrator.dt
-        integrator.dt *= scalefactor
+        dt *= scalefactor
         dt_modified = true
         t = integrator.t + integrator.dt
 
