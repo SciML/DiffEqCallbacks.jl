@@ -92,7 +92,6 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     # update current and next time step
     if dt_modified # add safety factor since guess is based on extrapolation
         set_proposed_dt!(integrator, 9//10*dt)
-        change_t_via_interpolation!(integrator,t)
     else
         set_proposed_dt!(integrator, integrator.dt)
     end
