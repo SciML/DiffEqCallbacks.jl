@@ -75,7 +75,6 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
         isaccepted(u, p, t, abstol, f, args...) && break
 
         # reduce time step
-        dtcache = integrator.dt
         dt *= scalefactor
         dt_modified = true
         t = integrator.t + dt
