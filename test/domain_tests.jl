@@ -34,41 +34,39 @@ naive_sol_absval = solve(prob_absval, BS3())
 @test naive_sol_absval.errors[:l2] > 1.3e4
 
 # general domain approach
-# can only guarantee approximately non-negative values
 function g(resid,u)
     resid[1] = u[1] < 0 ? -u[1] : 0
 end
-general_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g, [1.0]))
-@test_broken all(x -> x[1] ≥ -10*eps(), general_sol_absval.u)
+general_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g, [1.0]), save_everystep=false)
+@test all(x -> x[1] ≥ 0, general_sol_absval.u)
 @test general_sol_absval.errors[:l∞] < 9.9e-5
-@test general_sol_absval.errors[:l2] < 4.3e-5
+@test general_sol_absval.errors[:l2] < 4.5e-5
 @test general_sol_absval.errors[:final] < 4.3e-18
 
 # test non-autonomous function
 g_t(resid, u, p, t) = g(resid, u)
 
-general_t_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g_t, [1.0]))
-@test general_sol_absval.t ≈ general_t_sol_absval.t &&
-    general_sol_absval.u ≈ general_t_sol_absval.u
+general_t_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g_t, [1.0]), save_everystep=false)
+@test general_sol_absval.t ≈ general_t_sol_absval.t
+@test general_sol_absval.u ≈ general_t_sol_absval.u
 
 # positive domain approach
-# can guarantee non-negative values
-positive_sol_absval = solve(prob_absval, BS3(); callback=PositiveDomain([1.0]))
-@test_broken all(x -> x[1] ≥ 0, positive_sol_absval.u)
-@test general_sol_absval.t ≈ positive_sol_absval.t
+positive_sol_absval = solve(prob_absval, BS3(); callback=PositiveDomain([1.0]), save_everystep=false)
+@test all(x -> x[1] ≥ 0, positive_sol_absval.u)
 @test general_sol_absval.errors[:l∞] ≈ positive_sol_absval.errors[:l∞]
 
 # specify abstol as array or scalar
-positive_sol_absval2 = solve(prob_absval, BS3(); callback=PositiveDomain([1.0], abstol=[1e-6]))
-@test positive_sol_absval.t ≈ positive_sol_absval2.t &&
-    positive_sol_absval.u ≈ positive_sol_absval2.u
-positive_sol_absval3 = solve(prob_absval, BS3(); callback=PositiveDomain([1.0], abstol=1e-6))
-@test positive_sol_absval.t ≈ positive_sol_absval3.t && positive_sol_absval.u ≈ positive_sol_absval3.u
+positive_sol_absval2 = solve(prob_absval, BS3(); callback=PositiveDomain([1.0], abstol=[1e-9]), save_everystep=false)
+@test all(x -> x[1] ≥ 0, positive_sol_absval2.u)
+@test positive_sol_absval2.errors[:l∞] ≈ positive_sol_absval.errors[:l∞]
+positive_sol_absval3 = solve(prob_absval, BS3(); callback=PositiveDomain([1.0], abstol=1e-9), save_everystep=false)
+@test all(x -> x[1] ≥ 0, positive_sol_absval3.u)
+@test positive_sol_absval3.errors[:l∞] ≈ positive_sol_absval.errors[:l∞]
 
 # specify scalefactor
-positive_sol_absval4 = solve(prob_absval, BS3(); callback=PositiveDomain([1.0], scalefactor=0.2))
-@test length(positive_sol_absval.t) < length(positive_sol_absval4.t)
-@test positive_sol_absval.errors[:l2] > positive_sol_absval4.errors[:l2]
+positive_sol_absval4 = solve(prob_absval, BS3(); callback=PositiveDomain([1.0], scalefactor=0.2), save_everystep=false)
+@test all(x -> x[1] ≥ 0, positive_sol_absval4.u)
+@test positive_sol_absval4.errors[:l∞] ≈ positive_sol_absval.errors[:l∞]
 
 """
 Knee problem
@@ -93,7 +91,7 @@ naive_sol_knee = solve(prob_knee, Rodas5())
 @test naive_sol_knee[1, end] ≈ -1.0 atol=1e-5
 
 # positive domain approach
-positive_sol_knee = solve(prob_knee, Rodas5(); callback=PositiveDomain([1.0]))
+positive_sol_knee = solve(prob_knee, Rodas5(); callback=PositiveDomain([1.0]), save_everystep=false)
 @test all(x -> x[1] ≥ 0, positive_sol_knee.u)
 @test positive_sol_knee[1, end] ≈ 0.0 atol=1e-5
 
