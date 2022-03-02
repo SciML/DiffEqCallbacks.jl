@@ -36,8 +36,10 @@ end
 Apply domain callback `f` to `integrator`.
 """
 function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uType}
-    # modify u
-    u_modified!(integrator, modify_u!(integrator, f))
+    if !SciMLBase.isadaptive(integrator)
+        throw(ArgumentError("domain callback can only be applied to adaptive algorithms"))
+    end
+
     # define array of next time step, absolute tolerance, and scale factor
     if uType <: Nothing
         if typeof(integrator.u) <: Union{Number,SArray}
@@ -54,20 +56,21 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     # setup callback and save addtional arguments for checking next time step
     args = setup(f, integrator)
 
-    # cache current time step
-    dt = integrator.dt
+    # obtain proposed next time step
+    dt = get_proposed_dt(integrator)
+
+    # ensure that t + dt <= first(tstops)
+    tdir = integrator.tdir
+    if OrdinaryDiffEq.has_tstop(integrator)
+        tdir_t = tdir * integrator.t
+        tdir_tstop = OrdinaryDiffEq.first_tstop(integrator)
+        dt = tdir * min(abs(dt), abs(tdir_tstop - tdir_t)) # step! to the end
+    end
+    t = integrator.t + dt
+
     dt_modified = false
     p = integrator.p
-
-    # update time step of integrator to proposed next time step
-    integrator.dt = get_proposed_dt(integrator)
-
-    # adjust time step to bounds and time stops
-    fix_dt_at_bounds!(integrator)
-    modify_dt_for_tstops!(integrator)
-    t = integrator.t + integrator.dt
-
-    while integrator.tdir * integrator.dt > 0
+    while tdir * dt > 0
         # calculate estimated value of next step and its residuals
         if typeof(u) <: Union{Number,SArray}
             u = integrator(t)
@@ -79,20 +82,18 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
         isaccepted(u, p, t, abstol, f, args...) && break
 
         # reduce time step
-        dtcache = integrator.dt
-        integrator.dt *= scalefactor
+        dtcache = dt
+        dt *= scalefactor
         dt_modified = true
+        t = integrator.t + dt
 
-        # adjust new time step to bounds and time stops
-        fix_dt_at_bounds!(integrator)
-        modify_dt_for_tstops!(integrator)
-        t = integrator.t + integrator.dt
-
-        # abort iteration when time step is not changed
-        if dtcache == integrator.dt
+        # abort iteration when time step cannot be reduced any further
+        # TODO: ideally, we would go back and shorten the previous time step instead
+        # of displaying this warning
+        if dtcache == dt
             if integrator.opts.verbose
                 @warn("Could not restrict values to domain. Iteration was canceled since ",
-                     "time step dt = ", integrator.dt, " could not be reduced.")
+                     "proposed time step dt = ", dt, " could not be reduced.")
             end
             break
         end
@@ -100,11 +101,13 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
 
     # update current and next time step
     if dt_modified # add safety factor since guess is based on extrapolation
-        set_proposed_dt!(integrator, 9//10*integrator.dt)
-    else
-        set_proposed_dt!(integrator, integrator.dt)
+        set_proposed_dt!(integrator, 9//10*dt)
     end
-    integrator.dt = dt
+
+    # modify u
+    u_modified!(integrator, modify_u!(integrator, f))
+
+    return
 end
 
 """
@@ -171,8 +174,12 @@ function _set_neg_zero!(integrator,u::SArray)
 end
 
 # state vector is accepted if its entries are greater than -abstol
-isaccepted(u, p, t, abstol::Number, ::PositiveDomainAffect) = all(x -> x + abstol > 0, u)
-isaccepted(u, p, t, abstol, ::PositiveDomainAffect) = all(x + y > 0 for (x,y) in zip(u, abstol))
+isaccepted(u, p, t, abstol::Number, ::PositiveDomainAffect) = all(ui -> ui > -abstol, u)
+function isaccepted(u, p, t, abstol, ::PositiveDomainAffect)
+    length(u) == length(abstol) ||
+        throw(DimensionMismatch("numbers of states and tolerances do not match"))
+    all(ui > -tol for (ui, tol) in zip(u, abstol))
+end
 
 # specific method definitions for general domain callback
 
@@ -194,6 +201,8 @@ function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous,F,T,S,uTy
         all(x-> x < abstol, resid)
     else
         # element-wise comparison
+        length(resid) == length(abstol) ||
+            throw(DimensionMismatch("numbers of residuals and tolerances do not match"))
         all(x < y for (x,y) in zip(resid, abstol))
     end
 end
