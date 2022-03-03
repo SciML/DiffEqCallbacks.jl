@@ -7,14 +7,14 @@ f = function (du,u,p,t)
 end
 prob = ODEProblem(f,u0,(0.0,100.0))
 
-function g(resid,u)
+function g(resid,u,p)
   resid[1] = u[2]^2 + u[1]^2 - 2
   resid[2] = u[3]^2 + u[4]^2 - 2
   resid[3] = 0
   resid[4] = 0
 end
 
-g_t(resid,u,p,t) = g(resid,u)
+g_t(resid,u,p,t) = g(resid,u,p)
 
 isautonomous(p::ManifoldProjection{autonomous,NL}) where {autonomous,NL} = autonomous
 
