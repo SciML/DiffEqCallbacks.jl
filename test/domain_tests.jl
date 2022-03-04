@@ -34,7 +34,7 @@ naive_sol_absval = solve(prob_absval, BS3())
 @test naive_sol_absval.errors[:l2] > 1.3e4
 
 # general domain approach
-function g(resid,u)
+function g(resid,u,p)
     resid[1] = u[1] < 0 ? -u[1] : 0
 end
 general_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g, [1.0]), save_everystep=false)
@@ -43,8 +43,8 @@ general_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g, [1.0]),
 @test general_sol_absval.errors[:l2] < 4.5e-5
 @test general_sol_absval.errors[:final] < 4.3e-18
 
-# test non-autonomous function
-g_t(resid, u, p, t) = g(resid, u)
+# test "non-autonomous" function
+g_t(resid, u, p, t) = g(resid, u, p)
 
 general_t_sol_absval = solve(prob_absval, BS3(); callback=GeneralDomain(g_t, [1.0]), save_everystep=false)
 @test general_sol_absval.t ≈ general_t_sol_absval.t

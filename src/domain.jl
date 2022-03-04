@@ -191,7 +191,7 @@ function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous,F,T,S,uTy
                     resid) where {autonomous,F,T,S,uType}
     # calculate residuals
     if autonomous
-        f.g(resid, u)
+        f.g(resid, u, p)
     else
         f.g(resid, u, p, t)
     end
@@ -215,7 +215,7 @@ Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 (2005): 556-569.
 """
 function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                       abstol=nothing, scalefactor=nothing, autonomous=DiffEqBase.numargs(g)==2,
+                       abstol=nothing, scalefactor=nothing, autonomous=DiffEqBase.numargs(g)==3,
                        nlopts=Dict(:ftol => 10*eps()))
     if typeof(u) <: Nothing
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)

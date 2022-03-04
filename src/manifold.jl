@@ -22,7 +22,7 @@ mutable struct NonAutonomousFunction{F,autonomous}
   t
   p
 end
-(p::NonAutonomousFunction{F,true})(res,u) where F = p.f(res, u)
+(p::NonAutonomousFunction{F,true})(res,u) where F = p.f(res, u, p.p)
 (p::NonAutonomousFunction{F,false})(res,u) where F = p.f(res, u, p.p, p.t)
 
 mutable struct ManifoldProjection{autonomous,F,NL,O}
@@ -66,7 +66,7 @@ Structure-Preserving Algorithms for Ordinary Differential Equations. Berlin ;
 New York :Springer, 2002.
 """
 function ManifoldProjection(g; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                            autonomous=DiffEqBase.numargs(g)==2, nlopts=Dict{Symbol,Any}())
+                            autonomous=DiffEqBase.numargs(g)==3, nlopts=Dict{Symbol,Any}())
   affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
   condtion = (u,t,integrator) -> true
   save_positions = (false,save)
