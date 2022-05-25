@@ -49,7 +49,7 @@ function (affect!::SavingAffect)(integrator,force_save = false)
         affect!.saveiter += 1
         curt = pop!(affect!.saveat) # current time
         if curt != integrator.t # If <t, interpolate
-            if typeof(integrator) <: ODEIntegrator
+            if integrator isa SciMLBase.AbstractODEIntegrator
                 # Expand lazy dense for interpolation
                 DiffEqBase.addsteps!(integrator)
             end
