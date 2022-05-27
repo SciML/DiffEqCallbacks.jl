@@ -13,7 +13,7 @@ function (affect!::FunctionCallingAffect)(integrator,force_func = false)
         affect!.funciter += 1
         curt = pop!(affect!.funcat) # current time
         if curt != integrator.t # If <t, interpolate
-            if typeof(integrator) <: ODEIntegrator
+            if integrator isa SciMLBase.AbstractODEIntegrator
                 # Expand lazy dense for interpolation
                 DiffEqBase.addsteps!(integrator)
             end

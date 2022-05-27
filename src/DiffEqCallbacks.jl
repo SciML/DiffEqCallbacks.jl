@@ -9,9 +9,6 @@ module DiffEqCallbacks
 
   import SciMLBase
 
-  import OrdinaryDiffEq
-  using OrdinaryDiffEq: ODEIntegrator
-
   include("autoabstol.jl")
   include("manifold.jl")
   include("domain.jl")

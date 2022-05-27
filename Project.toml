@@ -9,7 +9,6 @@ DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
@@ -21,7 +20,7 @@ DataStructures = "0.18"
 DiffEqBase = "6.11"
 ForwardDiff = "0.10"
 NLsolve = "4.2"
-OrdinaryDiffEq = "5.13, 6"
+OrdinaryDiffEq = "6.14"
 Parameters = "0.12"
 RecipesBase = "0.7, 0.8, 1.0"
 RecursiveArrayTools = "2"
@@ -32,8 +31,9 @@ julia = "1.6"
 [extras]
 DiffEqProblemLibrary = "a077e3f3-b75c-5d7f-a0c6-6bc4c8ec64a9"
 DiffEqSensitivity = "41bf760c-e81c-5289-8e54-58b1f1f8abe2"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
 [targets]
-test = ["DiffEqProblemLibrary", "Test", "DiffEqSensitivity", "Tracker"]
+test = ["OrdinaryDiffEq", "DiffEqProblemLibrary", "Test", "DiffEqSensitivity", "Tracker"]

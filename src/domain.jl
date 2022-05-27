@@ -61,9 +61,9 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
 
     # ensure that t + dt <= first(tstops)
     tdir = integrator.tdir
-    if OrdinaryDiffEq.has_tstop(integrator)
+    if SciMLBase.has_tstop(integrator)
         tdir_t = tdir * integrator.t
-        tdir_tstop = OrdinaryDiffEq.first_tstop(integrator)
+        tdir_tstop = SciMLBase.first_tstop(integrator)
         dt = tdir * min(abs(dt), abs(tdir_tstop - tdir_t)) # step! to the end
     end
     t = integrator.t + dt
