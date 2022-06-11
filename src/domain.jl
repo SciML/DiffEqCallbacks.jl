@@ -215,7 +215,7 @@ Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 (2005): 556-569.
 """
 function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                       abstol=nothing, scalefactor=nothing, autonomous=DiffEqBase.numargs(g)==3,
+                       abstol=nothing, scalefactor=nothing, autonomous=maximum(SciMLBase.numargs(g))==3,
                        nlopts=Dict(:ftol => 10*eps()))
     if typeof(u) <: Nothing
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
