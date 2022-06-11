@@ -66,7 +66,7 @@ Structure-Preserving Algorithms for Ordinary Differential Equations. Berlin ;
 New York :Springer, 2002.
 """
 function ManifoldProjection(g; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                            autonomous=DiffEqBase.numargs(g)==3, nlopts=Dict{Symbol,Any}())
+                            autonomous=maximum(SciMLBase.numargs(g))==3, nlopts=Dict{Symbol,Any}())
   affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
   condtion = (u,t,integrator) -> true
   save_positions = (false,save)
