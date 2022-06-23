@@ -16,7 +16,7 @@ for tmax_problem in [tmax; Inf]
 
     # Dynamics: two independent single integrators:
     du = [0; 0]
-    u0 = [0.; 0.]
+    u0 = [0.0; 0.0]
     dynamics = (u, p, t) -> eltype(u).(du)
     prob = ODEProblem(dynamics, u0, (tmin, tmax_problem))
 
@@ -27,7 +27,7 @@ for tmax_problem in [tmax; Inf]
     initialize1 = (c, u, t, integrator) -> periodic1_initialized[] = true
     periodic1 = PeriodicCallback(increase_du_1, Δt1; initialize = initialize1)
 
-    Δt2 = 1.
+    Δt2 = 1.0
     increase_du_2 = integrator -> du[2] += 1
     periodic2 = PeriodicCallback(increase_du_2, Δt2)
 
@@ -35,7 +35,8 @@ for tmax_problem in [tmax; Inf]
     terminator = DiscreteCallback((u, t, integrator) -> t == tmax, terminate!)
 
     # Solve.
-    sol = solve(prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2), tstops = [tmax])
+    sol = solve(prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2),
+                tstops = [tmax])
 
     # Ensure that initialize1 has been called
     @test periodic1_initialized[]
@@ -52,23 +53,23 @@ for tmax_problem in [tmax; Inf]
 
     # Make sure that the final state matches manual integration of the piecewise linear function
     foreach(Δts, sol.u[end], du) do Δt, u_i, du_i
-        @test u_i ≈ Δt * sum(1 : du_i - 1) + rem(tmax - tmin, Δt) * du_i atol = 1e-5
+        @test u_i≈Δt * sum(1:(du_i - 1)) + rem(tmax - tmin, Δt) * du_i atol=1e-5
     end
 end
 
-function fff(du,u,p,t)
-  du[1] = -u[1]
-  du[2] = 0
+function fff(du, u, p, t)
+    du[1] = -u[1]
+    du[2] = 0
 end
 
 u0 = [2.0, 0.0]
 function periodic(integrator)
-  integrator.u[2] = integrator.u[1]
+    integrator.u[2] = integrator.u[1]
 end
-cb = PeriodicCallback(periodic, 0.1, initial_affect = true, save_positions=(true,true))
+cb = PeriodicCallback(periodic, 0.1, initial_affect = true, save_positions = (true, true))
 tspan = (0.0, 10.0)
 p = nothing
 
-prob = ODEProblem(fff,u0,tspan,p)
+prob = ODEProblem(fff, u0, tspan, p)
 sol = solve(prob, Tsit5(), callback = cb)
-@test sol.u[2] == [2.0,2.0]
+@test sol.u[2] == [2.0, 2.0]

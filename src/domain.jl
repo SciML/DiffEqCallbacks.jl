@@ -1,14 +1,14 @@
 # type definitions
 
-abstract type AbstractDomainAffect{T,S,uType} end
+abstract type AbstractDomainAffect{T, S, uType} end
 
-struct PositiveDomainAffect{T,S,uType} <: AbstractDomainAffect{T,S,uType}
+struct PositiveDomainAffect{T, S, uType} <: AbstractDomainAffect{T, S, uType}
     abstol::T
     scalefactor::S
     u::uType
 end
 
-struct GeneralDomainAffect{autonomous,F,T,S,uType} <: AbstractDomainAffect{T,S,uType}
+struct GeneralDomainAffect{autonomous, F, T, S, uType} <: AbstractDomainAffect{T, S, uType}
     g::F
     abstol::T
     scalefactor::S
@@ -16,8 +16,9 @@ struct GeneralDomainAffect{autonomous,F,T,S,uType} <: AbstractDomainAffect{T,S,u
     resid::uType
 
     function GeneralDomainAffect{autonomous}(g::F, abstol::T, scalefactor::S, u::uType,
-                                             resid::uType) where {autonomous,F,T,S,uType}
-        new{autonomous,F,T,S,uType}(g, abstol, scalefactor, u, resid)
+                                             resid::uType) where {autonomous, F, T, S, uType
+                                                                  }
+        new{autonomous, F, T, S, uType}(g, abstol, scalefactor, u, resid)
     end
 end
 
@@ -35,14 +36,14 @@ end
 
 Apply domain callback `f` to `integrator`.
 """
-function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uType}
+function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, uType}
     if !SciMLBase.isadaptive(integrator)
         throw(ArgumentError("domain callback can only be applied to adaptive algorithms"))
     end
 
     # define array of next time step, absolute tolerance, and scale factor
     if uType <: Nothing
-        if typeof(integrator.u) <: Union{Number,SArray}
+        if typeof(integrator.u) <: Union{Number, SArray}
             u = integrator.u
         else
             u = similar(integrator.u)
@@ -51,7 +52,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
         u = f.u
     end
     abstol = T <: Nothing ? integrator.opts.abstol : f.abstol
-    scalefactor = S <: Nothing ? 1//2 : f.scalefactor
+    scalefactor = S <: Nothing ? 1 // 2 : f.scalefactor
 
     # setup callback and save addtional arguments for checking next time step
     args = setup(f, integrator)
@@ -72,7 +73,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
     p = integrator.p
     while tdir * dt > 0
         # calculate estimated value of next step and its residuals
-        if typeof(u) <: Union{Number,SArray}
+        if typeof(u) <: Union{Number, SArray}
             u = integrator(t)
         else
             integrator(u, t)
@@ -93,7 +94,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
         if dtcache == dt
             if integrator.opts.verbose
                 @warn("Could not restrict values to domain. Iteration was canceled since ",
-                     "proposed time step dt = ", dt, " could not be reduced.")
+                      "proposed time step dt = ", dt, " could not be reduced.")
             end
             break
         end
@@ -101,7 +102,7 @@ function affect!(integrator, f::AbstractDomainAffect{T,S,uType}) where {T,S,uTyp
 
     # update current and next time step
     if dt_modified # add safety factor since guess is based on extrapolation
-        set_proposed_dt!(integrator, 9//10*dt)
+        set_proposed_dt!(integrator, 9 // 10 * dt)
     end
 
     # modify u
@@ -138,10 +139,10 @@ isaccepted(u, p, t, tolerance, ::AbstractDomainAffect, args...) = true
 
 function modify_u!(integrator, f::PositiveDomainAffect)
     # set all negative values to zero
-    _set_neg_zero!(integrator,integrator.u) # Returns true if modified
+    _set_neg_zero!(integrator, integrator.u) # Returns true if modified
 end
 
-function _set_neg_zero!(integrator,u::AbstractArray)
+function _set_neg_zero!(integrator, u::AbstractArray)
     modified = false
     @inbounds for i in eachindex(integrator.u)
         if integrator.u[i] < 0
@@ -152,7 +153,7 @@ function _set_neg_zero!(integrator,u::AbstractArray)
     modified
 end
 
-function _set_neg_zero!(integrator,u::Number)
+function _set_neg_zero!(integrator, u::Number)
     modified = false
     if integrator.u < 0
         integrator.u = 0
@@ -161,11 +162,11 @@ function _set_neg_zero!(integrator,u::Number)
     modified
 end
 
-function _set_neg_zero!(integrator,u::SArray)
+function _set_neg_zero!(integrator, u::SArray)
     modified = false
     @inbounds for i in eachindex(integrator.u)
         if u[i] < 0
-            u = setindex(u,zero(first(u)),i)
+            u = setindex(u, zero(first(u)), i)
             modified = true
         end
     end
@@ -184,11 +185,12 @@ end
 # specific method definitions for general domain callback
 
 # create array of residuals
-setup(f::GeneralDomainAffect, integrator) =
+function setup(f::GeneralDomainAffect, integrator)
     typeof(f.resid) <: Nothing ? (similar(integrator.u),) : (f.resid,)
+end
 
-function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous,F,T,S,uType},
-                    resid) where {autonomous,F,T,S,uType}
+function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous, F, T, S, uType},
+                    resid) where {autonomous, F, T, S, uType}
     # calculate residuals
     if autonomous
         f.g(resid, u, p)
@@ -198,12 +200,12 @@ function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous,F,T,S,uTy
 
     # accept time step if residuals are smaller than the tolerance
     if typeof(abstol) <: Number
-        all(x-> x < abstol, resid)
+        all(x -> x < abstol, resid)
     else
         # element-wise comparison
         length(resid) == length(abstol) ||
             throw(DimensionMismatch("numbers of residuals and tolerances do not match"))
-        all(x < y for (x,y) in zip(resid, abstol))
+        all(x < y for (x, y) in zip(resid, abstol))
     end
 end
 
@@ -214,19 +216,20 @@ Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 “Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
 (2005): 556-569.
 """
-function GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                       abstol=nothing, scalefactor=nothing, autonomous=maximum(SciMLBase.numargs(g))==3,
-                       nlopts=Dict(:ftol => 10*eps()))
+function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
+                       abstol = nothing, scalefactor = nothing,
+                       autonomous = maximum(SciMLBase.numargs(g)) == 3,
+                       nlopts = Dict(:ftol => 10 * eps()))
     if typeof(u) <: Nothing
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
     else
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, deepcopy(u),
                                                   deepcopy(u))
     end
-    condition = (u,t,integrator) -> true
-    CallbackSet(ManifoldProjection(g; nlsolve=nlsolve, save=false,
-                                   autonomous=autonomous, nlopts=nlopts),
-                DiscreteCallback(condition, affect!; save_positions=(false, save)))
+    condition = (u, t, integrator) -> true
+    CallbackSet(ManifoldProjection(g; nlsolve = nlsolve, save = false,
+                                   autonomous = autonomous, nlopts = nlopts),
+                DiscreteCallback(condition, affect!; save_positions = (false, save)))
 end
 
 """
@@ -234,14 +237,14 @@ Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 “Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
 (2005): 556-569.
 """
-function PositiveDomain(u=nothing; save=true, abstol=nothing, scalefactor=nothing)
+function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
     if typeof(u) <: Nothing
         affect! = PositiveDomainAffect(abstol, scalefactor, nothing)
     else
         affect! = PositiveDomainAffect(abstol, scalefactor, deepcopy(u))
     end
-    condition = (u,t,integrator) -> true
-    DiscreteCallback(condition, affect!; save_positions=(false, save))
+    condition = (u, t, integrator) -> true
+    DiscreteCallback(condition, affect!; save_positions = (false, save))
 end
 
 export GeneralDomain, PositiveDomain
