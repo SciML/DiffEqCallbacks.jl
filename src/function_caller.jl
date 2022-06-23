@@ -1,4 +1,4 @@
-mutable struct FunctionCallingAffect{funcFunc, funcatType, funcatCacheType}
+mutable struct FunctionCallingAffect{funcFunc,funcatType,funcatCacheType}
     func::funcFunc
     funcat::funcatType
     funcat_cache::funcatCacheType
@@ -7,9 +7,10 @@ mutable struct FunctionCallingAffect{funcFunc, funcatType, funcatCacheType}
     funciter::Int
 end
 
-function (affect!::FunctionCallingAffect)(integrator,force_func = false)
+function (affect!::FunctionCallingAffect)(integrator, force_func = false)
     # see OrdinaryDiffEq.jl -> integrator_utils.jl, function funcvalues!
-    while !isempty(affect!.funcat) && integrator.tdir * first(affect!.funcat) <= integrator.tdir * integrator.t # Perform funcat
+    while !isempty(affect!.funcat) &&
+        integrator.tdir * first(affect!.funcat) <= integrator.tdir * integrator.t # Perform funcat
         affect!.funciter += 1
         curt = pop!(affect!.funcat) # current time
         if curt != integrator.t # If <t, interpolate
@@ -21,7 +22,7 @@ function (affect!::FunctionCallingAffect)(integrator,force_func = false)
                 curu = integrator(curt)
             else
                 curu = first(get_tmp_cache(integrator))
-                integrator(curu,curt) # inplace since func_func allocates
+                integrator(curu, curt) # inplace since func_func allocates
             end
             affect!.func(curu, curt, integrator)
         else # ==t, just func
@@ -62,11 +63,13 @@ interpolation if necessary.
 If the time `tdir` direction is not positive, i.e. `tspan[1] > tspan[2]`,
 `tdir = -1` has to be specified.
 """
-function FunctionCallingCallback(func;
-                        funcat=Vector{Float64}(),
-                        func_everystep=isempty(funcat),
-                        func_start = true,
-                        tdir=1)
+function FunctionCallingCallback(
+    func;
+    funcat = Vector{Float64}(),
+    func_everystep = isempty(funcat),
+    func_start = true,
+    tdir = 1,
+)
     # funcat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     funcat_vec = collect(funcat)
     if tdir > 0
@@ -74,12 +77,21 @@ function FunctionCallingCallback(func;
     else
         funcat_internal = BinaryMaxHeap(funcat_vec)
     end
-    affect! = FunctionCallingAffect(func, funcat_internal,
-                                    funcat_vec, func_everystep, func_start, 0)
+    affect! = FunctionCallingAffect(
+        func,
+        funcat_internal,
+        funcat_vec,
+        func_everystep,
+        func_start,
+        0,
+    )
     condtion = (u, t, integrator) -> true
-    DiscreteCallback(condtion, affect!;
-                     initialize = functioncalling_initialize,
-                     save_positions=(false,false))
+    DiscreteCallback(
+        condtion,
+        affect!;
+        initialize = functioncalling_initialize,
+        save_positions = (false, false),
+    )
 end
 
 

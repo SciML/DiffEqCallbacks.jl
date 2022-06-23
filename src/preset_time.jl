@@ -1,9 +1,13 @@
-function PresetTimeCallback(tstops,user_affect!;
-                            initialize = SciMLBase.INITIALIZE_DEFAULT,
-                            filter_tstops = true, kwargs...)
+function PresetTimeCallback(
+    tstops,
+    user_affect!;
+    initialize = SciMLBase.INITIALIZE_DEFAULT,
+    filter_tstops = true,
+    kwargs...,
+)
 
     condition = function (u, t, integrator)
-      t in tstops
+        t in tstops
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
@@ -17,7 +21,10 @@ function PresetTimeCallback(tstops,user_affect!;
         initialize(c, u, t, integrator)
         if filter_tstops
             tdir = integrator.tdir
-            _tstops = tstops[@.((tdir*tstops > tdir*integrator.sol.prob.tspan[1]) * (tdir*tstops < tdir*integrator.sol.prob.tspan[2]))]
+            _tstops = tstops[@.(
+                (tdir * tstops > tdir * integrator.sol.prob.tspan[1]) *
+                (tdir * tstops < tdir * integrator.sol.prob.tspan[2])
+            )]
             add_tstop!.((integrator,), _tstops)
         else
             add_tstop!.((integrator,), tstops)

@@ -6,20 +6,23 @@ function allDerivPass(integrator, abstol, reltol, min_t)
         testval = first(get_tmp_cache(integrator))
         DiffEqBase.get_du!(testval, integrator)
         if typeof(integrator.sol.prob) <: DiffEqBase.DiscreteProblem
-            @. testval =  testval - integrator.u
+            @. testval = testval - integrator.u
         end
     else
         testval = get_du(integrator)
         if typeof(integrator.sol.prob) <: DiffEqBase.DiscreteProblem
-            testval =  testval - integrator.u
+            testval = testval - integrator.u
         end
     end
 
     if typeof(integrator.u) <: Array
-        any(abs(d) > abstol && abs(d) > reltol*abs(u) for (d,abstol, reltol, u) =
-           zip(testval, Iterators.cycle(abstol), Iterators.cycle(reltol), integrator.u)) && (return false)
+        any(
+            abs(d) > abstol && abs(d) > reltol * abs(u) for (d, abstol, reltol, u) in
+                zip(testval, Iterators.cycle(abstol), Iterators.cycle(reltol), integrator.u)
+        ) && (return false)
     else
-        any((abs.(testval) .> abstol) .& (abs.(testval) .> reltol .* abs.(integrator.u))) && (return false)
+        any((abs.(testval) .> abstol) .& (abs.(testval) .> reltol .* abs.(integrator.u))) &&
+            (return false)
     end
 
     if min_t === nothing
@@ -32,8 +35,12 @@ end
 # Allow user-defined tolerances and test functions but use sensible defaults
 # test function must take integrator, time, followed by absolute
 #   and relative tolerance and return true/false
-function TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass;
-                              min_t = nothing)
+function TerminateSteadyState(
+    abstol = 1e-8,
+    reltol = 1e-6,
+    test = allDerivPass;
+    min_t = nothing,
+)
     condition = (u, t, integrator) -> test(integrator, abstol, reltol, min_t)
     affect! = (integrator) -> terminate!(integrator)
     DiscreteCallback(condition, affect!; save_positions = (true, false))
