@@ -30,10 +30,10 @@ julia = "1.6"
 
 [extras]
 DiffEqProblemLibrary = "a077e3f3-b75c-5d7f-a0c6-6bc4c8ec64a9"
-DiffEqSensitivity = "41bf760c-e81c-5289-8e54-58b1f1f8abe2"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+SciMLSensitivity = "1ed8b502-d754-442c-8d5d-10ac956f44a1"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
 [targets]
-test = ["OrdinaryDiffEq", "DiffEqProblemLibrary", "Test", "DiffEqSensitivity", "Tracker"]
+test = ["OrdinaryDiffEq", "DiffEqProblemLibrary", "Test", "SciMLSensitivity", "Tracker"]
