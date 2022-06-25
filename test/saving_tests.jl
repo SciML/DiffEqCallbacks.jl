@@ -1,5 +1,5 @@
 using Test, OrdinaryDiffEq, DiffEqProblemLibrary, DiffEqCallbacks, LinearAlgebra,
-      DiffEqSensitivity, Tracker
+      SciMLSensitivity, Tracker
 import LinearAlgebra: norm
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
