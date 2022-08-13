@@ -1,4 +1,22 @@
+"""
+```julia
+function IterativeCallback(time_choice, user_affect!,tType = Float64;
+                           initial_affect = false, kwargs...)
+```
 
+A callback to be used to iteratively apply some affect. For example, if given the first
+effect at `t₁`, you can define `t₂` to apply the next effect.
+
+## Arguments
+
+- `time_choice(integrator)` determines the time of the next callback. If `nothing` is
+  returned for the time choice then the iterator ends.
+- `user_affect!` is the effect applied to the integrator at the stopping points.
+
+## Keyword Arguments
+
+- `initial_affect` is whether to apply the affect at `t=0` which defaults to `false`
+"""
 function IterativeCallback(time_choice, user_affect!, tType = Float64;
                            initial_affect = false,
                            initialize = (cb, u, t, integrator) -> u_modified!(integrator,
@@ -89,6 +107,26 @@ function (S::PeriodicCallbackAffect)(integrator)
     end
 end
 
+"""
+```julia
+PeriodicCallback(f, Δt::Number; initial_affect = true, kwargs...)
+```
+
+`PeriodicCallback` can be used when a function should be called periodically in terms of
+integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`,
+`t = tspan[1] + 2Δt`, and so on. This callback can, for example, be used to model a
+discrete-time controller for a continuous-time system, running at a fixed rate.
+
+## Arguments
+
+- `f` the `affect!(integrator)` function to be called periodically
+- `Δt` is the period, `initial_affect` is whether to apply the affect at `t=0` which
+  defaults to `false`
+
+## Keyword Arguments
+
+- `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
+"""
 function PeriodicCallback(f, Δt::Number;
                           initial_affect = false,
                           initialize = (cb, u, t, integrator) -> u_modified!(integrator,

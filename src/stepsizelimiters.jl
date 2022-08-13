@@ -27,6 +27,30 @@ function StepsizeLimiter_initialize(cb, u, t, integrator)
     cb.affect!(integrator)
 end
 
+@doc doc"""
+```julia
+StepsizeLimiter(dtFE;safety_factor=9//10,max_step=false,cached_dtcache=0.0)
+```
+
+In many cases there is a known maximal stepsize for which the computation is
+stable and produces correct results. For example, in hyperbolic PDEs one normally
+needs to ensure that the stepsize stays below some ``\Delta t_{FE}`` determined
+by the CFL condition. For nonlinear hyperbolic PDEs this limit can be a function
+`dtFE(u,p,t)` which changes throughout the computation. The stepsize limiter lets
+you pass a function which will adaptively limit the stepsizes to match these
+constraints.
+
+## Arguments
+
+- `dtFE` is the maximal timestep and is calculated using the previous `t` and `u`.
+
+## Keyword Arguments
+
+- `safety_factor` is the factor below the true maximum that will be stepped to
+  which defaults to `9//10`. `max_step=true` makes every step equal to
+- `safety_factor*dtFE(u,p,t)` when the solver is set to `adaptive=false`. `cached_dtcache`
+  should be set to match the type for time when not using Float64 values.
+"""
 function StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
                          cached_dtcache = 0.0)
     affect! = StepsizeLimiterAffect(dtFE, cached_dtcache, safety_factor, max_step)

@@ -212,8 +212,53 @@ end
 # callback definitions
 
 """
+```julia
+GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
+                       abstol=nothing, scalefactor=nothing, autonomous=numargs(g)==2,
+                       nlopts=Dict(:ftol => 10*eps()))
+```
+
+A `GeneralDomain` callback in DiffEqCallbacks.jl generalizes the concept of
+a `PositiveDomain` callback to arbitrary domains. Domains are specified by
+in-place functions `g(u, resid)` or `g(t, u, resid)` that calculate residuals of a
+state vector `u` at time `t` relative to that domain. As for `PositiveDomain`, steps
+are accepted if residuals of the extrapolated values at the next time step are below
+a certain tolerance. Moreover, this callback is automatically coupled with a
+`ManifoldProjection` that keeps all calculated state vectors close to the desired
+domain, but in contrast to a `PositiveDomain` callback the nonlinear solver in a
+`ManifoldProjection` can not guarantee that all state vectors of the solution are
+actually inside the domain. Thus a `PositiveDomain` callback should in general be
+preferred.
+
+## Arguments
+
+- `g`: the implicit definition of the domain as a function `g(resid, u, p)` or
+  `g(resid, u, p, t)` which is zero when the value is in the domain.
+- `u`: A prototype of the state vector of the integrator. A copy of it is saved and
+  extrapolated values are written to it. If it is not specified
+  every application of the callback allocates a new copy of the state vector.
+
+## Keyword Arguments
+
+- `nlsolve`: A nonlinear solver as defined [in the nlsolve format](@ref linear_nonlinear)
+  which is passed to a `ManifoldProjection`.
+- `save`: Whether to do the standard saving (applied after the callback).
+- `abstol`: Tolerance up to which residuals are accepted. Element-wise tolerances
+  are allowed. If it is not specified every application of the callback uses the
+  current absolute tolerances of the integrator.
+- `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
+  specified time steps are halved.
+- `autonomous`: Whether `g` is an autonomous function of the form `g(u, resid)`.
+- `nlopts`: Optional arguments to nonlinear solver of a `ManifoldProjection` which
+  can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
+  The default value of `ftol = 10*eps()` ensures that convergence is only declared
+  if the infinite norm of residuals is very small and hence the state vector is very
+  close to the domain.
+
+## References
+
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
-“Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
+Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
@@ -232,9 +277,65 @@ function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
                 DiscreteCallback(condition, affect!; save_positions = (false, save)))
 end
 
-"""
+@doc doc"""
+```julia
+PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
+```
+
+Especially in biology and other natural sciences, a desired property of
+dynamical systems is the positive invariance of the positive cone, i.e.
+non-negativity of variables at time ``t_0`` ensures their non-negativity at times
+``t \geq t_0`` for which the solution is defined. However, even if a system
+satisfies this property mathematically it can be difficult for ODE solvers to
+ensure it numerically, as these [MATLAB examples](https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html)
+show.
+
+In order to deal with this problem one can specify `isoutofdomain=(u,p,t) -> any(x
+-> x < 0, u)` as additional [solver option](@ref solver_options),
+which will reject any step that leads to non-negative values and reduce the next
+time step. However, since this approach only rejects steps and hence
+calculations might be repeated multiple times until a step is accepted, it can
+be computationally expensive.
+
+Another approach is taken by a `PositiveDomain` callback in
+DiffEqCallbacks.jl, which is inspired by
+[Shampine's et al. paper about non-negative ODE solutions](http://www.sciencedirect.com/science/article/pii/S0096300304009683).
+It reduces the next step by a certain scale factor until the extrapolated value
+at the next time point is non-negative with a certain tolerance. Extrapolations
+are cheap to compute but might be inaccurate, so if a time step is changed it
+is additionally reduced by a safety factor of 0.9. Since extrapolated values are
+only non-negative up to a certain tolerance and in addition actual calculations
+might lead to negative values, also any negative values at the current time point
+are set to 0. Hence by this callback non-negative values at any time point are
+ensured in a computationally cheap way, but the quality of the solution
+depends on how accurately extrapolations approximate next time steps.
+
+Please note that the system should be defined also outside the positive domain,
+since even with these approaches negative variables might occur during the
+calculations. Moreover, one should follow Shampine's et. al. advice and set the
+derivative ``x'_i`` of a negative component ``x_i`` to ``\max \{0, f_i(x, t)\}``,
+where ``t`` denotes the current time point with state vector ``x`` and ``f_i``
+is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
+
+## Arguments
+
+- `u`: A prototype of the state vector of the integrator. A copy of it is saved and
+  extrapolated values are written to it. If it is not specified
+  every application of the callback allocates a new copy of the state vector.
+
+## Keyword Arguments
+
+- `save`: Whether to do the standard saving (applied after the callback).
+- `abstol`: Tolerance up to which negative extrapolated values are accepted.
+  Element-wise tolerances are allowed. If it is not specified every application
+  of the callback uses the current absolute tolerances of the integrator.
+- `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
+  specified time steps are halved.
+
+## References
+
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
-“Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
+Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
