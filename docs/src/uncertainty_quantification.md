@@ -50,8 +50,6 @@ Now we can plot the resulting Monte Carlo solution:
 plot(sim,idxs=(0,1),linealpha=0.4)
 ```
 
-![uncertainty_02](../assets/uncertainty_02.png)
-
 If we increase the amount of error, we see that some parts of the
 equation have less uncertainty than others. For example, at `σ=0.5`:
 
@@ -62,8 +60,6 @@ sim = solve(ensemble_prob,Euler(),trajectories=100,callback=cb,dt=1/10)
 plot(sim,idxs=(0,1),linealpha=0.4)
 ```
 
-![uncertainty_05](../assets/uncertainty_05.png)
-
 But at this amount of noise, we can see how we contract to the true solution by
 decreasing `dt`:
 
@@ -73,8 +69,6 @@ ensemble_prob = EnsembleProblem(prob)
 sim = solve(ensemble_prob,Euler(),trajectories=100,callback=cb,dt=1/100)
 plot(sim,idxs=(0,1),linealpha=0.4)
 ```
-
-![uncertainty_lowh](../assets/uncertainty_lowh.png)
 
 ## Example 2: Adaptive ProbInts on FitzHugh-Nagumo
 
@@ -96,8 +90,6 @@ sim = solve(ensemble_prob,Tsit5(),trajectories=100,callback=cb)
 plot(sim,idxs=(0,1),linealpha=0.4)
 ```
 
-![uncertainty_adaptive_default](../assets/uncertainty_adaptive_default.png)
-
 In this case, we see that the default tolerances give us a very good solution. However, if we increase the tolerance a lot:
 
 ```@example probnum
@@ -107,8 +99,6 @@ ensemble_prob = EnsembleProblem(prob)
 sim = solve(ensemble_prob,Tsit5(),trajectories=100,callback=cb,abstol=1e-3,reltol=1e-1)
 plot(sim,idxs=(0,1),linealpha=0.4)
 ```
-
-![uncertainty_adaptive_default](../assets/uncertainty_high_tolerance.png)
 
 we can see that the moments just after the rise can be uncertain.
 
@@ -147,8 +137,6 @@ sim = solve(ensemble_prob,Tsit5(),trajectories=100,callback=cb)
 plot(sim,idxs=(0,1),linealpha=0.4)
 ```
 
-![uncertainty_chaos](../assets/uncertainty_chaos.png)
-
 Here we see that by `t` about 22 we start to receive strong deviations from the "true" solution.
 We can increase
 the amount of time before error explosion by using a higher order method
@@ -162,8 +150,6 @@ ensemble_prob = EnsembleProblem(prob)
 sim = solve(ensemble_prob,Vern7(),trajectories=100,callback=cb,reltol=1e-6)
 plot(sim,idxs=(0,1),linealpha=0.4)
 ```
-
-![uncertainty_high_order](../assets/uncertainty_high_order.png)
 
 we see that we can extend the amount of time until we deviate strongly from the "true" solution.
 Of course, for a chaotic system like the Lorenz one presented here, it is impossible to follow the true solution

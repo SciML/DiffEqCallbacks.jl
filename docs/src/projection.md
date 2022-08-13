@@ -12,7 +12,7 @@ ManifoldProjection
 Here we solve the harmonic oscillator:
 
 ```@example manifold
-using OrdinaryDiffEq, DiffEqCallbacks
+using OrdinaryDiffEq, DiffEqCallbacks, Plots
 
 u0 = ones(2)
 function f(du,u,p,t)
@@ -48,4 +48,7 @@ sol = solve(prob,Vern7(),save_everystep=false,callback=cb)
 @show sol[end][1]^2 + sol[end][2]^2 ≈ 2
 ```
 
-![manifold_projection](https://user-images.githubusercontent.com/1814174/184501895-38f081b6-3d7a-434c-adca-63b6b36a315c.png)
+```@example manifold
+using Plots
+plot(sol,idxs=(1,2))
+```
