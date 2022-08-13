@@ -7,5 +7,5 @@ preserving geometric properties and precise error defintiions.
 StepsizeLimiter
 GeneralDomain
 PositiveDomain
-autoabstol
+AutoAbstol
 ```
