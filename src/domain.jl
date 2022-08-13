@@ -258,7 +258,7 @@ preferred.
 ## References
 
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
-“Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
+\“Non-negative solutions of ODEs.\” Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
@@ -335,7 +335,7 @@ is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 ## References
 
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
-“Non-negative solutions of ODEs.” Applied Mathematics and Computation 170
+\“Non-negative solutions of ODEs.\” Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
