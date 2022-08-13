@@ -25,7 +25,6 @@ function AutoAbstol_initialize(cb, u, t, integrator)
     u_modified!(integrator, false)
 end
 
-
 """
 ```julia
 AutoAbstol(save=true;init_curmax=1e-6)
