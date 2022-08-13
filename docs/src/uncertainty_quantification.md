@@ -48,7 +48,7 @@ Now we can plot the resulting Monte Carlo solution:
 
 ```@example probnum
 using Plots; plotly(); plot(sim,idxs=(0,1),linealpha=0.4)
-```probnum
+```
 
 ![uncertainty_02](../assets/uncertainty_02.png)
 
