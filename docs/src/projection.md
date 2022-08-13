@@ -12,6 +12,8 @@ ManifoldProjection
 Here we solve the harmonic oscillator:
 
 ```@example manifold
+using OrdinaryDiffEq, DiffEqCallbacks
+
 u0 = ones(2)
 function f(du,u,p,t)
   du[1] = u[2]
