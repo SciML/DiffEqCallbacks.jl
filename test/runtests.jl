@@ -13,4 +13,5 @@ using Test
     @time @testset "Periodic tests" begin include("periodic_tests.jl") end
     @time @testset "Manifold tests" begin include("manifold_tests.jl") end
     @time @testset "Domain tests" begin include("domain_tests.jl") end
+    @time @testset "ProbInts tests" begin include("probints_tests.jl") end
 end

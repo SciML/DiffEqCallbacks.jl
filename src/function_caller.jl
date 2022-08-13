@@ -49,18 +49,23 @@ function functioncalling_initialize(cb, u, t, integrator)
 end
 
 """
-    FunctionCallingCallback(func;
-                    funcat=Vector{Float64}(),
-                    func_everystep=isempty(funcat),
-                    func_start = true,
-                    tdir=1)
+```julia
+FunctionCallingCallback(func;
+               funcat=Vector{Float64}(),
+               func_everystep=isempty(funcat),
+               func_start = true
+               tdir=1)
+```
 
-A `DiscreteCallback` applied after every step to call `func(u,t,integrator)`
-If `func_everystep`, every step of the integrator gives a `func` call.
-If `funcat` is specified, the function is called at the given times, using
-interpolation if necessary.
-If the time `tdir` direction is not positive, i.e. `tspan[1] > tspan[2]`,
-`tdir = -1` has to be specified.
+The function calling callback lets you define a function `func(u,t,integrator)`
+which gets calls at the time points of interest. The constructor is:
+
+- `func(t, u, integrator)` is the function to be called.
+- `funcat` values that the function is sure to be evaluated at.
+- `func_everystep` whether to call the function after each integrator step.
+- `func_start` whether the function is called the initial condition.
+- `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
+  be adapted if `tspan[1] > tspan[end]`.
 """
 function FunctionCallingCallback(func;
                                  funcat = Vector{Float64}(),

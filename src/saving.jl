@@ -94,21 +94,36 @@ function saving_initialize(cb, u, t, integrator)
 end
 
 """
-    SavingCallback(save_func, saved_values::SavedValues;
-                    saveat=Vector{eltype(saved_values.t)}(),
-                    save_everystep=isempty(saveat),
-                    save_start = save_everystep || isempty(saveat) || saveat isa Number,
-                    save_end = save_everystep || isempty(saveat) || saveat isa Number,
-                    tdir=1)
+```julia
+SavingCallback(save_func, saved_values::SavedValues;
+               saveat=Vector{eltype(saved_values.t)}(),
+               save_everystep=isempty(saveat),
+               save_start = true,
+               tdir=1)
+```
 
-A `DiscreteCallback` applied after every step, saving the time `t` and the value
-of `save_func(u, t, integrator)` in `saved_values`.
+The saving callback lets you define a function `save_func(u, t, integrator)` which
+returns quantities of interest that shall be saved.
 
-If `save_everystep`, every step of the integrator is saved.
-If `saveat` is specified, the values are saved at the given times, using
-interpolation if necessary.
-If the time `tdir` direction is not positive, i.e. `tspan[1] > tspan[2]`,
-`tdir = -1` has to be specified.
+## Arguments
+
+- `save_func(u, t, integrator)` returns the quantities which shall be saved.
+  Note that this should allocate the output (not as a view to `u`).
+- `saved_values::SavedValues` is the types that `save_func` will return, i.e.
+  `save_func(t, u, integrator)::savevalType`. It's specified via
+  `SavedValues(typeof(t),savevalType)`, i.e. give the type for time and the
+  type that `save_func` will output (or higher compatible type).
+
+## Keyword Arguments
+
+- `saveat` mimics `saveat` in `solve` from `solve`.
+- `save_everystep` mimics `save_everystep` from `solve`.
+- `save_start` mimics `save_start` from `solve`.
+- `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
+  be adapted if `tspan[1] > tspan[end]`.
+
+The outputted values are saved into `saved_values`. Time points are found via
+`saved_values.t` and the values are `saved_values.saveval`.
 """
 function SavingCallback(save_func, saved_values::SavedValues;
                         saveat = Vector{eltype(saved_values.t)}(),
