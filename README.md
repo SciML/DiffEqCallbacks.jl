@@ -1,9 +1,15 @@
 # DiffEqCallbacks.jl: Prebuilt Callbacks for extending the solvers of DifferentialEquations.jl
 
 [![Join the chat at https://gitter.im/JuliaDiffEq/Lobby](https://badges.gitter.im/JuliaDiffEq/Lobby.svg)](https://gitter.im/JuliaDiffEq/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://diffeqcallbacks.sciml.ai/stable/)
+[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/dev/modules/DiffEqCallbacks/)
+
 [![Build Status](https://github.com/SciML/DiffEqCallbacks.jl/workflows/CI/badge.svg)](https://github.com/SciML/DiffEqCallbacks.jl/actions?query=workflow%3ACI)
 [![Coverage Status](https://coveralls.io/repos/SciML/DiffEqCallbacks.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/SciML/DiffEqCallbacks.jl?branch=master)
 [![codecov.io](http://codecov.io/github/SciML/DiffEqCallbacks.jl/coverage.svg?branch=master)](http://codecov.io/github/SciML/DiffEqCallbacks.jl?branch=master)
+
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
+[![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 [DifferentialEquations.jl](https://diffeq.sciml.ai/dev) has an expressive callback system
 which allows for customizable transformations of te solver behavior. DiffEqCallbacks.jl
