@@ -76,3 +76,5 @@ function AdaptiveProbIntsUncertainty(order, save = true)
     save_positions = (save, false)
     DiscreteCallback(condtion, affect!, save_positions = save_positions)
 end
+
+export ProbIntsUncertainty, AdaptiveProbIntsUncertainty
