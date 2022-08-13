@@ -1,4 +1,4 @@
-using DiffEqUncertainty, DiffEqBase, OrdinaryDiffEq, DiffEqProblemLibrary
+using DiffEqcallbacks, DiffEqBase, OrdinaryDiffEq
 using Test
 
 function g(du, u, p, t)
