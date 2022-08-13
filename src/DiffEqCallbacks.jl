@@ -5,6 +5,8 @@ using DiffEqBase, RecursiveArrayTools, DataStructures, RecipesBase, StaticArrays
 
 import Base.Iterators
 
+using Markdown
+
 using Parameters: @unpack
 
 import SciMLBase

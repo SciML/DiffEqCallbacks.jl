@@ -258,7 +258,7 @@ preferred.
 ## References
 
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
-\“Non-negative solutions of ODEs.\” Applied Mathematics and Computation 170
+Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
@@ -277,7 +277,7 @@ function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
                 DiscreteCallback(condition, affect!; save_positions = (false, save)))
 end
 
-"""
+@doc doc"""
 ```julia
 PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
 ```
@@ -285,7 +285,7 @@ PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing
 Especially in biology and other natural sciences, a desired property of
 dynamical systems is the positive invariance of the positive cone, i.e.
 non-negativity of variables at time ``t_0`` ensures their non-negativity at times
-``t \\geq t_0`` for which the solution is defined. However, even if a system
+``t \geq t_0`` for which the solution is defined. However, even if a system
 satisfies this property mathematically it can be difficult for ODE solvers to
 ensure it numerically, as these [MATLAB examples](https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html)
 show.
@@ -335,7 +335,7 @@ is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 ## References
 
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
-\“Non-negative solutions of ODEs.\” Applied Mathematics and Computation 170
+Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)

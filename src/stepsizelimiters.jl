@@ -27,7 +27,7 @@ function StepsizeLimiter_initialize(cb, u, t, integrator)
     cb.affect!(integrator)
 end
 
-"""
+@doc doc"""
 ```julia
 StepsizeLimiter(dtFE;safety_factor=9//10,max_step=false,cached_dtcache=0.0)
 ```
