@@ -1,9 +1,7 @@
-using Test, OrdinaryDiffEq, DiffEqProblemLibrary, DiffEqCallbacks, LinearAlgebra,
+using Test, OrdinaryDiffEq, DiffEqCallbacks, LinearAlgebra,
       SciMLSensitivity, Tracker
 import LinearAlgebra: norm
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_2Dlinear, prob_ode_linear
+import ODEProblemLibrary: prob_ode_2Dlinear, prob_ode_linear
 
 # save_everystep, scalar problem
 prob = prob_ode_linear
