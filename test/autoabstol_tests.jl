@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, DiffEqProblemLibrary, Test, DiffEqBase, DiffEqCallbacks
+using OrdinaryDiffEq, Test, DiffEqBase, DiffEqCallbacks
 import ODEProblemLibrary: prob_ode_2Dlinear, prob_ode_linear
 
 prob = prob_ode_linear
