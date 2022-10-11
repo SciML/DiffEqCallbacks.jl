@@ -15,6 +15,7 @@ model with the `Euler()` method. We define the FitzHugh-Nagumo model:
 
 ```@example probnum
 using DiffEqCallbacks, OrdinaryDiffEq, Plots
+gr(fmt=:png)
 
 function fitz(du,u,p,t)
   V,R = u
