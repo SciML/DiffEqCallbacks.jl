@@ -1,6 +1,6 @@
 # DiffEqCallbacks.jl: Prebuilt Callbacks for extending the solvers of DifferentialEquations.jl
 
-[DifferentialEquations.jl](https://diffeq.sciml.ai/dev) has an expressive callback system
+[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) has an expressive callback system
 which allows for customizable transformations of te solver behavior. DiffEqCallbacks.jl
 is a library of pre-built callbacks which makes it easy to transform the solver into a
 domain-specific simulation tool.
@@ -24,7 +24,7 @@ sol = solve(prob,alg;callback=cb)
 ```
 
 For more information on using callbacks,
-[see the manual page](https://diffeq.sciml.ai/dev/features/callback_functions).
+[see the manual page](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions).
 
 ## Note About Dependencies
 

@@ -20,7 +20,7 @@ makedocs(sitename = "DiffEqCallbacks.jl",
          clean = true, doctest = false,
          format = Documenter.HTML(analytics = "UA-90474609-3",
                                   assets = ["assets/favicon.ico"],
-                                  canonical = "https://diffeqcallbacks.sciml.ai/stable/"),
+                                  canonical = "https://docs.sciml.ai/DiffEqCallbacks/stable/"),
          pages = pages)
 
 deploydocs(repo = "github.com/SciML/DiffEqCallbacks.jl.git";
