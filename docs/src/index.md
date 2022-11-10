@@ -45,7 +45,7 @@ the callback system. Callbacks are defined in the SciML interface at SciMLBase.j
 
 ## Reproducibility
 ```@raw html
-<details><summary>The documentation of this SciML package was build using these direct dependencies,</summary>
+<details><summary>The documentation of this SciML package was built using these direct dependencies,</summary>
 ```
 ```@example
 using Pkg # hide
