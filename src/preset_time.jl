@@ -8,7 +8,7 @@ PresetTimeCallback(tstops,user_affect!;
 
 A callback that adds callback `affect!` calls at preset times. No playing around with
 `tstops` or anything is required: this callback adds the triggers for you to make it
-utomatic.
+automatic.
 
 ## Arguments
 
