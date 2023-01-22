@@ -213,16 +213,18 @@ end
 
 """
 ```julia
-GeneralDomain(g, u=nothing; nlsolve=NLSOLVEJL_SETUP(), save=true,
-                       abstol=nothing, scalefactor=nothing, autonomous=numargs(g)==2,
-                       nlopts=Dict(:ftol => 10*eps()))
+GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
+                       abstol = nothing, scalefactor = nothing,
+                       autonomous = maximum(SciMLBase.numargs(g)) == 3,
+                       nlopts = Dict(:ftol => 10 * eps()))
 ```
 
 A `GeneralDomain` callback in DiffEqCallbacks.jl generalizes the concept of
 a `PositiveDomain` callback to arbitrary domains. Domains are specified by
-in-place functions `g(u, resid)` or `g(t, u, resid)` that calculate residuals of a
-state vector `u` at time `t` relative to that domain. As for `PositiveDomain`, steps
-are accepted if residuals of the extrapolated values at the next time step are below
+in-place functions `g(resid, u, p)` or `g(resid, u, p, t)` that calculate residuals of a
+state vector `u` at time `t` relative to that domain, with `p` the parameters of the 
+corresponding integrator. As for `PositiveDomain`, steps are accepted if residuals 
+of the extrapolated values at the next time step are below
 a certain tolerance. Moreover, this callback is automatically coupled with a
 `ManifoldProjection` that keeps all calculated state vectors close to the desired
 domain, but in contrast to a `PositiveDomain` callback the nonlinear solver in a
@@ -235,7 +237,7 @@ preferred.
 - `g`: the implicit definition of the domain as a function `g(resid, u, p)` or
   `g(resid, u, p, t)` which is zero when the value is in the domain.
 - `u`: A prototype of the state vector of the integrator. A copy of it is saved and
-  extrapolated values are written to it. If it is not specified
+  extrapolated values are written to it. If it is not specified,
   every application of the callback allocates a new copy of the state vector.
 
 ## Keyword Arguments
@@ -248,7 +250,7 @@ preferred.
   current absolute tolerances of the integrator.
 - `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
   specified time steps are halved.
-- `autonomous`: Whether `g` is an autonomous function of the form `g(u, resid)`.
+- `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)`.
 - `nlopts`: Optional arguments to nonlinear solver of a `ManifoldProjection` which
   can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
   The default value of `ftol = 10*eps()` ensures that convergence is only declared
