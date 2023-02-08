@@ -120,11 +120,12 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
 ## Arguments
 
 - `f` the `affect!(integrator)` function to be called periodically
-- `Δt` is the period, `initial_affect` is whether to apply the affect at `t=0` which
-  defaults to `false`
+- `Δt` is the period
 
 ## Keyword Arguments
 
+- `initial_affect` is whether to apply the affect at `t=0`, which defaults to `false`
+- `final_affect` is whether to apply the affect at the final time, which defaults to `false`
 - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
 """
 function PeriodicCallback(f, Δt::Number;
