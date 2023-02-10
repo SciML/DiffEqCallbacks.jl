@@ -73,3 +73,10 @@ p = nothing
 prob = ODEProblem(fff, u0, tspan, p)
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.u[2] == [2.0, 2.0]
+@test sol.u[end][1] != sol.u[end][2] # `final_affect = false` by default
+
+# Test that the callback is applied again when the simulation finished.
+cb = PeriodicCallback(periodic, 3.0, initial_affect = true, final_affect = true,
+                      save_positions = (true, true))
+sol = solve(prob, Tsit5(), callback = cb)
+@test sol.u[end][1] == sol.u[end][2]
