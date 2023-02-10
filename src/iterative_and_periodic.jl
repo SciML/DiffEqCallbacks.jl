@@ -86,7 +86,11 @@ function (S::PeriodicCallbackAffect)(integrator)
 
     affect!(integrator)
 
-    tstops = integrator.opts.tstops
+    add_next_tstop!(integrator, S)
+end
+
+function add_next_tstop!(integrator, S)
+    @unpack Δt, t0, index = S
 
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
     tnew = t0[] + (index[] + 1) * Δt
@@ -98,12 +102,9 @@ function (S::PeriodicCallbackAffect)(integrator)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
-    for i in length(tstops):-1:1 # reverse iterate to encounter large elements earlier
-        if tdir_tnew < tstops.valtree[i] # TODO: relying on implementation details
-            index[] += 1
-            add_tstop!(integrator, tnew)
-            break
-        end
+    if tdir_tnew < maximum(tstops.valtree)
+        index[] += 1
+        add_tstop!(integrator, tnew)
     end
 end
 
@@ -151,12 +152,11 @@ function PeriodicCallback(f, Δt::Number;
         @assert integrator.tdir == sign(Δt)
         initialize(c, u, t, integrator)
         t0[] = t
+        index[] = 0
         if initial_affect
-            index[] = 0
             affect!(integrator)
         else
-            index[] = 1
-            add_tstop!(integrator, t0[] + Δt)
+            add_next_tstop!(integrator, affect!)
         end
     end
 
