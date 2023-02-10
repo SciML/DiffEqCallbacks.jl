@@ -73,3 +73,10 @@ p = nothing
 prob = ODEProblem(fff, u0, tspan, p)
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.u[2] == [2.0, 2.0]
+
+# Test that `Δt > tspan[2]` does not extend the simulation beyond `tspan[2]`
+# when `initial_affect = false`.
+cb = PeriodicCallback(periodic, 11.0, initial_affect = false)
+prob = ODEProblem(fff, u0, tspan, p)
+sol = solve(prob, Tsit5(), callback = cb)
+@test sol.t[end] == tspan[2]
