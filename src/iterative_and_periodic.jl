@@ -121,15 +121,17 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
 ## Arguments
 
 - `f` the `affect!(integrator)` function to be called periodically
-- `Δt` is the period, `initial_affect` is whether to apply the affect at `t=0` which
-  defaults to `false`
+- `Δt` is the period
 
 ## Keyword Arguments
 
+- `initial_affect` is whether to apply the affect at `t=0`, which defaults to `false`
+- `final_affect` is whether to apply the affect at the final time, which defaults to `false`
 - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
 """
 function PeriodicCallback(f, Δt::Number;
                           initial_affect = false,
+                          final_affect = false,
                           initialize = (cb, u, t, integrator) -> u_modified!(integrator,
                                                                              initial_affect),
                           kwargs...)
@@ -137,7 +139,10 @@ function PeriodicCallback(f, Δt::Number;
     # Value of `t` at which `f` should be called next:
     t0 = Ref(typemax(Δt))
     index = Ref(0)
-    condition = (u, t, integrator) -> t == (t0[] + index[] * Δt)
+
+    condition = function (u, t, integrator)
+        t == (t0[] + index[] * Δt) || (final_affect && isfinished(integrator))
+    end
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = PeriodicCallbackAffect(f, Δt, t0, index)
@@ -156,6 +161,14 @@ function PeriodicCallback(f, Δt::Number;
     end
 
     DiscreteCallback(condition, affect!; initialize = initialize_periodic, kwargs...)
+end
+
+@inline function isfinished(integrator)
+    # Checking for floating point equality is OK here as `DifferentialEquations.jl`
+    # sets the time exactly to the final time in the last iteration
+    return integrator.t == last(integrator.sol.prob.tspan) ||
+           isempty(integrator.opts.tstops) ||
+           integrator.iter == integrator.opts.maxiters
 end
 
 export PeriodicCallback
