@@ -14,7 +14,7 @@ Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 
 [compat]
 DataStructures = "0.18"
@@ -26,7 +26,7 @@ Parameters = "0.12"
 RecipesBase = "0.7, 0.8, 1.0"
 RecursiveArrayTools = "2"
 SciMLBase = "1.48.1"
-StaticArrays = "0.10, 0.11, 0.12, 1.0"
+StaticArraysCore = "1.4"
 julia = "1.6"
 
 [extras]
