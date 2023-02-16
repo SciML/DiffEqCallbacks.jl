@@ -43,7 +43,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
 
     # define array of next time step, absolute tolerance, and scale factor
     if uType <: Nothing
-        if typeof(integrator.u) <: Union{Number, SArray}
+        if typeof(integrator.u) <: Union{Number, StaticArraysCore.SArray}
             u = integrator.u
         else
             u = similar(integrator.u)
@@ -73,7 +73,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
     p = integrator.p
     while tdir * dt > 0
         # calculate estimated value of next step and its residuals
-        if typeof(u) <: Union{Number, SArray}
+        if typeof(u) <: Union{Number, StaticArraysCore.SArray}
             u = integrator(t)
         else
             integrator(u, t)
@@ -162,7 +162,7 @@ function _set_neg_zero!(integrator, u::Number)
     modified
 end
 
-function _set_neg_zero!(integrator, u::SArray)
+function _set_neg_zero!(integrator, u::StaticArraysCore.SArray)
     modified = false
     @inbounds for i in eachindex(integrator.u)
         if u[i] < 0
