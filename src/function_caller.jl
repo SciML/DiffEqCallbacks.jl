@@ -51,21 +51,21 @@ end
 """
 ```julia
 FunctionCallingCallback(func;
-               funcat=Vector{Float64}(),
-               func_everystep=isempty(funcat),
-               func_start = true
-               tdir=1)
+                        funcat = Vector{Float64}(),
+                        func_everystep = isempty(funcat),
+                        func_start = true,
+                        tdir = 1)
 ```
 
 The function calling callback lets you define a function `func(u,t,integrator)`
 which gets calls at the time points of interest. The constructor is:
 
-- `func(t, u, integrator)` is the function to be called.
-- `funcat` values that the function is sure to be evaluated at.
-- `func_everystep` whether to call the function after each integrator step.
-- `func_start` whether the function is called the initial condition.
-- `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
-  be adapted if `tspan[1] > tspan[end]`.
+  - `func(t, u, integrator)` is the function to be called.
+  - `funcat` values that the function is sure to be evaluated at.
+  - `func_everystep` whether to call the function after each integrator step.
+  - `func_start` whether the function is called the initial condition.
+  - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
+    be adapted if `tspan[1] > tspan[end]`.
 """
 function FunctionCallingCallback(func;
                                  funcat = Vector{Float64}(),

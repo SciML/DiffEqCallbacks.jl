@@ -16,10 +16,10 @@ for the saved values, and then call the solver with the callback.
 
 ```@example saving
 using DiffEqCallbacks, OrdinaryDiffEq, LinearAlgebra
-prob = ODEProblem((du,u,p,t) -> du .= u, rand(4,4), (0.0,1.0))
-saved_values = SavedValues(Float64, Tuple{Float64,Float64})
-cb = SavingCallback((u,t,integrator)->(tr(u),norm(u)), saved_values)
-sol = solve(prob, Tsit5(), callback=cb)
+prob = ODEProblem((du, u, p, t) -> du .= u, rand(4, 4), (0.0, 1.0))
+saved_values = SavedValues(Float64, Tuple{Float64, Float64})
+cb = SavingCallback((u, t, integrator) -> (tr(u), norm(u)), saved_values)
+sol = solve(prob, Tsit5(), callback = cb)
 
 print(saved_values.saveval)
 ```
@@ -29,9 +29,10 @@ Note that the values are retrieved from the cache as `.saveval`, and the time po
 `saveat` act analogously to how they act in the `solve` function.
 
 ```@example saving
-saved_values = SavedValues(Float64, Tuple{Float64,Float64})
-cb = SavingCallback((u,t,integrator)->(tr(u),norm(u)), saved_values, saveat=0.0:0.1:1.0)
-sol = solve(prob, Tsit5(), callback=cb)
+saved_values = SavedValues(Float64, Tuple{Float64, Float64})
+cb = SavingCallback((u, t, integrator) -> (tr(u), norm(u)), saved_values,
+                    saveat = 0.0:0.1:1.0)
+sol = solve(prob, Tsit5(), callback = cb)
 print(saved_values.saveval)
 print(saved_values.t)
 ```

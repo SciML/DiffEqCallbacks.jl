@@ -31,7 +31,7 @@ end
 
 """
 ```julia
-ManifoldProjection(g;nlsolve=NLSOLVEJL_SETUP(),save=true)
+ManifoldProjection(g; nlsolve = NLSOLVEJL_SETUP(), save = true)
 ```
 
 In many cases, you may want to declare a manifold on which a solution lives.
@@ -52,17 +52,17 @@ properties.
 
 ## Arguments
 
-- `g`: The residual function for the manifold. This is an inplace function of form
-  `g(resid, u)` or `g(resid, u, p, t)` which writes to the residual `resid` the
-  difference from the manifold components. Here, it is assumed that `resid` is of
-  the same shape as `u`.
+  - `g`: The residual function for the manifold. This is an inplace function of form
+    `g(resid, u)` or `g(resid, u, p, t)` which writes to the residual `resid` the
+    difference from the manifold components. Here, it is assumed that `resid` is of
+    the same shape as `u`.
 
 ## Keyword Arguments
 
-- `nlsolve`: A nonlinear solver as defined [in the nlsolve format](linear_nonlinear.html)
-- `save`: Whether to do the standard saving (applied after the callback)
-- `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u)`.
-- `nlopts`: Optional arguments to nonlinear solver which can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
+  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](linear_nonlinear.html)
+  - `save`: Whether to do the standard saving (applied after the callback)
+  - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u)`.
+  - `nlopts`: Optional arguments to nonlinear solver which can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
 
 ### Saveat Warning
 

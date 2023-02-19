@@ -47,18 +47,18 @@ the [Steady State Solvers](@ref) section).
 
 ## Arguments
 
-- `abstol` and `reltol` are the absolute and relative tolerance, respectively.
-  These tolerances may be specified as scalars or as arrays of the same length
-  as the states of the problem.
-- `test` represents the function that evaluates the condition for termination. The default
-  condition is that all derivatives should become smaller than `abstol` and the states times
- `reltol`. The user can pass any other function to implement a different termination condition.
-  Such function should take four arguments: `integrator`, `abstol`, `reltol`, and `min_t`.
+  - `abstol` and `reltol` are the absolute and relative tolerance, respectively.
+    These tolerances may be specified as scalars or as arrays of the same length
+    as the states of the problem.
+  - `test` represents the function that evaluates the condition for termination. The default
+    condition is that all derivatives should become smaller than `abstol` and the states times
+    `reltol`. The user can pass any other function to implement a different termination condition.
+    Such function should take four arguments: `integrator`, `abstol`, `reltol`, and `min_t`.
 
 ## Keyword Arguments
 
-- `min_t` specifies an optional minimum `t` before the steady state calculations are allowed
-  to terminate.
+  - `min_t` specifies an optional minimum `t` before the steady state calculations are allowed
+    to terminate.
 """
 function TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass;
                               min_t = nothing)

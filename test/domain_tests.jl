@@ -14,11 +14,13 @@ Absolute value function
 ```math
 \\frac{du}{dt} = -|u|
 ```
+
 with initial condition ``u₀=1``, and solution
 
 ```math
 u(t) = u₀*e^{-t}
 ```
+
 for positive initial values ``u₀``.
 """
 function absval(du, u, p, t)

@@ -214,16 +214,16 @@ end
 """
 ```julia
 GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
-                       abstol = nothing, scalefactor = nothing,
-                       autonomous = maximum(SciMLBase.numargs(g)) == 3,
-                       nlopts = Dict(:ftol => 10 * eps()))
+              abstol = nothing, scalefactor = nothing,
+              autonomous = maximum(SciMLBase.numargs(g)) == 3,
+              nlopts = Dict(:ftol => 10 * eps()))
 ```
 
 A `GeneralDomain` callback in DiffEqCallbacks.jl generalizes the concept of
 a `PositiveDomain` callback to arbitrary domains. Domains are specified by
 in-place functions `g(resid, u, p)` or `g(resid, u, p, t)` that calculate residuals of a
-state vector `u` at time `t` relative to that domain, with `p` the parameters of the 
-corresponding integrator. As for `PositiveDomain`, steps are accepted if residuals 
+state vector `u` at time `t` relative to that domain, with `p` the parameters of the
+corresponding integrator. As for `PositiveDomain`, steps are accepted if residuals
 of the extrapolated values at the next time step are below
 a certain tolerance. Moreover, this callback is automatically coupled with a
 `ManifoldProjection` that keeps all calculated state vectors close to the desired
@@ -234,28 +234,28 @@ preferred.
 
 ## Arguments
 
-- `g`: the implicit definition of the domain as a function `g(resid, u, p)` or
-  `g(resid, u, p, t)` which is zero when the value is in the domain.
-- `u`: A prototype of the state vector of the integrator. A copy of it is saved and
-  extrapolated values are written to it. If it is not specified,
-  every application of the callback allocates a new copy of the state vector.
+  - `g`: the implicit definition of the domain as a function `g(resid, u, p)` or
+    `g(resid, u, p, t)` which is zero when the value is in the domain.
+  - `u`: A prototype of the state vector of the integrator. A copy of it is saved and
+    extrapolated values are written to it. If it is not specified,
+    every application of the callback allocates a new copy of the state vector.
 
 ## Keyword Arguments
 
-- `nlsolve`: A nonlinear solver as defined [in the nlsolve format](@ref linear_nonlinear)
-  which is passed to a `ManifoldProjection`.
-- `save`: Whether to do the standard saving (applied after the callback).
-- `abstol`: Tolerance up to which residuals are accepted. Element-wise tolerances
-  are allowed. If it is not specified every application of the callback uses the
-  current absolute tolerances of the integrator.
-- `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
-  specified time steps are halved.
-- `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)`.
-- `nlopts`: Optional arguments to nonlinear solver of a `ManifoldProjection` which
-  can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
-  The default value of `ftol = 10*eps()` ensures that convergence is only declared
-  if the infinite norm of residuals is very small and hence the state vector is very
-  close to the domain.
+  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](@ref linear_nonlinear)
+    which is passed to a `ManifoldProjection`.
+  - `save`: Whether to do the standard saving (applied after the callback).
+  - `abstol`: Tolerance up to which residuals are accepted. Element-wise tolerances
+    are allowed. If it is not specified every application of the callback uses the
+    current absolute tolerances of the integrator.
+  - `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
+    specified time steps are halved.
+  - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)`.
+  - `nlopts`: Optional arguments to nonlinear solver of a `ManifoldProjection` which
+    can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
+    The default value of `ftol = 10*eps()` ensures that convergence is only declared
+    if the infinite norm of residuals is very small and hence the state vector is very
+    close to the domain.
 
 ## References
 
