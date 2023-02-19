@@ -76,7 +76,7 @@ plot(sim, idxs = (0, 1), linealpha = 0.4)
 While the first example is academic and shows how the ProbInts method
 scales, the fact that one should have some idea of the error in order
 to calibrate `σ` can lead to complications. Thus the more useful method
-in many cases is the `AdaptiveProbIntsUncertainty` version. In this
+in many cases, is the `AdaptiveProbIntsUncertainty` version. In this
 version, no `σ` is required since this is calculated using an internal
 error estimate. Thus this gives an accurate representation of the
 possible error without user input.

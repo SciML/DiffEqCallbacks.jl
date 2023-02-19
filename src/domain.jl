@@ -228,8 +228,8 @@ of the extrapolated values at the next time step are below
 a certain tolerance. Moreover, this callback is automatically coupled with a
 `ManifoldProjection` that keeps all calculated state vectors close to the desired
 domain, but in contrast to a `PositiveDomain` callback the nonlinear solver in a
-`ManifoldProjection` can not guarantee that all state vectors of the solution are
-actually inside the domain. Thus a `PositiveDomain` callback should in general be
+`ManifoldProjection` cannot guarantee that all state vectors of the solution are
+actually inside the domain. Thus, a `PositiveDomain` callback should generally be
 preferred.
 
 ## Arguments
@@ -245,11 +245,11 @@ preferred.
   - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](@ref linear_nonlinear)
     which is passed to a `ManifoldProjection`.
   - `save`: Whether to do the standard saving (applied after the callback).
-  - `abstol`: Tolerance up to which residuals are accepted. Element-wise tolerances
-    are allowed. If it is not specified every application of the callback uses the
+  - `abstol`: Tolerance up to, which residuals are accepted. Element-wise tolerances
+    are allowed. If it is not specified, every application of the callback uses the
     current absolute tolerances of the integrator.
   - `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
-    specified time steps are halved.
+    specified, time steps are halved.
   - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)`.
   - `nlopts`: Optional arguments to nonlinear solver of a `ManifoldProjection` which
     can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
@@ -292,7 +292,7 @@ satisfies this property mathematically it can be difficult for ODE solvers to
 ensure it numerically, as these [MATLAB examples](https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html)
 show.
 
-In order to deal with this problem one can specify `isoutofdomain=(u,p,t) -> any(x
+To deal with this problem, one can specify `isoutofdomain=(u,p,t) -> any(x
 -> x < 0, u)` as additional [solver option](@ref solver_options),
 which will reject any step that leads to non-negative values and reduce the next
 time step. However, since this approach only rejects steps and hence
@@ -308,13 +308,13 @@ are cheap to compute but might be inaccurate, so if a time step is changed it
 is additionally reduced by a safety factor of 0.9. Since extrapolated values are
 only non-negative up to a certain tolerance and in addition actual calculations
 might lead to negative values, also any negative values at the current time point
-are set to 0. Hence by this callback non-negative values at any time point are
+are set to 0. Hence, by this callback non-negative values at any time point are
 ensured in a computationally cheap way, but the quality of the solution
 depends on how accurately extrapolations approximate next time steps.
 
-Please note that the system should be defined also outside the positive domain,
-since even with these approaches negative variables might occur during the
-calculations. Moreover, one should follow Shampine's et. al. advice and set the
+Please note, that the system should be defined also outside the positive domain,
+since even with these approaches, negative variables might occur during the
+calculations. Moreover, one should follow Shampine's et al. advice and set the
 derivative ``x'_i`` of a negative component ``x_i`` to ``\max \{0, f_i(x, t)\}``,
 where ``t`` denotes the current time point with state vector ``x`` and ``f_i``
 is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
@@ -322,17 +322,17 @@ is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 ## Arguments
 
 - `u`: A prototype of the state vector of the integrator. A copy of it is saved and
-  extrapolated values are written to it. If it is not specified
+  extrapolated values are written to it. If it is not specified,
   every application of the callback allocates a new copy of the state vector.
 
 ## Keyword Arguments
 
 - `save`: Whether to do the standard saving (applied after the callback).
-- `abstol`: Tolerance up to which negative extrapolated values are accepted.
-  Element-wise tolerances are allowed. If it is not specified every application
+- `abstol`: Tolerance up to, which negative extrapolated values are accepted.
+  Element-wise tolerances are allowed. If it is not specified, every application
   of the callback uses the current absolute tolerances of the integrator.
 - `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
-  specified time steps are halved.
+  specified, time steps are halved.
 
 ## References
 

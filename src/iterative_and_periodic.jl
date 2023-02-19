@@ -10,7 +10,7 @@ effect at `t₁`, you can define `t₂` to apply the next effect.
 ## Arguments
 
   - `time_choice(integrator)` determines the time of the next callback. If `nothing` is
-    returned for the time choice then the iterator ends.
+    returned for the time choice, then the iterator ends.
   - `user_affect!` is the effect applied to the integrator at the stopping points.
 
 ## Keyword Arguments

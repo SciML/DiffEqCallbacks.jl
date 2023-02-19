@@ -32,7 +32,7 @@ end
 StepsizeLimiter(dtFE;safety_factor=9//10,max_step=false,cached_dtcache=0.0)
 ```
 
-In many cases there is a known maximal stepsize for which the computation is
+In many cases, there is a known maximal stepsize for which the computation is
 stable and produces correct results. For example, in hyperbolic PDEs one normally
 needs to ensure that the stepsize stays below some ``\Delta t_{FE}`` determined
 by the CFL condition. For nonlinear hyperbolic PDEs this limit can be a function

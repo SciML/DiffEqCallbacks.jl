@@ -9,7 +9,7 @@ FunctionCallingCallback
 
 ### Saving Example
 
-In this example we will solve a matrix equation and at each step save a tuple
+In this example, we will solve a matrix equation and at each step save a tuple
 of values which contains the current trace and the norm of the matrix. We build
 the `SavedValues` cache to use `Float64` for time and `Tuple{Float64,Float64}`
 for the saved values, and then call the solver with the callback.
