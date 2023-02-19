@@ -301,7 +301,7 @@ be computationally expensive.
 
 Another approach is taken by a `PositiveDomain` callback in
 DiffEqCallbacks.jl, which is inspired by
-[Shampine's et al. paper about non-negative ODE solutions](http://www.sciencedirect.com/science/article/pii/S0096300304009683).
+[Shampine's et al. paper about non-negative ODE solutions](https://www.sciencedirect.com/science/article/pii/S0096300304009683).
 It reduces the next step by a certain scale factor until the extrapolated value
 at the next time point is non-negative with a certain tolerance. Extrapolations
 are cheap to compute but might be inaccurate, so if a time step is changed it

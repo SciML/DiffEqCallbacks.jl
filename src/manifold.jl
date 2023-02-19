@@ -59,7 +59,7 @@ properties.
 
 ## Keyword Arguments
 
-  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](linear_nonlinear.html)
+  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](@ref linear_nonlinear)
   - `save`: Whether to do the standard saving (applied after the callback)
   - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u)`.
   - `nlopts`: Optional arguments to nonlinear solver which can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).

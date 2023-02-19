@@ -12,6 +12,7 @@ include("pages.jl")
 makedocs(sitename = "DiffEqCallbacks.jl",
          authors = "Chris Rackauckas",
          modules = [DiffEqCallbacks],
+         linkcheck=true,
          strict = [
              :doctest,
              :linkcheck,
