@@ -36,16 +36,20 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
     u_modified!(integrator, false)
 end
 
-function functioncalling_initialize(cb, u, t, integrator)
-    if cb.affect!.funciter != 0
+function functioncalling_initialize(cb, u, t, integrator)    
+    functioncalling_affect_initialize(cb.affect!, u, t, integrator)
+end
+
+function functioncalling_affect_initialize(affect::FunctionCallingAffect, u, t, integrator)
+    if affect.funciter != 0
         if integrator.tdir > 0
-            cb.affect!.funcat = BinaryMinHeap(cb.affect!.funcat_cache)
+            affect.funcat = BinaryMinHeap(affect.funcat_cache)
         else
-            cb.affect!.funcat = BinaryMaxHeap(cb.affect!.funcat_cache)
+            affect.funcat = BinaryMaxHeap(affect.funcat_cache)
         end
-        cb.affect!.funciter = 0
+        affect.funciter = 0
     end
-    cb.affect!.func_start && cb.affect!(integrator)
+    affect.func_start && affect(integrator)
 end
 
 """
