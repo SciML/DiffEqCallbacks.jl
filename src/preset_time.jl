@@ -34,8 +34,8 @@ function PresetTimeCallback(tstops, user_affect!;
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize_preset = function (c, u, t, integrator)
-        initialize(c, u, t, integrator)
+    initialize_preset = function (c, _affect!, u, t, integrator)
+        initialize(c, _affect!, u, t, integrator)
         if filter_tstops
             tdir = integrator.tdir
             _tstops = tstops[@.((tdir * tstops > tdir * integrator.sol.prob.tspan[1])*(tdir *

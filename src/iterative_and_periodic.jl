@@ -132,7 +132,7 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
 function PeriodicCallback(f, Δt::Number;
                           initial_affect = false,
                           final_affect = false,
-                          initialize = (cb, u, t, integrator) -> u_modified!(integrator,
+                          initialize = (cb, _affect!, u, t, integrator) -> u_modified!(integrator,
                                                                              initial_affect),
                           kwargs...)
 
@@ -148,9 +148,9 @@ function PeriodicCallback(f, Δt::Number;
     affect! = PeriodicCallbackAffect(f, Δt, t0, index)
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize_periodic = function (c, u, t, integrator)
+    initialize_periodic = function (c, _affect!, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
-        initialize(c, u, t, integrator)
+        initialize(c, _affect!, u, t, integrator)
         t0[] = t
         index[] = 0
         if initial_affect
