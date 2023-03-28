@@ -84,9 +84,9 @@ end
 function (S::PeriodicCallbackAffect)(integrator)
     @unpack affect!, Δt, t0, index = S
 
-    affect!(integrator)
-
     add_next_tstop!(integrator, S)
+
+    affect!(integrator)
 end
 
 function add_next_tstop!(integrator, S)
