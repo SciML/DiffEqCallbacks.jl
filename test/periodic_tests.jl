@@ -86,7 +86,7 @@ periodic_terminate2 = integrator -> if integrator.t >= tmax; terminate!(integrat
 cb = PeriodicCallback(periodic_terminate2, 0.1, initial_affect = true, final_affect = true,
                       save_positions = (true, true))
 sol = solve(prob, Tsit5(), callback = cb)
-@test sol.retcode == :Terminated
+@test sol.retcode == ReturnCode.Terminated
 @test sol.t[end] == tmax
 
 # Test that `Δt > tspan[2]` does not extend the simulation beyond `tspan[2]`
