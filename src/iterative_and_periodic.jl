@@ -110,7 +110,9 @@ end
 
 """
 ```julia
-PeriodicCallback(f, Δt::Number; initial_affect = true, kwargs...)
+PeriodicCallback(f, Δt::Number; initial_affect = false, 
+                                final_affect = false,
+                                kwargs...)
 ```
 
 `PeriodicCallback` can be used when a function should be called periodically in terms of
