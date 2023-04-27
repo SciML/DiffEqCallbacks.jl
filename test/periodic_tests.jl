@@ -82,7 +82,9 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test sol.u[end][1] == sol.u[end][2]
 
 # Test a PeriodicCallback that stops the simulation with terminate!(integrator)
-periodic_terminate2 = integrator -> if integrator.t >= tmax; terminate!(integrator) end
+periodic_terminate2 = integrator -> if integrator.t >= tmax
+    terminate!(integrator)
+end
 cb = PeriodicCallback(periodic_terminate2, 0.1, initial_affect = true, final_affect = true,
                       save_positions = (true, true))
 sol = solve(prob, Tsit5(), callback = cb)
