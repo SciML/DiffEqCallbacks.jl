@@ -1,4 +1,3 @@
-using DiffEqCallbacks
 using DifferentialEquations, SciMLSensitivity, Zygote
 using QuadGK
 using ForwardDiff
@@ -46,27 +45,26 @@ end
 
 dGdp_ForwardDiff = ForwardDiff.gradient(G, p) 
 
-integrand_values = IntegrandValues(Float64, Vector{Float64})
+integrand_values = IntegrandValues(Vector{Float64})
 function callback_saving(u,t,integrator,sol)
     temp = sol(t)
     return vjp((x)->lotka_volterra(temp,x,t),integrator.p,u)[1]
 end
-gp, ws = gausslegendre(500) #generate Gaussian quadrature nodes
-gp = ((tspan[end]-tspan[1])/2)*gp .+ ((tspan[end]+tspan[1])/2) #convert nodes to correct integration limits
-cb = IntegratingCallback((u,t,integrator)->callback_saving(u,t,integrator,sol), integrand_values, gp; tdir=-1)
+gp, ws = gausslegendre(5) #generate Gaussian quadrature nodes
+cb = IntegratingCallback((u,t,integrator)->callback_saving(u,t,integrator,sol), integrand_values, gp, ws)
 prob_adjoint = ODEProblem((u,p,t)->adjoint(u,p,t,sol), [0.0,0.0], (tspan[end],tspan[1]), p, callback = cb)
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
-function compute_dGdp(integrand,tspan,ws)
-    temp = zeros(length(integrand.t),4)
-    for i in 1:length(integrand.t)
+function compute_dGdp(integrand)
+    temp = zeros(length(integrand.integrand),4)
+    for i in 1:length(integrand.integrand)
         for j in 1:length(integrand.integrand[1])
             temp[i,j] = integrand.integrand[i][j]
         end
     end
-    return ((tspan[end]-tspan[1])/2).*sum(ws.*temp,dims=1)[:]
+    return sum(temp,dims=1)[:]
 end
 
-dGdp_new = compute_dGdp(integrand_values,tspan,ws)
+dGdp_new = compute_dGdp(integrand_values)
 
-@test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-6, rtol = 1e-6)
+@test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-8, rtol = 1e-8)

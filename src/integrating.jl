@@ -1,86 +1,49 @@
 """
-    IntegrandValues{tType<:Real, integrandType}
+    IntegrandValues{integrandType}
 
-A struct used to save values of the time in `t::Vector{tType}` and
-integrand values in `integrand::Vector{integrandType}`.
+A struct used to save values of the integrand values in `integrand::Vector{integrandType}`.
 """
-struct IntegrandValues{tType, integrandType}
-    t::Vector{tType}
+struct IntegrandValues{integrandType}
     integrand::Vector{integrandType}
 end
 
 """
-    IntegrandValues(tType::DataType, integrandType::DataType)
+    IntegrandValues(ntegrandType::DataType)
 
-Return `IntegrandValues{tType, integrandType}` with empty storage vectors.
+Return `IntegrandValues{integrandType}` with empty storage vectors.
 """
-function IntegrandValues(::Type{tType}, ::Type{integrandType}) where {tType, integrandType}
-    IntegrandValues{tType, integrandType}(Vector{tType}(), Vector{integrandType}())
+function IntegrandValues(::Type{integrandType}) where {integrandType}
+    IntegrandValues{integrandType}(Vector{integrandType}())
 end
 
-function Base.show(io::IO, saved_values::IntegrandValues)
-    tType = eltype(saved_values.t)
-    savevalType = eltype(saved_values.integrand)
-    print(io, "IntegrandValues{tType=", tType, ", integrandType=", savevalType, "}",
-          "\nt:\n", saved_values.t, "\nintegrand:\n", saved_values.integrand)
+function Base.show(io::IO, integrand_values::IntegrandValues)
+    integrandType = eltype(integrand_values.integrand)
+    print(io, "IntegrandValues{integrandType=", integrandType, "}",
+          "\nintegrand:\n", integrand_values.integrand)
 end
 
-mutable struct SavingIntegrandAffect{IntegrandFunc, tType, integrandType, gaussPointsType, gaussPointsCacheType}
+mutable struct SavingIntegrandAffect{IntegrandFunc, integrandType, gaussPointsType, gaussWeightsType}
     integrand_func::IntegrandFunc
-    integrand_values::IntegrandValues{tType, integrandType}
+    integrand_values::IntegrandValues{integrandType}
     gauss_points::gaussPointsType
-    gauss_points_cache::gaussPointsCacheType
-    gaussiter::Int
+    gauss_weights::gaussWeightsType
 end
-
-
 
 function (affect!::SavingIntegrandAffect)(integrator)
-    just_saved = false
-    while !isempty(affect!.gauss_points) &&
-        integrator.tdir * first(affect!.gauss_points) <= integrator.tdir * integrator.t # Perform saveat
-        affect!.gaussiter += 1
-        curt = pop!(affect!.gauss_points) # current time
-        if curt != integrator.t # If <t, interpolate
-            if integrator isa SciMLBase.AbstractODEIntegrator
-                # Expand lazy dense for interpolation
-                DiffEqBase.addsteps!(integrator)
-            end
-            if !DiffEqBase.isinplace(integrator.sol.prob)
-                curu = integrator(curt)
-            else
-                curu = first(get_tmp_cache(integrator))
-                integrator(curu, curt) # inplace since save_func allocates
-            end
-            copyat_or_push!(affect!.integrand_values.t, affect!.gaussiter, curt)
-            copyat_or_push!(affect!.integrand_values.integrand, affect!.gaussiter,
-                            affect!.integrand_func(curu, curt, integrator), Val{false})
-        else # ==t, just save
-            just_saved = true
-            copyat_or_push!(affect!.integrand_values.t, affect!.gaussiter, integrator.t)
-            copyat_or_push!(affect!.integrand_values.integrand, affect!.gaussiter,
-                            affect!.integrand_func(integrator.u, integrator.t, integrator),
-                            Val{false})
-        end
+    integral = zeros(eltype(eltype(affect!.integrand_values.integrand)),length(integrator.p))
+    for i in 1:length(affect!.gauss_points)
+        t_temp = ((integrator.t-integrator.tprev)/2)*affect!.gauss_points[i]+(integrator.t+integrator.tprev)/2
+        integral .+= affect!.gauss_weights[i]*affect!.integrand_func(integrator(t_temp), t_temp, integrator)
     end
+    integral *= -(integrator.t-integrator.tprev)/2
+    push!(affect!.integrand_values.integrand, integral)
     u_modified!(integrator, false)
 end
 
-function integrand_saving_initialize(cb, u, t, integrator)
-    if cb.affect!.gaussiter != 0
-        if integrator.tdir > 0
-            cb.affect!.gauss_points = BinaryMinHeap(cb.affect!.gauss_points_cache)
-        else
-            cb.affect!.gauss_points = BinaryMaxHeap(cb.affect!.gauss_points_cache)
-        end
-        cb.affect!.gaussiter = 0
-    end
-end
 
 """
 ```julia
-IntegratingCallback(integrand_func, integrand_values::IntegrandValues, gauss_points = Vector{eltype(integrand_values.t)}();
-               tdir=1)
+IntegratingCallback(integrand_func, integrand_values::IntegrandValues, gauss_points = Vector{eltype(integrand_values.t)}())
 ```
 
 The saving callback lets you define a function `integrand_func(u, t, integrator)` which
@@ -92,31 +55,20 @@ returns lambda*df/dp + dg/dp for calculating the adjoint integral.
   Note that this should allocate the output (not as a view to `u`).
 - `integrand_values::IntegrandValues` is the types that `integrand_func` will return, i.e.
   `integrand_func(t, u, integrator)::integrandType`. It's specified via
-  `IntegrandValues(typeof(t),integrandType)`, i.e. give the type for time and the
-  type that `integrand_func` will output (or higher compatible type).
+  `IntegrandValues(integrandType)`, i.e. give the type 
+  that `integrand_func` will output (or higher compatible type).
 - `gauss_points` are the Gauss-Legendre points, scaled for the correct limits of integration
-
-## Keyword Arguments
-
-- `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `-1` since the adjoint solve is reverse.
 
 The outputted values are saved into `integrand_values`. Time points are found via
 `integrand_values.t` and the values are `integrand_values.integrand`.
 """
 # need to make take in the Gaussian quadrature points (similar to saveat)
-function IntegratingCallback(integrand_func, integrand_values::IntegrandValues, gauss_points = Vector{eltype(integrand_values.t)}();
-                        tdir = -1)
+function IntegratingCallback(integrand_func, integrand_values::IntegrandValues, gauss_points, gauss_weights)
     gauss_points_vec = collect(gauss_points)
-    if tdir > 0
-        gauss_points_internal = BinaryMinHeap(gauss_points_vec)
-    else
-        gauss_points_internal = BinaryMaxHeap(gauss_points_vec)
-    end
-    affect! = SavingIntegrandAffect(integrand_func, integrand_values, gauss_points_internal, gauss_points_vec, 0)
+    gauss_weights_vec = collect(gauss_weights)
+    affect! = SavingIntegrandAffect(integrand_func, integrand_values, gauss_points_vec, gauss_weights_vec)
     condition = (u, t, integrator) -> true
-    DiscreteCallback(condition, affect!;
-                     initialize = integrand_saving_initialize,
-                     save_positions = (false, false))
+    DiscreteCallback(condition, affect!)
 end
 
 export IntegratingCallback, IntegrandValues
