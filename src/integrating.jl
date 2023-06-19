@@ -35,7 +35,7 @@ end
 
 
 
-function (affect!::SavingIntegrandAffect)(integrator, force_save = false)
+function (affect!::SavingIntegrandAffect)(integrator)
     just_saved = false
     while !isempty(affect!.gauss_points) &&
         integrator.tdir * first(affect!.gauss_points) <= integrator.tdir * integrator.t # Perform saveat
