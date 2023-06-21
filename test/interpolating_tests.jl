@@ -1,9 +1,7 @@
 using DifferentialEquations, SciMLSensitivity, Zygote
-using QuadGK
 using ForwardDiff
-using Interpolations
+using QuadGK
 using Test
-using FastGaussQuadrature
 
 # function for computing vector-jacobian products using Zygote
 function vjp(func, eval_pt, vec_mul)
@@ -50,8 +48,7 @@ function callback_saving(u,t,integrator,sol)
     temp = sol(t)
     return vjp((x)->lotka_volterra(temp,x,t),integrator.p,u)[1]
 end
-gp, ws = gausslegendre(5) #generate Gaussian quadrature nodes
-cb = IntegratingCallback((u,t,integrator)->callback_saving(u,t,integrator,sol), integrand_values, gp, ws)
+cb = IntegratingCallback((u,t,integrator)->callback_saving(u,t,integrator,sol), integrand_values)
 prob_adjoint = ODEProblem((u,p,t)->adjoint(u,p,t,sol), [0.0,0.0], (tspan[end],tspan[1]), p, callback = cb)
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
