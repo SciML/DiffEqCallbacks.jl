@@ -95,7 +95,6 @@ returns lambda*df/dp + dg/dp for calculating the adjoint integral.
 The outputted values are saved into `integrand_values`. Time points are found via
 `integrand_values.t` and the values are `integrand_values.integrand`.
 """
-# need to make take in the Gaussian quadrature points (similar to saveat)
 function IntegratingCallback(integrand_func, integrand_values::IntegrandValues)
     affect! = SavingIntegrandAffect(integrand_func, integrand_values)
     condition = (u, t, integrator) -> true
