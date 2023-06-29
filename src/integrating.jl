@@ -79,8 +79,8 @@ end
 IntegratingCallback(integrand_func, integrand_values::IntegrandValues, gauss_points = Vector{eltype(integrand_values.t)}())
 ```
 
-The saving callback lets you define a function `integrand_func(u, t, integrator)` which
-returns lambda*df/dp + dg/dp for calculating the adjoint integral.
+Lets you define a function `integrand_func(u, t, integrator)` which
+returns Integral(integrand_func(u(t),t)dt over the problem tspan.
 
 ## Arguments
 
