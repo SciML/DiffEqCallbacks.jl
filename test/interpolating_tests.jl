@@ -1,4 +1,4 @@
-using DifferentialEquations, SciMLSensitivity, Zygote
+using OrdinaryDiffEq, SciMLSensitivity, Zygote
 using ForwardDiff
 using QuadGK
 using Test
