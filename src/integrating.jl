@@ -62,7 +62,7 @@ mutable struct SavingIntegrandAffect{IntegrandFunc, integrandType}
 end
 
 function (affect!::SavingIntegrandAffect)(integrator)
-    n = div(OrdinaryDiffEq.alg_order(integrator.alg) + 1,2)
+    n = div(SciMLBase.alg_order(integrator.alg) + 1,2)
     integral = zeros(eltype(eltype(affect!.integrand_values.integrand)),length(integrator.p))
     for i in 1:n
         t_temp = ((integrator.t-integrator.tprev)/2)*gauss_points[n][i]+(integrator.t+integrator.tprev)/2
