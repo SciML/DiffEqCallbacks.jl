@@ -14,4 +14,5 @@ using Test
     @time @testset "Manifold tests" begin include("manifold_tests.jl") end
     @time @testset "Domain tests" begin include("domain_tests.jl") end
     @time @testset "ProbInts tests" begin include("probints.jl") end
+    @time @testset "Interpolating tests" begin include("interpolating_tests.jl") end
 end
