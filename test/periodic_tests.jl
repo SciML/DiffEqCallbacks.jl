@@ -36,7 +36,7 @@ for tmax_problem in [tmax; Inf]
 
     # Solve.
     sol = solve(prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2),
-                tstops = [tmax])
+        tstops = [tmax])
 
     # Ensure that initialize1 has been called
     @test periodic1_initialized[]
@@ -77,7 +77,7 @@ sol = solve(prob, Tsit5(), callback = cb)
 
 # Test that the callback is applied again when the simulation finished.
 cb = PeriodicCallback(periodic, 3.0, initial_affect = true, final_affect = true,
-                      save_positions = (true, true))
+    save_positions = (true, true))
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.u[end][1] == sol.u[end][2]
 
@@ -86,7 +86,7 @@ periodic_terminate2 = integrator -> if integrator.t >= tmax
     terminate!(integrator)
 end
 cb = PeriodicCallback(periodic_terminate2, 0.1, initial_affect = true, final_affect = true,
-                      save_positions = (true, true))
+    save_positions = (true, true))
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.retcode == ReturnCode.Terminated
 @test sol.t[end] == tmax

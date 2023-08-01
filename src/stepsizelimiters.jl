@@ -32,7 +32,7 @@ end
 StepsizeLimiter(dtFE;safety_factor=9//10,max_step=false,cached_dtcache=0.0)
 ```
 
-In many cases there is a known maximal stepsize for which the computation is
+In many cases, there is a known maximal stepsize for which the computation is
 stable and produces correct results. For example, in hyperbolic PDEs one normally
 needs to ensure that the stepsize stays below some ``\Delta t_{FE}`` determined
 by the CFL condition. For nonlinear hyperbolic PDEs this limit can be a function
@@ -52,12 +52,12 @@ constraints.
   should be set to match the type for time when not using Float64 values.
 """
 function StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
-                         cached_dtcache = 0.0)
+    cached_dtcache = 0.0)
     affect! = StepsizeLimiterAffect(dtFE, cached_dtcache, safety_factor, max_step)
     condtion = (u, t, integrator) -> true
     DiscreteCallback(condtion, affect!;
-                     initialize = StepsizeLimiter_initialize,
-                     save_positions = (false, false))
+        initialize = StepsizeLimiter_initialize,
+        save_positions = (false, false))
 end
 
 export StepsizeLimiter

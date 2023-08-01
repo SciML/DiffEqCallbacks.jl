@@ -17,7 +17,7 @@ end
 function (p::NLSOLVEJL_SETUP{CS, AD})(::Type{Val{:init}}, f, u0_prototype) where {CS, AD}
     AD ? autodiff = :forward : autodiff = :central
     OnceDifferentiable(f, u0_prototype, u0_prototype, autodiff,
-                       ForwardDiff.Chunk(determine_chunksize(u0_prototype, CS)))
+        ForwardDiff.Chunk(determine_chunksize(u0_prototype, CS)))
 end
 
 # wrapper for non-autonomous functions
@@ -31,7 +31,7 @@ end
 
 """
 ```julia
-ManifoldProjection(g;nlsolve=NLSOLVEJL_SETUP(),save=true)
+ManifoldProjection(g; nlsolve = NLSOLVEJL_SETUP(), save = true)
 ```
 
 In many cases, you may want to declare a manifold on which a solution lives.
@@ -52,17 +52,17 @@ properties.
 
 ## Arguments
 
-- `g`: The residual function for the manifold. This is an inplace function of form
-  `g(resid, u)` or `g(resid, u, p, t)` which writes to the residual `resid` the
-  difference from the manifold components. Here, it is assumed that `resid` is of
-  the same shape as `u`.
+  - `g`: The residual function for the manifold. This is an inplace function of form
+    `g(resid, u)` or `g(resid, u, p, t)` which writes to the residual `resid` the
+    difference from the manifold components. Here, it is assumed that `resid` is of
+    the same shape as `u`.
 
 ## Keyword Arguments
 
-- `nlsolve`: A nonlinear solver as defined [in the nlsolve format](linear_nonlinear.html)
-- `save`: Whether to do the standard saving (applied after the callback)
-- `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u)`.
-- `nlopts`: Optional arguments to nonlinear solver which can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
+  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](@ref linear_nonlinear)
+  - `save`: Whether to do the standard saving (applied after the callback)
+  - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u)`.
+  - `nlopts`: Optional arguments to nonlinear solver which can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
 
 ### Saveat Warning
 
@@ -92,7 +92,7 @@ mutable struct ManifoldProjection{autonomous, F, NL, O}
         # since NLsolve only accepts functions with two arguments
         _g = NonAutonomousFunction{typeof(g), autonomous}(g, 0, 0)
         new{autonomous, typeof(_g), typeof(nlsolve), typeof(nlopts)}(_g, _g, nlsolve,
-                                                                     nlopts)
+            nlopts)
     end
 end
 
@@ -118,14 +118,14 @@ function Manifold_initialize(cb, u, t, integrator)
 end
 
 function ManifoldProjection(g; nlsolve = NLSOLVEJL_SETUP(), save = true,
-                            autonomous = maximum(SciMLBase.numargs(g)) == 3,
-                            nlopts = Dict{Symbol, Any}())
+    autonomous = maximum(SciMLBase.numargs(g)) == 3,
+    nlopts = Dict{Symbol, Any}())
     affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
     condtion = (u, t, integrator) -> true
     save_positions = (false, save)
     DiscreteCallback(condtion, affect!;
-                     initialize = Manifold_initialize,
-                     save_positions = save_positions)
+        initialize = Manifold_initialize,
+        save_positions = save_positions)
 end
 
 export ManifoldProjection

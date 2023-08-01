@@ -18,7 +18,7 @@ function allDerivPass(integrator, abstol, reltol, min_t)
     if typeof(integrator.u) <: Array
         any(abs(d) > abstol && abs(d) > reltol * abs(u)
             for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
-                                              Iterators.cycle(reltol), integrator.u)) &&
+            Iterators.cycle(reltol), integrator.u)) &&
             (return false)
     else
         any((abs.(testval) .> abstol) .& (abs.(testval) .> reltol .* abs.(integrator.u))) &&
@@ -47,21 +47,21 @@ the [Steady State Solvers](@ref) section).
 
 ## Arguments
 
-- `abstol` and `reltol` are the absolute and relative tolerance, respectively.
-  These tolerances may be specified as scalars or as arrays of the same length
-  as the states of the problem.
-- `test` represents the function that evaluates the condition for termination. The default
-  condition is that all derivatives should become smaller than `abstol` and the states times
- `reltol`. The user can pass any other function to implement a different termination condition.
-  Such function should take four arguments: `integrator`, `abstol`, `reltol`, and `min_t`.
+  - `abstol` and `reltol` are the absolute and relative tolerance, respectively.
+    These tolerances may be specified as scalars or as arrays of the same length
+    as the states of the problem.
+  - `test` represents the function that evaluates the condition for termination. The default
+    condition is that all derivatives should become smaller than `abstol` and the states times
+    `reltol`. The user can pass any other function to implement a different termination condition.
+    Such function should take four arguments: `integrator`, `abstol`, `reltol`, and `min_t`.
 
 ## Keyword Arguments
 
-- `min_t` specifies an optional minimum `t` before the steady state calculations are allowed
-  to terminate.
+  - `min_t` specifies an optional minimum `t` before the steady state calculations are allowed
+    to terminate.
 """
 function TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass;
-                              min_t = nothing)
+    min_t = nothing)
     condition = (u, t, integrator) -> test(integrator, abstol, reltol, min_t)
     affect! = (integrator) -> terminate!(integrator)
     DiscreteCallback(condition, affect!; save_positions = (true, false))

@@ -1,7 +1,7 @@
 """
 ```julia
-function IterativeCallback(time_choice, user_affect!,tType = Float64;
-                           initial_affect = false, kwargs...)
+IterativeCallback(time_choice, user_affect!, tType = Float64;
+    initial_affect = false, kwargs...)
 ```
 
 A callback to be used to iteratively apply some affect. For example, if given the first
@@ -9,19 +9,19 @@ effect at `t₁`, you can define `t₂` to apply the next effect.
 
 ## Arguments
 
-- `time_choice(integrator)` determines the time of the next callback. If `nothing` is
-  returned for the time choice then the iterator ends.
-- `user_affect!` is the effect applied to the integrator at the stopping points.
+  - `time_choice(integrator)` determines the time of the next callback. If `nothing` is
+    returned for the time choice, then the iterator ends.
+  - `user_affect!` is the effect applied to the integrator at the stopping points.
 
 ## Keyword Arguments
 
-- `initial_affect` is whether to apply the affect at `t=0` which defaults to `false`
+  - `initial_affect` is whether to apply the affect at `t=0` which defaults to `false`
 """
 function IterativeCallback(time_choice, user_affect!, tType = Float64;
-                           initial_affect = false,
-                           initialize = (cb, u, t, integrator) -> u_modified!(integrator,
-                                                                              initial_affect),
-                           kwargs...)
+    initial_affect = false,
+    initialize = (cb, u, t, integrator) -> u_modified!(integrator,
+        initial_affect),
+    kwargs...)
     # Value of `t` at which `f` should be called next:
     tnext = Ref{Union{Nothing, eltype(tType)}}(typemax(tType))
     condition = function (u, t, integrator)
@@ -110,9 +110,9 @@ end
 
 """
 ```julia
-PeriodicCallback(f, Δt::Number; initial_affect = false, 
-                                final_affect = false,
-                                kwargs...)
+PeriodicCallback(f, Δt::Number; initial_affect = false,
+    final_affect = false,
+    kwargs...)
 ```
 
 `PeriodicCallback` can be used when a function should be called periodically in terms of
@@ -122,21 +122,21 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
 
 ## Arguments
 
-- `f` the `affect!(integrator)` function to be called periodically
-- `Δt` is the period
+  - `f` the `affect!(integrator)` function to be called periodically
+  - `Δt` is the period
 
 ## Keyword Arguments
 
-- `initial_affect` is whether to apply the affect at `t=0`, which defaults to `false`
-- `final_affect` is whether to apply the affect at the final time, which defaults to `false`
-- `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
+  - `initial_affect` is whether to apply the affect at `t=0`, which defaults to `false`
+  - `final_affect` is whether to apply the affect at the final time, which defaults to `false`
+  - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
 """
 function PeriodicCallback(f, Δt::Number;
-                          initial_affect = false,
-                          final_affect = false,
-                          initialize = (cb, u, t, integrator) -> u_modified!(integrator,
-                                                                             initial_affect),
-                          kwargs...)
+    initial_affect = false,
+    final_affect = false,
+    initialize = (cb, u, t, integrator) -> u_modified!(integrator,
+        initial_affect),
+    kwargs...)
 
     # Value of `t` at which `f` should be called next:
     t0 = Ref(typemax(Δt))

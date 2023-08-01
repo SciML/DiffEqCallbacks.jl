@@ -1,9 +1,9 @@
 """
 ```julia
-PresetTimeCallback(tstops,user_affect!;
-                            initialize = DiffEqBase.INITIALIZE_DEFAULT,
-                            filter_tstops = true,
-                            kwargs...)
+PresetTimeCallback(tstops, user_affect!;
+    initialize = DiffEqBase.INITIALIZE_DEFAULT,
+    filter_tstops = true,
+    kwargs...)
 ```
 
 A callback that adds callback `affect!` calls at preset times. No playing around with
@@ -12,17 +12,17 @@ automatic.
 
 ## Arguments
 
-- `tstops`: the times for the `affect!` to trigger at.
-- `user_affect!`: an `affect!(integrator)` function to use at the time points.
+  - `tstops`: the times for the `affect!` to trigger at.
+  - `user_affect!`: an `affect!(integrator)` function to use at the time points.
 
 ## Keyword Arguments
 
-- `filter_tstops`: Whether to filter out tstops beyond the end of the integration timespan.
-  Defaults to true. If false, then tstops can extend the interval of integration.
+  - `filter_tstops`: Whether to filter out tstops beyond the end of the integration timespan.
+    Defaults to true. If false, then tstops can extend the interval of integration.
 """
 function PresetTimeCallback(tstops, user_affect!;
-                            initialize = SciMLBase.INITIALIZE_DEFAULT,
-                            filter_tstops = true, kwargs...)
+    initialize = SciMLBase.INITIALIZE_DEFAULT,
+    filter_tstops = true, kwargs...)
     condition = function (u, t, integrator)
         t in tstops
     end
@@ -38,10 +38,12 @@ function PresetTimeCallback(tstops, user_affect!;
         initialize(c, u, t, integrator)
         if filter_tstops
             tdir = integrator.tdir
-            _tstops = tstops[@.((tdir * tstops > tdir * integrator.sol.prob.tspan[1])*(tdir *
-                                                                                       tstops <
-                                                                                       tdir *
-                                                                                       integrator.sol.prob.tspan[2]))]
+            _tstops = tstops[@.((tdir * tstops >
+                                 tdir *
+                                 integrator.sol.prob.tspan[1])*(tdir *
+                                                                tstops <
+                                                                tdir *
+                                                                integrator.sol.prob.tspan[2]))]
             add_tstop!.((integrator,), _tstops)
         else
             add_tstop!.((integrator,), tstops)
