@@ -17,7 +17,7 @@ end
 function (p::NLSOLVEJL_SETUP{CS, AD})(::Type{Val{:init}}, f, u0_prototype) where {CS, AD}
     AD ? autodiff = :forward : autodiff = :central
     OnceDifferentiable(f, u0_prototype, u0_prototype, autodiff,
-                       ForwardDiff.Chunk(determine_chunksize(u0_prototype, CS)))
+        ForwardDiff.Chunk(determine_chunksize(u0_prototype, CS)))
 end
 
 # wrapper for non-autonomous functions
@@ -92,7 +92,7 @@ mutable struct ManifoldProjection{autonomous, F, NL, O}
         # since NLsolve only accepts functions with two arguments
         _g = NonAutonomousFunction{typeof(g), autonomous}(g, 0, 0)
         new{autonomous, typeof(_g), typeof(nlsolve), typeof(nlopts)}(_g, _g, nlsolve,
-                                                                     nlopts)
+            nlopts)
     end
 end
 
@@ -118,14 +118,14 @@ function Manifold_initialize(cb, u, t, integrator)
 end
 
 function ManifoldProjection(g; nlsolve = NLSOLVEJL_SETUP(), save = true,
-                            autonomous = maximum(SciMLBase.numargs(g)) == 3,
-                            nlopts = Dict{Symbol, Any}())
+    autonomous = maximum(SciMLBase.numargs(g)) == 3,
+    nlopts = Dict{Symbol, Any}())
     affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
     condtion = (u, t, integrator) -> true
     save_positions = (false, save)
     DiscreteCallback(condtion, affect!;
-                     initialize = Manifold_initialize,
-                     save_positions = save_positions)
+        initialize = Manifold_initialize,
+        save_positions = save_positions)
 end
 
 export ManifoldProjection

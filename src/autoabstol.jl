@@ -48,8 +48,8 @@ function AutoAbstol(save = true; init_curmax = 0.0)
     condtion = (u, t, integrator) -> true
     save_positions = (save, false)
     DiscreteCallback(condtion, affect!;
-                     initialize = AutoAbstol_initialize,
-                     save_positions = save_positions)
+        initialize = AutoAbstol_initialize,
+        save_positions = save_positions)
 end
 
 export AutoAbstol

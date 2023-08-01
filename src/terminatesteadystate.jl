@@ -18,7 +18,7 @@ function allDerivPass(integrator, abstol, reltol, min_t)
     if typeof(integrator.u) <: Array
         any(abs(d) > abstol && abs(d) > reltol * abs(u)
             for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
-                                              Iterators.cycle(reltol), integrator.u)) &&
+            Iterators.cycle(reltol), integrator.u)) &&
             (return false)
     else
         any((abs.(testval) .> abstol) .& (abs.(testval) .> reltol .* abs.(integrator.u))) &&
@@ -61,7 +61,7 @@ the [Steady State Solvers](@ref) section).
     to terminate.
 """
 function TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass;
-                              min_t = nothing)
+    min_t = nothing)
     condition = (u, t, integrator) -> test(integrator, abstol, reltol, min_t)
     affect! = (integrator) -> terminate!(integrator)
     DiscreteCallback(condition, affect!; save_positions = (true, false))

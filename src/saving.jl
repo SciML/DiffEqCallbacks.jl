@@ -22,7 +22,7 @@ function Base.show(io::IO, saved_values::SavedValues)
     tType = eltype(saved_values.t)
     savevalType = eltype(saved_values.saveval)
     print(io, "SavedValues{tType=", tType, ", savevalType=", savevalType, "}",
-          "\nt:\n", saved_values.t, "\nsaveval:\n", saved_values.saveval)
+        "\nt:\n", saved_values.t, "\nsaveval:\n", saved_values.saveval)
 end
 
 @recipe function plot(saved_values::SavedValues)
@@ -60,13 +60,13 @@ function (affect!::SavingAffect)(integrator, force_save = false)
             end
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, curt)
             copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter,
-                            affect!.save_func(curu, curt, integrator), Val{false})
+                affect!.save_func(curu, curt, integrator), Val{false})
         else # ==t, just save
             just_saved = true
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
             copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter,
-                            affect!.save_func(integrator.u, integrator.t, integrator),
-                            Val{false})
+                affect!.save_func(integrator.u, integrator.t, integrator),
+                Val{false})
         end
     end
     if !just_saved &&
@@ -75,8 +75,8 @@ function (affect!::SavingAffect)(integrator, force_save = false)
         affect!.saveiter += 1
         copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
         copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter,
-                        affect!.save_func(integrator.u, integrator.t, integrator),
-                        Val{false})
+            affect!.save_func(integrator.u, integrator.t, integrator),
+            Val{false})
     end
     u_modified!(integrator, false)
 end
@@ -96,10 +96,10 @@ end
 """
 ```julia
 SavingCallback(save_func, saved_values::SavedValues;
-               saveat = Vector{eltype(saved_values.t)}(),
-               save_everystep = isempty(saveat),
-               save_start = true,
-               tdir = 1)
+    saveat = Vector{eltype(saved_values.t)}(),
+    save_everystep = isempty(saveat),
+    save_start = true,
+    tdir = 1)
 ```
 
 The saving callback lets you define a function `save_func(u, t, integrator)` which
@@ -126,11 +126,11 @@ The outputted values are saved into `saved_values`. Time points are found via
 `saved_values.t` and the values are `saved_values.saveval`.
 """
 function SavingCallback(save_func, saved_values::SavedValues;
-                        saveat = Vector{eltype(saved_values.t)}(),
-                        save_everystep = isempty(saveat),
-                        save_start = save_everystep || isempty(saveat) || saveat isa Number,
-                        save_end = save_everystep || isempty(saveat) || saveat isa Number,
-                        tdir = 1)
+    saveat = Vector{eltype(saved_values.t)}(),
+    save_everystep = isempty(saveat),
+    save_start = save_everystep || isempty(saveat) || saveat isa Number,
+    save_end = save_everystep || isempty(saveat) || saveat isa Number,
+    tdir = 1)
     # saveat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     saveat_vec = collect(saveat)
     if tdir > 0
@@ -139,11 +139,11 @@ function SavingCallback(save_func, saved_values::SavedValues;
         saveat_internal = BinaryMaxHeap(saveat_vec)
     end
     affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_vec,
-                           save_everystep, save_start, save_end, 0)
+        save_everystep, save_start, save_end, 0)
     condtion = (u, t, integrator) -> true
     DiscreteCallback(condtion, affect!;
-                     initialize = saving_initialize,
-                     save_positions = (false, false))
+        initialize = saving_initialize,
+        save_positions = (false, false))
 end
 
 export SavingCallback, SavedValues

@@ -31,7 +31,7 @@ Note that the values are retrieved from the cache as `.saveval`, and the time po
 ```@example saving
 saved_values = SavedValues(Float64, Tuple{Float64, Float64})
 cb = SavingCallback((u, t, integrator) -> (tr(u), norm(u)), saved_values,
-                    saveat = 0.0:0.1:1.0)
+    saveat = 0.0:0.1:1.0)
 sol = solve(prob, Tsit5(), callback = cb)
 print(saved_values.saveval)
 print(saved_values.t)

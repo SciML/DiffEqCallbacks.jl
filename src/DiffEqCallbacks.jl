@@ -1,7 +1,8 @@
 module DiffEqCallbacks
 
-using DiffEqBase, RecursiveArrayTools, DataStructures, RecipesBase, StaticArraysCore,
-      NLsolve, ForwardDiff
+using DiffEqBase,
+    RecursiveArrayTools, DataStructures, RecipesBase, StaticArraysCore,
+    NLsolve, ForwardDiff
 
 import Base.Iterators
 

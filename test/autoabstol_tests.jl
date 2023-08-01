@@ -29,6 +29,6 @@ step!(integrator2D_2)
 
 sol1 = solve(prob2D, BS3(), callback = cb2D, abstol = fill(1e-6, 4, 2))
 sol2 = solve(prob2D, BS3(), callback = cb2D, abstol = fill(1e-6, 4, 2),
-             reltol = fill(1e-3, 4, 2))
+    reltol = fill(1e-3, 4, 2))
 @test sol1.t == sol2.t && sol1.u == sol2.u
 @test_throws MethodError solve(prob, BS3(), callback = cb2D, abstol = 1e-6)

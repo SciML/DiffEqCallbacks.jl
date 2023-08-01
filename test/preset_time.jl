@@ -38,9 +38,9 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test notcalled
 
 cb = PresetTimeCallback([1.2], integrator -> begin
-                            global notcalled
-                            notcalled = false
-                        end, filter_tstops = false)
+        global notcalled
+        notcalled = false
+    end, filter_tstops = false)
 sol = solve(prob, Tsit5(), callback = cb)
 @test !notcalled
 
@@ -51,8 +51,8 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test notcalled
 
 cb = PresetTimeCallback([-0.2], integrator -> begin
-                            global notcalled
-                            notcalled = false
-                        end, filter_tstops = false)
+        global notcalled
+        notcalled = false
+    end, filter_tstops = false)
 sol = solve(prob, Tsit5(), callback = cb)
 @test !notcalled

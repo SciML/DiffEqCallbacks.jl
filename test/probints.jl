@@ -17,7 +17,7 @@ cb = ProbIntsUncertainty(1e4, 5)
 solve(prob, Tsit5())
 monte_prob = EnsembleProblem(prob)
 sim = solve(monte_prob, Tsit5(), trajectories = 10, callback = cb, adaptive = false,
-            dt = 1 / 10)
+    dt = 1 / 10)
 
 #using Plots; plotly(); plot(sim,vars=(0,1),linealpha=0.4)
 
@@ -34,7 +34,7 @@ cb = ProbIntsUncertainty(0.1, 1)
 sol = solve(prob, Euler(), dt = 1 / 10)
 monte_prob = EnsembleProblem(prob)
 sim = solve(monte_prob, Euler(), trajectories = 100, callback = cb, adaptive = false,
-            dt = 1 / 10)
+    dt = 1 / 10)
 
 #using Plots; plotly(); plot(sim,vars=(0,1),linealpha=0.4)
 
@@ -42,6 +42,6 @@ cb = AdaptiveProbIntsUncertainty(5)
 sol = solve(prob, Tsit5())
 monte_prob = EnsembleProblem(prob)
 sim = solve(monte_prob, Tsit5(), trajectories = 100, callback = cb, abstol = 1e-3,
-            reltol = 1e-1)
+    reltol = 1e-1)
 
 #using Plots; plotly(); plot(sim,vars=(0,1),linealpha=0.4)

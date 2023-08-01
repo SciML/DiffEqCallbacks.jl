@@ -98,7 +98,7 @@ cb = AdaptiveProbIntsUncertainty(5)
 sol = solve(prob, Tsit5())
 ensemble_prob = EnsembleProblem(prob)
 sim = solve(ensemble_prob, Tsit5(), trajectories = 100, callback = cb, abstol = 1e-3,
-            reltol = 1e-1)
+    reltol = 1e-1)
 plot(sim, idxs = (0, 1), linealpha = 0.4)
 ```
 
