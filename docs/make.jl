@@ -13,6 +13,9 @@ makedocs(sitename = "DiffEqCallbacks.jl",
     authors = "Chris Rackauckas",
     modules = [DiffEqCallbacks],
     linkcheck = true,
+    linkcheck_ignore = [
+        "https://www.sciencedirect.com/science/article/pii/S0096300304009683",
+    ],
     strict = [
         :doctest,
         :linkcheck,
