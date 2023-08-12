@@ -3,6 +3,7 @@
 pages = [
     "Home" => "index.md",
     "output_saving.md",
+    "integrating.md",
     "timed_callbacks.md",
     "steady_state.md",
     "step_control.md",
