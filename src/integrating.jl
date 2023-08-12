@@ -189,10 +189,14 @@ returns Integral(integrand_func(u(t),t)dt over the problem tspan.
     `integrand_func(t, u, integrator)::integrandType`. It's specified via
     `IntegrandValues(integrandType)`, i.e. give the type
     that `integrand_func` will output (or higher compatible type).
-  - `gauss_points` are the Gauss-Legendre points, scaled for the correct limits of integration
 
 The outputted values are saved into `integrand_values`. Time points are found via
 `integrand_values.t` and the values are `integrand_values.integrand`.
+
+!!! note
+
+    This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
+    solvers are required.
 """
 function IntegratingCallback(integrand_func, integrand_values::IntegrandValues)
     affect! = SavingIntegrandAffect(integrand_func, integrand_values)
