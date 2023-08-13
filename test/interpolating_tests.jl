@@ -66,7 +66,7 @@ end
 
 dGdp_new = compute_dGdp(integrand_values)
 
-@test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-8, rtol = 1e-8)
+@test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-11, rtol = 1e-11)
 
 
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
@@ -103,4 +103,4 @@ sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
 dGdp_new = compute_dGdp(integrand_values)
 dGdp_analytical = analytical_derivative(p,tspan[end])
-@test isapprox(dGdp_analytical, dGdp_new, atol = 1e-8, rtol = 1e-8)
+@test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
