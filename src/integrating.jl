@@ -66,14 +66,11 @@ function (affect!::SavingIntegrandAffect)(integrator)
     integral = zeros(eltype(eltype(affect!.integrand_values.integrand)),length(integrator.p))
     for i in 1:n
         t_temp = ((integrator.t-integrator.tprev)/2)*gauss_points[n][i]+(integrator.t+integrator.tprev)/2
-        #t_temp = ((integrator.dt)/2)*gauss_points[n][i]+(2*integrator.t+integrator.dt)/2
         integral .+= gauss_weights[n][i]*affect!.integrand_func(integrator(t_temp), t_temp, integrator)
     end
     integral *= -(integrator.t-integrator.tprev)/2
-    #integral *= -(integrator.dt)/2
     push!(affect!.integrand_values.integrand, integral)
     u_modified!(integrator, false)
-    #println(integrator.t)
 end
 
 
