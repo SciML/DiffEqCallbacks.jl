@@ -29,6 +29,10 @@ function adjoint(u, p, t, sol)
            Zygote.gradient((x) -> g(x, p, t), sol(t))[1]
 end
 
+function adjoint_inplace(du, u, p, t, sol)
+    du .= -vjp((x)->lotka_volterra(x,p,t), sol(t), u)[1] - Zygote.gradient((x)->g(x,p,t), sol(t))[1]
+end
+
 u0 = [1.0, 1.0] #initial condition
 tspan = (0.0, 10.0) #simulation time
 p = [1.5, 1.0, 3.0, 1.0] # Lotka-Volterra parameters
@@ -46,18 +50,28 @@ end
 dGdp_ForwardDiff = ForwardDiff.gradient(G, p)
 
 integrand_values = IntegrandValues(Vector{Float64})
+integrand_values_inplace = IntegrandValues(Vector{Float64})
 function callback_saving(u, t, integrator, sol)
     temp = sol(t)
     return vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
 end
-cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
+cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol), 
     integrand_values)
-prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol),
-    [0.0, 0.0],
-    (tspan[end], tspan[1]),
-    p,
+cb_inplace = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol), 
+            integrand_values_inplace)
+prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), 
+    [0.0, 0.0], 
+    (tspan[end], tspan[1]), 
+    p, 
     callback = cb)
+prob_adjoint_inplace = ODEProblem((du, u, p, t) -> adjoint_inplace(du, u, p, t, sol), 
+    [0.0, 0.0], 
+    (tspan[end], tspan[1]), 
+    p, 
+    callback = cb_inplace)
+
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
+sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
 function compute_dGdp(integrand)
     temp = zeros(length(integrand.integrand), length(integrand.integrand[1]))
@@ -70,8 +84,10 @@ function compute_dGdp(integrand)
 end
 
 dGdp_new = compute_dGdp(integrand_values)
+dGdp_new_inplace = compute_dGdp(integrand_values_inplace)
 
-@test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-8, rtol = 1e-8)
+@test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
 
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 function simple_linear_system(u, p, t)
@@ -163,5 +179,5 @@ prob_adjoint = ODEProblem((u, p, t) -> adjoint_linear(u, p, t, sol),
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
 dGdp_new = compute_dGdp(integrand_values)
-dGdp_analytical = analytical_derivative(p, tspan[end])
-@test isapprox(dGdp_analytical, dGdp_new, atol = 1e-8, rtol = 1e-8)
+dGdp_analytical = analytical_derivative(p,tspan[end])
+@test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
