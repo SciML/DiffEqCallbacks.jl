@@ -51,27 +51,27 @@ end
 """
 ```julia
 FunctionCallingCallback(func;
-               funcat=Vector{Float64}(),
-               func_everystep=isempty(funcat),
-               func_start = true
-               tdir=1)
+    funcat = Vector{Float64}(),
+    func_everystep = isempty(funcat),
+    func_start = true,
+    tdir = 1)
 ```
 
 The function calling callback lets you define a function `func(u,t,integrator)`
 which gets calls at the time points of interest. The constructor is:
 
-- `func(t, u, integrator)` is the function to be called.
-- `funcat` values that the function is sure to be evaluated at.
-- `func_everystep` whether to call the function after each integrator step.
-- `func_start` whether the function is called the initial condition.
-- `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
-  be adapted if `tspan[1] > tspan[end]`.
+  - `func(t, u, integrator)` is the function to be called.
+  - `funcat` values that the function is sure to be evaluated at.
+  - `func_everystep` whether to call the function after each integrator step.
+  - `func_start` whether the function is called the initial condition.
+  - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
+    be adapted if `tspan[1] > tspan[end]`.
 """
 function FunctionCallingCallback(func;
-                                 funcat = Vector{Float64}(),
-                                 func_everystep = isempty(funcat),
-                                 func_start = true,
-                                 tdir = 1)
+    funcat = Vector{Float64}(),
+    func_everystep = isempty(funcat),
+    func_start = true,
+    tdir = 1)
     # funcat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     funcat_vec = collect(funcat)
     if tdir > 0
@@ -80,11 +80,11 @@ function FunctionCallingCallback(func;
         funcat_internal = BinaryMaxHeap(funcat_vec)
     end
     affect! = FunctionCallingAffect(func, funcat_internal,
-                                    funcat_vec, func_everystep, func_start, 0)
+        funcat_vec, func_everystep, func_start, 0)
     condtion = (u, t, integrator) -> true
     DiscreteCallback(condtion, affect!;
-                     initialize = functioncalling_initialize,
-                     save_positions = (false, false))
+        initialize = functioncalling_initialize,
+        save_positions = (false, false))
 end
 
 export FunctionCallingCallback
