@@ -66,7 +66,13 @@ function (affect!::SavingIntegrandAffect)(integrator)
     integral = zeros(eltype(eltype(affect!.integrand_values.integrand)),length(integrator.p))
     for i in 1:n
         t_temp = ((integrator.t-integrator.tprev)/2)*gauss_points[n][i]+(integrator.t+integrator.tprev)/2
-        integral .+= gauss_weights[n][i]*affect!.integrand_func(integrator(t_temp), t_temp, integrator)
+        if DiffEqBase.isinplace(integrator.sol.prob)
+            curu = first(get_tmp_cache(integrator))
+            integrator(curu, t_temp)
+            integral .+= gauss_weights[n][i]*affect!.integrand_func(curu, t_temp, integrator)
+        else
+            integral .+= gauss_weights[n][i]*affect!.integrand_func(integrator(t_temp), t_temp, integrator)
+        end
     end
     integral *= -(integrator.t-integrator.tprev)/2
     push!(affect!.integrand_values.integrand, integral)
