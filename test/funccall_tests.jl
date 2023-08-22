@@ -13,6 +13,11 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test collect(0.0:0.25:1.0) == ts
 
 ts = Vector{Float64}()
+cb = FunctionCallingCallback((u, t, integrator) -> push!(ts, t), funcat = 0.25)
+sol = solve(prob, Tsit5(), callback = cb)
+@test collect(0.0:0.25:1.0) == ts
+
+ts = Vector{Float64}()
 cb = FunctionCallingCallback((u, t, integrator) -> push!(ts, t), funcat = 0.0:0.25:1.0,
     func_everystep = true)
 sol = solve(prob, Tsit5(), callback = cb)

@@ -35,6 +35,15 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test all(idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
     eachindex(saved_values.t))
 
+# scalar saveat, scalar problem
+saved_values = SavedValues(Float64, Float64)
+saveat = range(prob.tspan[1], stop = prob.tspan[2], length = 50)
+cb = SavingCallback((u, t, integrator) -> u, saved_values, saveat = step(saveat))
+sol = solve(prob, Tsit5(), callback = cb)
+@test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
+@test all(idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
+    eachindex(saved_values.t))
+
 # saveat, inplace problem
 saved_values = SavedValues(eltype(prob2D.tspan), typeof(prob2D.u0))
 saveat = range(prob2D.tspan[1], stop = prob.tspan[2], length = 50)
