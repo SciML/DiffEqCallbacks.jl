@@ -151,9 +151,10 @@ function Base.show(io::IO, integrand_values::IntegrandValues)
         "\nintegrand:\n", integrand_values.integrand)
 end
 
-mutable struct SavingIntegrandAffect{IntegrandFunc, integrandType}
+mutable struct SavingIntegrandAffect{IntegrandFunc, integrandType, integrandCacheType}
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValues{integrandType}
+    integrand_cache::integrandCacheType
 end
 
 function (affect!::SavingIntegrandAffect)(integrator)
@@ -166,8 +167,8 @@ function (affect!::SavingIntegrandAffect)(integrator)
         if DiffEqBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
-            integral .+= gauss_weights[n][i] * 
-                         affect!.integrand_func(curu, t_temp, integrator)
+            affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
+            integral .+= gauss_weights[n][i] * affect!.integrand_cache
         else
             integral .+= gauss_weights[n][i] * 
                          affect!.integrand_func(integrator(t_temp), t_temp, integrator)
@@ -205,8 +206,8 @@ The outputted values are saved into `integrand_values`. Time points are found vi
     This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
     solvers are required.
 """
-function IntegratingCallback(integrand_func, integrand_values::IntegrandValues)
-    affect! = SavingIntegrandAffect(integrand_func, integrand_values)
+function IntegratingCallback(integrand_func, integrand_values::IntegrandValues, cache)
+    affect! = SavingIntegrandAffect(integrand_func, integrand_values, cache)
     condition = (u, t, integrator) -> true
     DiscreteCallback(condition, affect!, save_positions=(false,false))
 end

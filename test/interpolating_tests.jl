@@ -55,10 +55,14 @@ function callback_saving(u, t, integrator, sol)
     temp = sol(t)
     return vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
 end
+function callback_saving_inplace(du, u, t, integrator, sol)
+    temp = sol(t)
+    du .= vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
+end
 cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol), 
-    integrand_values)
-cb_inplace = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol), 
-            integrand_values_inplace)
+    integrand_values, 0.0)
+cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace(du, u, t, integrator, sol), 
+            integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), 
     [0.0, 0.0], 
     (tspan[end], tspan[1]), 
@@ -98,6 +102,11 @@ end
 function adjoint_linear(u, p, t, sol)
     a, b = p
     return -[0 b; -a 0] * u - 2.0 * (sol(t) .- 1.0)
+end
+
+function adjoint_linear_inplace(du, u, p, t, sol)
+    a, b = p
+    du .= -[0 b; -a 0] * u - 2.0 * (sol(t) .- 1.0)
 end
 
 u0 = [1.0, 1.0] #initial condition
@@ -166,18 +175,33 @@ function analytical_derivative(p, t)
 end
 
 integrand_values = IntegrandValues(Vector{Float64})
+integrand_values_inplace = IntegrandValues(Vector{Float64})
 function callback_saving_linear(u, t, integrator, sol)
     return [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
+function callback_saving_linear_inplace(du, u, t, integrator, sol)
+    du .= [-sol(t)[2] 0; 0 sol(t)[1]]' * u
+end
 cb = IntegratingCallback((u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
-    integrand_values)
+    integrand_values, 0.0)
+cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du, u, t, integrator, sol),
+    integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint_linear(u, p, t, sol),
     [0.0, 0.0],
     (tspan[end], tspan[1]),
     p,
     callback = cb)
+prob_adjoint_inplace = ODEProblem((du, u, p, t) -> adjoint_linear_inplace(du, u, p, t, sol),
+    [0.0, 0.0],
+    (tspan[end], tspan[1]),
+    p,
+    callback = cb_inplace)
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
+sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
 dGdp_new = compute_dGdp(integrand_values)
+dGdp_new_inplace = compute_dGdp(integrand_values_inplace)
 dGdp_analytical = analytical_derivative(p,tspan[end])
+
 @test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_analytical, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
