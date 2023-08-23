@@ -186,13 +186,14 @@ IntegratingCallback(integrand_func,
     gauss_points = Vector{eltype(integrand_values.t)}())
 ```
 
-Lets you define a function `integrand_func(u, t, integrator)` which
+Lets one define a function `integrand_func(u, t, integrator)` which
 returns Integral(integrand_func(u(t),t)dt over the problem tspan.
 
 ## Arguments
 
-  - `integrand_func(u, t, integrator)` returns the quantity in the integral for computing dG/dp.
-    Note that this should allocate the output (not as a view to `u`).
+  - `integrand_func(out, u, t, integrator)` for in-place problems and `out = integrand_func(u, t, integrator)` for
+    out-of-place problems. Returns the quantity in the integral for computing dG/dp.
+    Note that for out-of-place problems, this should allocate the output (not as a view to `u`).
   - `integrand_values::IntegrandValues` is the types that `integrand_func` will return, i.e.
     `integrand_func(t, u, integrator)::integrandType`. It's specified via
     `IntegrandValues(integrandType)`, i.e. give the type
