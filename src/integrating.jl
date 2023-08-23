@@ -167,8 +167,13 @@ function (affect!::SavingIntegrandAffect)(integrator)
         if DiffEqBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
-            affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-            integral .+= gauss_weights[n][i] * affect!.integrand_cache
+            if affect!.integrand_cache == Nothing
+                integral .+= gauss_weights[n][i] * 
+                         affect!.integrand_func(integrator(t_temp), t_temp, integrator)
+            else
+                affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
+                integral .+= gauss_weights[n][i] * affect!.integrand_cache
+            end
         else
             integral .+= gauss_weights[n][i] * 
                          affect!.integrand_func(integrator(t_temp), t_temp, integrator)
@@ -183,7 +188,7 @@ end
 ```julia
 IntegratingCallback(integrand_func,
     integrand_values::IntegrandValues,
-    gauss_points = Vector{eltype(integrand_values.t)}())
+    cache = Nothing)
 ```
 
 Lets one define a function `integrand_func(u, t, integrator)` which
@@ -198,16 +203,21 @@ returns Integral(integrand_func(u(t),t)dt over the problem tspan.
     `integrand_func(t, u, integrator)::integrandType`. It's specified via
     `IntegrandValues(integrandType)`, i.e. give the type
     that `integrand_func` will output (or higher compatible type).
+  - `cache` is provided to store `integrand_func` output for in-place problems.
+    if `cache` is `Nothing` but the problem is in-place, then `integrand_func`
+    is assumed to not be in-place and will be called as `out = integrand_func(u, t, integrator)`.
 
-The outputted values are saved into `integrand_values`. Time points are found via
-`integrand_values.t` and the values are `integrand_values.integrand`.
+The outputted values are saved into `integrand_values`. The values are found
+via `integrand_values.integrand`.
 
 !!! note
 
     This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
     solvers are required.
+
+    If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
 """
-function IntegratingCallback(integrand_func, integrand_values::IntegrandValues, cache)
+function IntegratingCallback(integrand_func, integrand_values::IntegrandValues, cache=Nothing)
     affect! = SavingIntegrandAffect(integrand_func, integrand_values, cache)
     condition = (u, t, integrator) -> true
     DiscreteCallback(condition, affect!, save_positions=(false,false))
