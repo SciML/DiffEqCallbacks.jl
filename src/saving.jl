@@ -82,11 +82,23 @@ function (affect!::SavingAffect)(integrator, force_save = false)
 end
 
 function saving_initialize(cb, u, t, integrator)
-    if cb.affect!.saveiter != 0
-        if integrator.tdir > 0
-            cb.affect!.saveat = BinaryMinHeap(cb.affect!.saveat_cache)
+    saveat_cache = cb.affect!.saveat_cache
+    if cb.affect!.saveiter != 0 || saveat_cache isa Number
+        tspan = integrator.sol.prob.tspan
+        saveat_cache = cb.affect!.saveat_cache
+        if saveat_cache isa Number
+            saveat_vec = range(tspan...; step = saveat_cache)
+            # avoid saving end twice
+            if tspan[end] == last(saveat_vec)
+                cb.affect!.save_end = false
+            end
         else
-            cb.affect!.saveat = BinaryMaxHeap(cb.affect!.saveat_cache)
+            saveat_vec = saveat_cache
+        end
+        if integrator.tdir > 0
+            cb.affect!.saveat = BinaryMinHeap(saveat_vec)
+        else
+            cb.affect!.saveat = BinaryMaxHeap(saveat_vec)
         end
         cb.affect!.saveiter = 0
     end
@@ -132,13 +144,20 @@ function SavingCallback(save_func, saved_values::SavedValues;
     save_end = save_everystep || isempty(saveat) || saveat isa Number,
     tdir = 1)
     # saveat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
-    saveat_vec = collect(saveat)
-    if tdir > 0
-        saveat_internal = BinaryMinHeap(saveat_vec)
+    if saveat isa Number
+        # expand to range using tspan in saving_initialize
+        saveat_cache = saveat
+        saveat_heap = fill(saveat, 0)
     else
-        saveat_internal = BinaryMaxHeap(saveat_vec)
+        saveat_heap = saveat_cache = collect(saveat)
     end
-    affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_vec,
+
+    if tdir > 0
+        saveat_internal = BinaryMinHeap(saveat_heap)
+    else
+        saveat_internal = BinaryMaxHeap(saveat_heap)
+    end
+    affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_cache,
         save_everystep, save_start, save_end, 0)
     condtion = (u, t, integrator) -> true
     DiscreteCallback(condtion, affect!;

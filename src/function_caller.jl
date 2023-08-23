@@ -37,11 +37,19 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
 end
 
 function functioncalling_initialize(cb, u, t, integrator)
-    if cb.affect!.funciter != 0
-        if integrator.tdir > 0
-            cb.affect!.funcat = BinaryMinHeap(cb.affect!.funcat_cache)
+    funcat_cache = cb.affect!.funcat_cache
+    if cb.affect!.funciter != 0 || funcat_cache isa Number
+        tspan = integrator.sol.prob.tspan
+        funcat_cache = cb.affect!.funcat_cache
+        funcat_vec = if funcat_cache isa Number
+            range(tspan...; step = funcat_cache)
         else
-            cb.affect!.funcat = BinaryMaxHeap(cb.affect!.funcat_cache)
+            funcat_cache
+        end
+        if integrator.tdir > 0
+            cb.affect!.funcat = BinaryMinHeap(funcat_vec)
+        else
+            cb.affect!.funcat = BinaryMaxHeap(funcat_vec)
         end
         cb.affect!.funciter = 0
     end
@@ -61,7 +69,7 @@ The function calling callback lets you define a function `func(u,t,integrator)`
 which gets calls at the time points of interest. The constructor is:
 
   - `func(t, u, integrator)` is the function to be called.
-  - `funcat` values that the function is sure to be evaluated at.
+  - `funcat` values or interval that the function is sure to be evaluated at.
   - `func_everystep` whether to call the function after each integrator step.
   - `func_start` whether the function is called the initial condition.
   - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
@@ -73,14 +81,21 @@ function FunctionCallingCallback(func;
     func_start = true,
     tdir = 1)
     # funcat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
-    funcat_vec = collect(funcat)
-    if tdir > 0
-        funcat_internal = BinaryMinHeap(funcat_vec)
+    if funcat isa Number
+        # expand to range using tspan in functioncalling_initialize
+        funcat_cache = funcat
+        funcat_heap = fill(funcat, 0)
     else
-        funcat_internal = BinaryMaxHeap(funcat_vec)
+        funcat_heap = funcat_cache = collect(funcat)
+    end
+
+    if tdir > 0
+        funcat_internal = BinaryMinHeap(funcat_heap)
+    else
+        funcat_internal = BinaryMaxHeap(funcat_heap)
     end
     affect! = FunctionCallingAffect(func, funcat_internal,
-        funcat_vec, func_everystep, func_start, 0)
+        funcat_cache, func_everystep, func_start, 0)
     condtion = (u, t, integrator) -> true
     DiscreteCallback(condtion, affect!;
         initialize = functioncalling_initialize,
