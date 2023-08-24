@@ -60,7 +60,7 @@ function callback_saving_inplace(du, u, t, integrator, sol)
     du .= vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
 end
 cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol), 
-    integrand_values, 0.0)
+    integrand_values)
 cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace(du, u, t, integrator, sol), 
             integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), 
@@ -183,7 +183,7 @@ function callback_saving_linear_inplace(du, u, t, integrator, sol)
     du .= [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
 cb = IntegratingCallback((u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
-    integrand_values, 0.0)
+    integrand_values)
 cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du, u, t, integrator, sol),
     integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint_linear(u, p, t, sol),
