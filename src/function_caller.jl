@@ -42,7 +42,12 @@ function functioncalling_initialize(cb, u, t, integrator)
         tspan = integrator.sol.prob.tspan
         funcat_cache = cb.affect!.funcat_cache
         funcat_vec = if funcat_cache isa Number
-            range(tspan...; step = funcat_cache)
+            step = funcat_cache
+            t0, tf = tspan
+            if !cb.affect!.func_start
+                t0 += step
+            end
+            range(t0, tf; step)
         else
             funcat_cache
         end
@@ -54,6 +59,7 @@ function functioncalling_initialize(cb, u, t, integrator)
         cb.affect!.funciter = 0
     end
     cb.affect!.func_start && cb.affect!(integrator)
+    u_modified!(integrator, false)
 end
 
 """

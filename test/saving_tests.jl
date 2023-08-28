@@ -44,6 +44,18 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test all(idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
     eachindex(saved_values.t))
 
+# scalar saveat without start and end
+saved_values = SavedValues(Float64, Float64)
+cb = SavingCallback((u, t, integrator) -> u,
+    saved_values;
+    saveat = 0.2,
+    save_start = false,
+    save_end = false)
+preset = PresetTimeCallback(Float64[], identity)
+sol = solve(prob, Tsit5(); dt = 0.2, adaptive = false, callback = CallbackSet(cb, preset))
+@test sol.t ≈ 0.0:0.2:1.0
+@test saved_values.t ≈ 0.2:0.2:0.8
+
 # saveat, inplace problem
 saved_values = SavedValues(eltype(prob2D.tspan), typeof(prob2D.u0))
 saveat = range(prob2D.tspan[1], stop = prob.tspan[2], length = 50)
@@ -95,7 +107,6 @@ saved_values = SavedValues(Float64, Tuple{Float64, Float64})
 cb = SavingCallback((u, t, integrator) -> (tr(u), norm(u)), saved_values,
     saveat = 0.0:0.1:1.0)
 sol = solve(prob, Tsit5(), callback = cb)
-println(saved_values.saveval)
 
 # Save only end
 prob = ODEProblem((du, u, p, t) -> du .= u, rand(4, 4), (0.0, 1.0))

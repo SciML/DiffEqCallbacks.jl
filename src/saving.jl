@@ -87,7 +87,15 @@ function saving_initialize(cb, u, t, integrator)
         tspan = integrator.sol.prob.tspan
         saveat_cache = cb.affect!.saveat_cache
         if saveat_cache isa Number
-            saveat_vec = range(tspan...; step = saveat_cache)
+            step = saveat_cache
+            t0, tf = tspan
+            if !cb.affect!.save_start
+                t0 += step
+            end
+            if !cb.affect!.save_end
+                tf -= step
+            end
+            saveat_vec = range(t0, tf; step)
             # avoid saving end twice
             if tspan[end] == last(saveat_vec)
                 cb.affect!.save_end = false
@@ -103,6 +111,7 @@ function saving_initialize(cb, u, t, integrator)
         cb.affect!.saveiter = 0
     end
     cb.affect!.save_start && cb.affect!(integrator)
+    u_modified!(integrator, false)
 end
 
 """
@@ -131,6 +140,7 @@ returns quantities of interest that shall be saved.
   - `saveat` mimics `saveat` in `solve` from `solve`.
   - `save_everystep` mimics `save_everystep` from `solve`.
   - `save_start` mimics `save_start` from `solve`.
+  - `save_end` mimics `save_end` from `solve`.
   - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
     be adapted if `tspan[1] > tspan[end]`.
 
