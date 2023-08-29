@@ -74,7 +74,7 @@ FunctionCallingCallback(func;
 The function calling callback lets you define a function `func(u,t,integrator)`
 which gets calls at the time points of interest. The constructor is:
 
-  - `func(t, u, integrator)` is the function to be called.
+  - `func(u, t, integrator)` is the function to be called.
   - `funcat` values or interval that the function is sure to be evaluated at.
   - `func_everystep` whether to call the function after each integrator step.
   - `func_start` whether the function is called the initial condition.
