@@ -24,20 +24,35 @@ function lotka_volterra(u, p, t)
     return [dx, dy]
 end
 
+function lotka_volterra(u, p::NamedTuple, t)
+    x, y = u
+    α, β = p.x.αβ
+    δ, γ = p.δγ
+    dx = α * x - β * x * y
+    dy = -δ * y + γ * x * y
+    return [dx, dy]
+end
+
 function adjoint(u, p, t, sol)
     return -vjp((x) -> lotka_volterra(x, p, t), sol(t), u)[1] -
            Zygote.gradient((x) -> g(x, p, t), sol(t))[1]
 end
 
 function adjoint_inplace(du, u, p, t, sol)
-    du .= -vjp((x)->lotka_volterra(x,p,t), sol(t), u)[1] - Zygote.gradient((x)->g(x,p,t), sol(t))[1]
+    du .= -vjp((x) -> lotka_volterra(x, p, t), sol(t), u)[1] -
+          Zygote.gradient((x) -> g(x, p, t), sol(t))[1]
 end
 
 u0 = [1.0, 1.0] #initial condition
 tspan = (0.0, 10.0) #simulation time
 p = [1.5, 1.0, 3.0, 1.0] # Lotka-Volterra parameters
+p_nt = (; x = (; αβ = [1.5, 1.0]), δγ = [3.0, 1.0]) # Lotka-Volterra parameters as NamedTuple
+
 prob = ODEProblem(lotka_volterra, u0, tspan, p)
 sol = solve(prob, Tsit5(), abstol = 1e-14, reltol = 1e-14)
+
+prob_nt = remake(prob, p = p_nt)
+sol_nt = solve(prob_nt, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
 # total loss functional
 function G(p)
@@ -59,23 +74,40 @@ function callback_saving_inplace(du, u, t, integrator, sol)
     temp = sol(t)
     du .= vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
 end
-cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol), 
+cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace(du, u, t, integrator, sol), 
-            integrand_values_inplace, zeros(length(p)))
-prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), 
-    [0.0, 0.0], 
-    (tspan[end], tspan[1]), 
-    p, 
-    callback = cb)
-prob_adjoint_inplace = ODEProblem((du, u, p, t) -> adjoint_inplace(du, u, p, t, sol), 
-    [0.0, 0.0], 
-    (tspan[end], tspan[1]), 
-    p, 
-    callback = cb_inplace)
+cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace(du,
+        u, t, integrator, sol),
+    integrand_values_inplace, zeros(length(p)))
+prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), [0.0, 0.0],
+    (tspan[end], tspan[1]), p; callback = cb)
+prob_adjoint_inplace = ODEProblem((du, u, p, t) -> adjoint_inplace(du, u, p, t, sol),
+    [0.0, 0.0], (tspan[end], tspan[1]), p; callback = cb_inplace)
 
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, reltol = 1e-14)
+
+function callback_saving_inplace_nt(du, u, t, integrator, sol)
+    temp = sol(t)
+    res = vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
+    DiffEqCallbacks.fmap((y, x) -> copyto!(y, x), du, res)
+    return du
+end
+integrand_values_nt = IntegrandValues(typeof(p_nt))
+integrand_values_inplace_nt = IntegrandValues(typeof(p_nt))
+cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
+    integrand_values_nt)
+cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace_nt(du,
+        u, t, integrator, sol),
+    integrand_values_inplace_nt, DiffEqCallbacks.allocate_zeros(p_nt))
+prob_adjoint_nt = ODEProblem((u, p, t) -> adjoint(u, p, t, sol_nt), [0.0, 0.0],
+    (tspan[end], tspan[1]), p_nt; callback = cb)
+prob_adjoint_nt_inplace = ODEProblem((du, u, p, t) -> adjoint_inplace(du, u, p, t, sol_nt),
+    [0.0, 0.0], (tspan[end], tspan[1]), p_nt; callback = cb_inplace)
+
+sol_adjoint_nt = solve(prob_adjoint_nt, Tsit5(), abstol = 1e-14, reltol = 1e-14)
+sol_adjoint_nt_inplace = solve(prob_adjoint_nt_inplace, Tsit5(), abstol = 1e-14,
+    reltol = 1e-14)
 
 function compute_dGdp(integrand)
     temp = zeros(length(integrand.integrand), length(integrand.integrand[1]))
@@ -90,8 +122,22 @@ end
 dGdp_new = compute_dGdp(integrand_values)
 dGdp_new_inplace = compute_dGdp(integrand_values_inplace)
 
+function compute_dGdp_nt(integrand)
+    temp = zeros(length(integrand.integrand), 4)
+    for i in 1:length(integrand.integrand)
+        temp[i, 1:2] .= integrand.integrand[i].x.αβ
+        temp[i, 3:4] .= integrand.integrand[i].δγ
+    end
+    return sum(temp, dims = 1)[:]
+end
+
+dGdp_new_nt = compute_dGdp_nt(integrand_values_nt)
+dGdp_new_inplace_nt = compute_dGdp_nt(integrand_values_inplace_nt)
+
 @test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-11, rtol = 1e-11)
 @test isapprox(dGdp_ForwardDiff, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff, dGdp_new_nt, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff, dGdp_new_inplace_nt, atol = 1e-11, rtol = 1e-11)
 
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 function simple_linear_system(u, p, t)
@@ -184,7 +230,11 @@ function callback_saving_linear_inplace(du, u, t, integrator, sol)
 end
 cb = IntegratingCallback((u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du, u, t, integrator, sol),
+cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du,
+        u,
+        t,
+        integrator,
+        sol),
     integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint_linear(u, p, t, sol),
     [0.0, 0.0],
@@ -201,7 +251,7 @@ sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, relto
 
 dGdp_new = compute_dGdp(integrand_values)
 dGdp_new_inplace = compute_dGdp(integrand_values_inplace)
-dGdp_analytical = analytical_derivative(p,tspan[end])
+dGdp_analytical = analytical_derivative(p, tspan[end])
 
 @test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
 @test isapprox(dGdp_analytical, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
