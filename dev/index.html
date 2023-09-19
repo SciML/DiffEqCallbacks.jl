@@ -5,22 +5,23 @@
   gtag('config', 'UA-90474609-3', {'page_path': location.pathname + location.search + location.hash});
 </script><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://docs.sciml.ai/DiffEqCallbacks/stable/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script><link href="assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="DiffEqCallbacks.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>DiffEqCallbacks.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Usage"><span>Usage</span></a></li><li><a class="tocitem" href="#Note-About-Dependencies"><span>Note About Dependencies</span></a></li><li><a class="tocitem" href="#Contributing"><span>Contributing</span></a></li><li><a class="tocitem" href="#Reproducibility"><span>Reproducibility</span></a></li></ul></li><li><a class="tocitem" href="output_saving/">Output and Saving Controls</a></li><li><a class="tocitem" href="integrating/">Numerical Integration Callbacks</a></li><li><a class="tocitem" href="timed_callbacks/">Timed Callbacks</a></li><li><a class="tocitem" href="steady_state/">Steady State Callbacks</a></li><li><a class="tocitem" href="step_control/">Step Control Callbacks</a></li><li><a class="tocitem" href="projection/">Manifold Projection</a></li><li><a class="tocitem" href="uncertainty_quantification/">Uncertainty Quantification</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/SciML/DiffEqCallbacks.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="DiffEqCallbacks.jl:-Prebuilt-Callbacks-for-extending-the-solvers-of-DifferentialEquations.jl"><a class="docs-heading-anchor" href="#DiffEqCallbacks.jl:-Prebuilt-Callbacks-for-extending-the-solvers-of-DifferentialEquations.jl">DiffEqCallbacks.jl: Prebuilt Callbacks for extending the solvers of DifferentialEquations.jl</a><a id="DiffEqCallbacks.jl:-Prebuilt-Callbacks-for-extending-the-solvers-of-DifferentialEquations.jl-1"></a><a class="docs-heading-anchor-permalink" href="#DiffEqCallbacks.jl:-Prebuilt-Callbacks-for-extending-the-solvers-of-DifferentialEquations.jl" title="Permalink"></a></h1><p><a href="https://docs.sciml.ai/DiffEqDocs/stable/">DifferentialEquations.jl</a> has an expressive callback system which allows for customizable transformations of te solver behavior. DiffEqCallbacks.jl is a library of pre-built callbacks which makes it easy to transform the solver into a domain-specific simulation tool.</p><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>To install DiffEqCallbacks.jl, use the Julia package manager:</p><pre><code class="language-julia hljs">using Pkg
 Pkg.add(&quot;DiffEqCallbacks&quot;)</code></pre><h2 id="Usage"><a class="docs-heading-anchor" href="#Usage">Usage</a><a id="Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Usage" title="Permalink"></a></h2><p>To use the callbacks provided in this library with  solvers, simply pass the callback to the solver via the <code>callback</code> keyword argument:</p><pre><code class="language-julia hljs">sol = solve(prob, alg; callback = cb)</code></pre><p>For more information on using callbacks, <a href="https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions">see the manual page</a>.</p><h2 id="Note-About-Dependencies"><a class="docs-heading-anchor" href="#Note-About-Dependencies">Note About Dependencies</a><a id="Note-About-Dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Note-About-Dependencies" title="Permalink"></a></h2><p>Note that DiffEqCallbacks.jl is not a required dependency for the callback mechanism. DiffEqCallbacks.jl is simply a library of pre-made callbacks, not the library which defines the callback system. Callbacks are defined in the SciML interface at SciMLBase.jl.</p><h2 id="Contributing"><a class="docs-heading-anchor" href="#Contributing">Contributing</a><a id="Contributing-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>On the <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl/docs/Project.toml`
-  [459566f4] DiffEqCallbacks v2.29.1 `~/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl`
-  [e30172f5] Documenter v0.27.25
+  [459566f4] DiffEqCallbacks v2.30.0 `~/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl`
+⌅ [e30172f5] Documenter v0.27.25
   [1dea7af3] OrdinaryDiffEq v6.55.0
   [91a5bcdd] Plots v1.39.0
-  [37e2e46d] LinearAlgebra</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.9.3
+  [37e2e46d] LinearAlgebra
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.9.3
 Commit bed2cd540a1 (2023-08-24 14:43 UTC)
 Build Info:
   Official https://julialang.org/ release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 2 × Intel(R) Xeon(R) CPU E5-2673 v4 @ 2.30GHz
+  CPU: 2 × Intel(R) Xeon(R) Platinum 8272CL CPU @ 2.60GHz
   WORD_SIZE: 64
   LIBM: libopenlibm
-  LLVM: libLLVM-14.0.6 (ORCJIT, broadwell)
+  LLVM: libLLVM-14.0.6 (ORCJIT, skylake-avx512)
   Threads: 1 on 2 virtual cores</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl/docs/Manifest.toml`
-  [47edcb42] ADTypes v0.2.2
+  [47edcb42] ADTypes v0.2.4
   [a4c015fc] ANSIColoredPrinters v0.0.1
   [79e6a3ab] Adapt v3.6.2
   [ec485272] ArnoldiMethod v0.2.0
@@ -28,7 +29,7 @@ Platform Info:
   [30b0a656] ArrayInterfaceCore v0.1.29
   [d1d4a3ce] BitFlags v0.1.7
   [62783981] BitTwiddlingConvenienceFunctions v0.1.5
-  [2a0fbf3d] CPUSummary v0.2.3
+  [2a0fbf3d] CPUSummary v0.2.4
   [d360d2e6] ChainRulesCore v1.16.0
   [fb6a15b2] CloseOpenIntervals v0.1.12
   [944b1d66] CodecZlib v0.7.2
@@ -47,13 +48,13 @@ Platform Info:
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.128.2
-  [459566f4] DiffEqCallbacks v2.29.1 `~/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl`
+  [2b5f629d] DiffEqBase v6.129.0
+  [459566f4] DiffEqCallbacks v2.30.0 `~/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl`
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
   [b4f34e82] Distances v0.10.9
   [ffbed154] DocStringExtensions v0.9.3
-  [e30172f5] Documenter v0.27.25
+⌅ [e30172f5] Documenter v0.27.25
   [4e289a0a] EnumX v1.0.4
   [460bff9d] ExceptionUnwrapping v0.1.9
   [d4d017d3] ExponentialUtilities v1.25.0
@@ -62,18 +63,20 @@ Platform Info:
   [7034ab61] FastBroadcast v0.2.6
   [9aa1b823] FastClosures v0.3.2
   [29a986be] FastLapackInterface v2.0.0
+  [1a297f60] FillArrays v1.6.1
   [6a86dc24] FiniteDiff v2.21.1
   [53c48c17] FixedPointNumbers v0.8.4
   [59287772] Formatting v0.4.2
   [f6369f11] ForwardDiff v0.10.36
   [069b7b12] FunctionWrappers v1.1.3
   [77dc65aa] FunctionWrappersWrappers v0.1.3
+  [d9f16b24] Functors v0.4.5
   [46192b85] GPUArraysCore v0.1.5
   [28b8d3ca] GR v0.72.9
   [c145ed77] GenericSchur v0.5.3
   [86223c79] Graphs v1.8.0
   [42e2da0e] Grisu v1.0.2
-  [cd3eb016] HTTP v1.9.15
+  [cd3eb016] HTTP v1.10.0
   [3e5b6fbb] HostCPUFeatures v0.1.16
   [b5f81e59] IOCapture v0.2.3
   [615f187c] IfElse v0.1.1
@@ -83,7 +86,7 @@ Platform Info:
   [1019f520] JLFzf v0.1.5
   [692b3bcd] JLLWrappers v1.5.0
   [682c06a0] JSON v0.21.4
-  [ef3ab10e] KLU v0.4.0
+  [ef3ab10e] KLU v0.4.1
   [ba0b0d4f] Krylov v0.9.4
   [b964fa9f] LaTeXStrings v1.3.0
   [23fbe1c1] Latexify v0.16.1
@@ -115,14 +118,14 @@ Platform Info:
   [ccf2f8ad] PlotThemes v3.1.0
   [995b91a9] PlotUtils v1.3.5
   [91a5bcdd] Plots v1.39.0
-  [f517fe37] Polyester v0.7.5
+  [f517fe37] Polyester v0.7.6
   [1d0040c9] PolyesterWeave v0.2.1
   [d236fae5] PreallocationTools v0.4.12
   [aea7be01] PrecompileTools v1.2.0
   [21216c6a] Preferences v1.4.0
   [3cdcf5f2] RecipesBase v1.3.4
   [01d81517] RecipesPipeline v0.6.12
-  [731186ca] RecursiveArrayTools v2.38.8
+  [731186ca] RecursiveArrayTools v2.38.10
   [f2c3362d] RecursiveFactorization v0.2.20
   [189a3867] Reexport v1.2.2
   [05181044] RelocatableFolders v1.0.0
@@ -130,7 +133,7 @@ Platform Info:
   [7e49a35a] RuntimeGeneratedFunctions v0.5.12
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.39
-  [0bca4576] SciMLBase v1.97.0
+  [0bca4576] SciMLBase v1.98.0
   [e9a6253c] SciMLNLSolve v0.1.8
   [c0aeaf25] SciMLOperators v0.3.6
   [6c6a2e73] Scratch v1.2.0
@@ -197,11 +200,11 @@ Platform Info:
   [89763e89] Libtiff_jll v4.5.1+1
   [38a345b3] Libuuid_jll v2.36.0+0
   [e7412a2a] Ogg_jll v1.3.5+1
-⌅ [458c3c95] OpenSSL_jll v1.1.22+0
+⌅ [458c3c95] OpenSSL_jll v1.1.23+0
   [efe28fd5] OpenSpecFun_jll v0.5.5+0
   [91d4177d] Opus_jll v1.3.2+0
   [30392449] Pixman_jll v0.42.2+0
-  [c0090381] Qt6Base_jll v6.4.2+3
+⌅ [c0090381] Qt6Base_jll v6.4.2+3
   [a2964d1f] Wayland_jll v1.21.0+0
   [2381bf8a] Wayland_protocols_jll v1.25.0+0
   [02c8fc9c] XML2_jll v2.10.4+0
@@ -285,5 +288,5 @@ Platform Info:
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
 Info Packages marked with ⌃ and ⌅ have new versions available, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details>You can also download the 
-<a href="https://github.com/SciML/DiffEqCallbacks.jl/tree/gh-pages/v2.29.1/assets/Manifest.toml">manifest</a> file and the
-<a href="https://github.com/SciML/DiffEqCallbacks.jl/tree/gh-pages/v2.29.1/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="output_saving/">Output and Saving Controls »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Monday 11 September 2023 10:12">Monday 11 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<a href="https://github.com/SciML/DiffEqCallbacks.jl/tree/gh-pages/v2.30.0/assets/Manifest.toml">manifest</a> file and the
+<a href="https://github.com/SciML/DiffEqCallbacks.jl/tree/gh-pages/v2.30.0/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="output_saving/">Output and Saving Controls »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Tuesday 19 September 2023 08:45">Tuesday 19 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
