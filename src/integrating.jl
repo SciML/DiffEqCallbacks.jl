@@ -158,7 +158,8 @@ gauss_weights = [[2.0],
 
 A struct used to save values of the integrand values in `integrand::Vector{integrandType}`.
 """
-struct IntegrandValues{integrandType}
+struct IntegrandValues{tType, integrandType}
+    ts::Vector{tType}
     integrand::Vector{integrandType}
 end
 
@@ -167,8 +168,8 @@ end
 
 Return `IntegrandValues{integrandType}` with empty storage vectors.
 """
-function IntegrandValues(::Type{integrandType}) where {integrandType}
-    IntegrandValues{integrandType}(Vector{integrandType}())
+function IntegrandValues(::Type{tType}, ::Type{integrandType}) where {tType, integrandType}
+    IntegrandValues{tType, integrandType}(Vector{tType}(), Vector{integrandType}())
 end
 
 function Base.show(io::IO, integrand_values::IntegrandValues)
@@ -177,14 +178,19 @@ function Base.show(io::IO, integrand_values::IntegrandValues)
         "\nintegrand:\n", integrand_values.integrand)
 end
 
-mutable struct SavingIntegrandAffect{IntegrandFunc, integrandType, integrandCacheType}
+mutable struct SavingIntegrandAffect{IntegrandFunc, tType, integrandType, integrandCacheType}
     integrand_func::IntegrandFunc
-    integrand_values::IntegrandValues{integrandType}
+    integrand_values::IntegrandValues{tType, integrandType}
     integrand_cache::integrandCacheType
 end
 
 function (affect!::SavingIntegrandAffect)(integrator)
-    n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
+    n = 0
+    if typeof(integrator.sol.prob) <: Union{SDEProblem, RODEProblem}
+        n = 10
+    else
+        n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
+    end
     integral = allocate_zeros(integrator.p)
     for i in 1:n
         t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] +
@@ -205,6 +211,7 @@ function (affect!::SavingIntegrandAffect)(integrator)
         end
     end
     recursive_scalar_mul!(integral, -(integrator.t - integrator.tprev) / 2)
+    push!(affect!.integrand_values.ts, integrator.t)
     push!(affect!.integrand_values.integrand, integral)
     u_modified!(integrator, false)
 end
