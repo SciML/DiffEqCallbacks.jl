@@ -64,8 +64,8 @@ end
 
 dGdp_ForwardDiff = ForwardDiff.gradient(G, p)
 
-integrand_values = IntegrandValues(Vector{Float64})
-integrand_values_inplace = IntegrandValues(Vector{Float64})
+integrand_values = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
+integrand_values_inplace = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
 function callback_saving(u, t, integrator, sol)
     temp = sol(t)
     return vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
@@ -74,9 +74,9 @@ function callback_saving_inplace(du, u, t, integrator, sol)
     temp = sol(t)
     du .= vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
 end
-cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
+cb = IntegratingSumCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace(du,
+cb_inplace = IntegratingSumCallback((du, u, t, integrator) -> callback_saving_inplace(du,
         u, t, integrator, sol),
     integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), [0.0, 0.0],
@@ -93,11 +93,11 @@ function callback_saving_inplace_nt(du, u, t, integrator, sol)
     DiffEqCallbacks.fmap((y, x) -> copyto!(y, x), du, res)
     return du
 end
-integrand_values_nt = IntegrandValues(typeof(p_nt))
-integrand_values_inplace_nt = IntegrandValues(typeof(p_nt))
-cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
+integrand_values_nt = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p_nt))
+integrand_values_inplace_nt = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p_nt))
+cb = IntegratingSumCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
     integrand_values_nt)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace_nt(du,
+cb_inplace = IntegratingSumCallback((du, u, t, integrator) -> callback_saving_inplace_nt(du,
         u, t, integrator, sol),
     integrand_values_inplace_nt, DiffEqCallbacks.allocate_zeros(p_nt))
 prob_adjoint_nt = ODEProblem((u, p, t) -> adjoint(u, p, t, sol_nt), [0.0, 0.0],
@@ -109,35 +109,10 @@ sol_adjoint_nt = solve(prob_adjoint_nt, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 sol_adjoint_nt_inplace = solve(prob_adjoint_nt_inplace, Tsit5(), abstol = 1e-14,
     reltol = 1e-14)
 
-function compute_dGdp(integrand)
-    temp = zeros(length(integrand.integrand), length(integrand.integrand[1]))
-    for i in 1:length(integrand.integrand)
-        for j in 1:length(integrand.integrand[1])
-            temp[i, j] = integrand.integrand[i][j]
-        end
-    end
-    return sum(temp, dims = 1)[:]
-end
-
-dGdp_new = compute_dGdp(integrand_values)
-dGdp_new_inplace = compute_dGdp(integrand_values_inplace)
-
-function compute_dGdp_nt(integrand)
-    temp = zeros(length(integrand.integrand), 4)
-    for i in 1:length(integrand.integrand)
-        temp[i, 1:2] .= integrand.integrand[i].x.αβ
-        temp[i, 3:4] .= integrand.integrand[i].δγ
-    end
-    return sum(temp, dims = 1)[:]
-end
-
-dGdp_new_nt = compute_dGdp_nt(integrand_values_nt)
-dGdp_new_inplace_nt = compute_dGdp_nt(integrand_values_inplace_nt)
-
-@test isapprox(dGdp_ForwardDiff, dGdp_new, atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_ForwardDiff, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_ForwardDiff, dGdp_new_nt, atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_ForwardDiff, dGdp_new_inplace_nt, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff, integrand_values.integrand, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff, integrand_values_inplace.integrand, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff, [integrand_values_nt.integrand.x.αβ[:];integrand_values_nt.integrand.δγ[:]], atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff, [integrand_values_inplace_nt.integrand.x.αβ[:];integrand_values_inplace_nt.integrand.δγ[:]], atol = 1e-11, rtol = 1e-11)
 
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 function simple_linear_system(u, p, t)
@@ -220,17 +195,17 @@ function analytical_derivative(p, t)
     return [d1, d2]
 end
 
-integrand_values = IntegrandValues(Vector{Float64})
-integrand_values_inplace = IntegrandValues(Vector{Float64})
+integrand_values = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
+integrand_values_inplace = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
 function callback_saving_linear(u, t, integrator, sol)
     return [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
 function callback_saving_linear_inplace(du, u, t, integrator, sol)
     du .= [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
-cb = IntegratingCallback((u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
+cb = IntegratingSumCallback((u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du,
+cb_inplace = IntegratingSumCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du,
         u,
         t,
         integrator,
@@ -249,9 +224,7 @@ prob_adjoint_inplace = ODEProblem((du, u, p, t) -> adjoint_linear_inplace(du, u,
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, reltol = 1e-14)
 
-dGdp_new = compute_dGdp(integrand_values)
-dGdp_new_inplace = compute_dGdp(integrand_values_inplace)
 dGdp_analytical = analytical_derivative(p, tspan[end])
 
-@test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_analytical, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_analytical, integrand_values.integrand, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_analytical, integrand_values_inplace.integrand, atol = 1e-11, rtol = 1e-11)
