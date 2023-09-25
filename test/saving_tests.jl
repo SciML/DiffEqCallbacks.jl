@@ -1,7 +1,9 @@
 using Test, OrdinaryDiffEq, DiffEqCallbacks, LinearAlgebra,
     SciMLSensitivity, Tracker
 import LinearAlgebra: norm
-import ODEProblemLibrary: prob_ode_2Dlinear, prob_ode_linear
+import ODEProblemLibrary: prob_ode_2Dlinear,
+    prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
+    prob_ode_nonlinchem, prob_ode_lorenz
 
 # save_everystep, scalar problem
 prob = prob_ode_linear
@@ -152,3 +154,60 @@ cb = SavingCallback((u, t, integrator) -> integrator.EEst * integrator.dt, saved
         return sum(saved_values.saveval)
     end,
     p)[1]))
+
+# Test that our `LinearizingSavingCallback` gives back something that when interpolated,
+# respects our `abstol`/`reltol` versus the actual solution:
+using DataInterpolations
+import DiffEqCallbacks: as_array
+
+as_array(T::Type{<:AbstractArray}) = T
+as_array(T::Type{<:Number}) = Vector{T}
+
+if VERSION >= v"1.9" # stack
+    function test_linearization(prob,
+        solver;
+        T = as_array(typeof(prob.u0)),
+        abstol = 1e-6,
+        reltol = 1e-3)
+
+        # Solve the given problem once
+        sv = SavedValues(Float64, T)
+        sol = solve(prob,
+            solver;
+            callback = LinearizingSavingCallback(sv),
+            abstol,
+            reltol)
+        @test sol.retcode == ReturnCode.Success
+        # Work around broken `finalize()` behavior and inconsistent `u` type:
+        push!(sv.t, sol.t[end])
+        push!(sv.saveval, as_array(sol.u[end]))
+
+        # After we get the time values from our `LinearizingSavingCallback`, we take those values,
+        # upsample by 10x, then interpolate our linearized output, and the actual solution object:
+        N = length(sv.t)
+        t_upsampled = LinearInterpolation(sv.t, Float64.(1:N))(range(1, N; length = 10 * N))
+
+        # Next, linearly interpolate `sv.saveval` to `t_upsampled`:
+        u_orig = stack(sv.saveval)
+        u_linear_upsampled = stack(LinearInterpolation(u_orig, sv.t).(t_upsampled))
+        u_interp_upsampled = stack(as_array.(sol(t_upsampled).u))
+
+        # Ensure that our two upsampled `u` vectors are approximately equal
+        if !isapprox(u_linear_upsampled, u_interp_upsampled; atol = abstol, rtol = reltol)
+            Main.u_err = abs.(u_linear_upsampled .- u_interp_upsampled)
+            display(abs.(u_linear_upsampled .- u_interp_upsampled))
+        end
+        @test isapprox(u_linear_upsampled, u_interp_upsampled; atol = abstol, rtol = reltol)
+    end
+
+    test_linearization(prob_ode_linear, Tsit5())
+    test_linearization(prob_ode_linear, Tsit5(); abstol=1e-9, reltol=1e-9)
+    test_linearization(prob_ode_vanderpol, Tsit5())
+    test_linearization(prob_ode_rigidbody, Tsit5())
+    test_linearization(prob_ode_nonlinchem, Tsit5())
+    test_linearization(prob_ode_lorenz, Tsit5())
+
+    # Broken due to `LinearInterpolation()` not supporting matrices, you can get
+    # rid of the time upsampling and see that comparing just based on `sv.t` works.
+    #test_linearization(prob_ode_2Dlinear, Tsit5())
+end

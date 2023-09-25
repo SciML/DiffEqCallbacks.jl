@@ -175,4 +175,107 @@ function SavingCallback(save_func, saved_values::SavedValues;
         save_positions = (false, false))
 end
 
-export SavingCallback, SavedValues
+# Sometimes, `integ(t)` yields a scalar instead of a vector :(
+as_array(t::Number) = [t]
+as_array(t::AbstractArray) = t
+
+function is_linear_enough((t₀, t₁), (u₀, u₁), integ, abstol, reltol)
+    tspread = t₁ - t₀
+    slopes = (u₁ .- u₀) ./ tspread
+    # Our interpolation dimension is the dimension _after_ all the dimensions in `u₀`
+    interp_dim = ndims(u₀) + 1
+
+    # Take the three quartiles, find the maximum error:
+    t_quartiles = permutedims(cat([
+                t₀ + tspread * 0.25,
+                t₀ + tspread * 0.50,
+                t₀ + tspread * 0.75,
+            ]; dims = interp_dim), reverse(1:interp_dim))
+
+    y_linear = u₀ .+ (t_quartiles .- t₀) .* slopes
+    y_interp = stack([as_array(integ(t)) for t in t_quartiles]; dims = interp_dim)
+
+    y_err = maximum(abs.(y_linear - y_interp), dims = 1)
+    worst_idx = argmax(y_err[:])
+    t_max = t_quartiles[worst_idx]
+    e_max = y_err[worst_idx]
+    is_linear = isapprox(y_linear, y_interp; atol = abstol, rtol = reltol)
+    return t_max, e_max, is_linear
+end
+
+function linearizing_save_affect!(saved_values::SavedValues, integ)
+    abstol = integ.opts.abstol
+    reltol = integ.opts.reltol
+
+    periods_to_check = [
+        (integ.tprev, as_array(integ(integ.tprev))) => (integ.t, as_array(integ(integ.t))),
+    ]
+
+    # Only check linearization after we've made at least a single step forward.
+    if integ.tprev != integ.t
+        # Keep splitting each period until all are linearized
+        while !isempty(periods_to_check)
+            (t₀, u₀), (t₁, u₁) = popfirst!(periods_to_check)
+
+            t_max, e_max, is_linear = is_linear_enough((t₀, t₁),
+                (u₀, u₁),
+                integ,
+                abstol,
+                reltol)
+            if isnan(e_max) || isnan(t_max)
+                throw(ArgumentError("Unable to linearize; ran out of precision"))
+            end
+            if !is_linear
+                # Sample at `t_max`, the point of maximal deviation, insert our two new periods into `periods_to_check`
+                u_max = as_array(integ(t_max))
+                pushfirst!(periods_to_check, (t_max, u_max) => (t₁, u₁))
+                pushfirst!(periods_to_check, (t₀, u₀) => (t_max, u_max))
+            else
+                # If we were linear enough, push the beginning of this period and continue!
+                push!(saved_values.t, t₀)
+                push!(saved_values.saveval, u₀)
+            end
+        end
+    else
+        # Just push the first values:
+        t₀, u₀ = first(periods_to_check)
+        push!(saved_values.t, t₀)
+        push!(saved_values.saveval, u₀)
+    end
+    u_modified!(integ, false)
+end
+
+function linearizing_save_finalize!(saved_values::SavedValues, integ)
+    push!(saved_values.t, integ.t)
+    push!(saved_values.saveval, integ(integ.t))
+end
+
+"""
+    LinearizingSavingCallback(saved_values::SavedValues)
+
+Provides a saving callback that inserts interpolation points into your signal such that
+a naive linear interpolation of the resultant saved values will be within `abstol`/`reltol`
+of the higher-order interpolation of your solution.  This essentially makes a time/space
+tradeoff, where more points in time are saved, costing more memory, but interpolation is
+incredibly cheap and downstream algorithm complexity is reduced by not needing to bother
+with multiple interpolation types.
+
+The algorithm internally checks 3 equidistant points between each time point to determine
+goodness of fit versus the linearly interpolated function; this should be sufficient for
+interpolations up to the 4th order, higher orders may need more points to ensure good
+fit.  This has not been implemented yet.
+"""
+function LinearizingSavingCallback(saved_values::SavedValues{T, <:AbstractArray{T}};
+    tdir = 1) where {T}
+    return DiscreteCallback(
+        # We will process every timestep
+        (u, t, integ) -> true,
+        # On each timepoint, we linearize and save the timesteps into `saved_values`
+        integ -> linearizing_save_affect!(saved_values, integ);
+        # We need to save the final step
+        finalize = (c, u, t, integ) -> linearizing_save_finalize(saved_values, integ),
+        # Don't add tstops to the left and right.
+        save_positions = (false, false))
+end
+
+export SavingCallback, SavedValues, LinearizingSavingCallback
