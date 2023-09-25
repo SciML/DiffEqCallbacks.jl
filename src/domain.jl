@@ -242,7 +242,7 @@ preferred.
 
 ## Keyword Arguments
 
-  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](@ref linear_nonlinear)
+  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](https://docs.sciml.ai/DiffEqDocs/stable/features/linear_nonlinear/)
     which is passed to a `ManifoldProjection`.
   - `save`: Whether to do the standard saving (applied after the callback).
   - `abstol`: Tolerance up to, which residuals are accepted. Element-wise tolerances
@@ -293,7 +293,7 @@ ensure it numerically, as these [MATLAB examples](https://www.mathworks.com/help
 show.
 
 To deal with this problem, one can specify `isoutofdomain=(u,p,t) -> any(x
--> x < 0, u)` as additional [solver option](@ref solver_options),
+-> x < 0, u)` as additional [solver option](https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/),
 which will reject any step that leads to non-negative values and reduce the next
 time step. However, since this approach only rejects steps and hence
 calculations might be repeated multiple times until a step is accepted, it can
