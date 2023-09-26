@@ -43,7 +43,7 @@ TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass; min_t = 
 `TerminateSteadyState` can be used to solve the problem for the steady-state
 by running the solver until the derivatives of the problem converge to 0 or
 `tspan[2]` is reached. This is an alternative approach to root finding (see
-the [Steady State Solvers](@ref) section).
+the [Steady State Solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/steady_state_solve/) section).
 
 ## Arguments
 
