@@ -36,7 +36,10 @@ using Test
     @time @testset "ProbInts tests" begin
         include("probints.jl")
     end
-    @time @testset "Interpolating tests" begin
-        include("interpolating_tests.jl")
+    @time @testset "Integrating tests" begin
+        include("integrating_tests.jl")
+    end
+    @time @testset "Integrating sum tests" begin
+        include("integrating_sum_tests.jl")
     end
 end
