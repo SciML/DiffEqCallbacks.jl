@@ -179,7 +179,7 @@ end
 as_array(t::Number) = [t]
 as_array(t::AbstractArray) = t
 
-function is_linear_enough((t₀, t₁), (u₀, u₁), integ, abstol, reltol)
+function is_linear_enough((t₀, t₁), (u₀, u₁), integ, u_idxs, abstol, reltol)
     tspread = t₁ - t₀
     slopes = (u₁ .- u₀) ./ tspread
     # Our interpolation dimension is the dimension _after_ all the dimensions in `u₀`
@@ -193,22 +193,43 @@ function is_linear_enough((t₀, t₁), (u₀, u₁), integ, abstol, reltol)
             ]; dims = interp_dim), reverse(1:interp_dim))
 
     y_linear = u₀ .+ (t_quartiles .- t₀) .* slopes
-    y_interp = stack([as_array(integ(t)) for t in t_quartiles]; dims = interp_dim)
+    y_interp = stack([as_array(integ(t))[u_idxs] for t in t_quartiles]; dims = interp_dim)
 
     y_err = maximum(abs.(y_linear - y_interp), dims = 1)
     worst_idx = argmax(y_err[:])
     t_max = t_quartiles[worst_idx]
     e_max = y_err[worst_idx]
     is_linear = isapprox(y_linear, y_interp; atol = abstol, rtol = reltol)
+
+    #=
+    @info("is_linear_enough",
+        t₀,
+        t₁,
+        slopes = join(string.(slopes), ", "),
+        y_err = join(string.(y_err), ", "),
+        is_linear,
+    )
+
+    if t₁ >= 24.0 && !is_linear && Main.integ === nothing
+        Main.t₀ = t₀
+        Main.t₁ = t₁
+        Main.u₀ = u₀
+        Main.u₁ = u₁
+        Main.integ = integ
+        Main.y_linear = y_linear
+        Main.y_interp = y_interp
+        #error()
+    end
+    =#
     return t_max, e_max, is_linear
 end
 
-function linearizing_save_affect!(saved_values::SavedValues, integ)
+function linearizing_save_loop(save_ts::Vector, save_us::Vector, integ, u_idxs)
     abstol = integ.opts.abstol
     reltol = integ.opts.reltol
 
     periods_to_check = [
-        (integ.tprev, as_array(integ(integ.tprev))) => (integ.t, as_array(integ(integ.t))),
+        (integ.tprev, as_array(integ(integ.tprev))[u_idxs]) => (integ.t, as_array(integ(integ.t))[u_idxs]),
     ]
 
     # Only check linearization after we've made at least a single step forward.
@@ -220,6 +241,7 @@ function linearizing_save_affect!(saved_values::SavedValues, integ)
             t_max, e_max, is_linear = is_linear_enough((t₀, t₁),
                 (u₀, u₁),
                 integ,
+                u_idxs,
                 abstol,
                 reltol)
             if isnan(e_max) || isnan(t_max)
@@ -227,13 +249,13 @@ function linearizing_save_affect!(saved_values::SavedValues, integ)
             end
             if !is_linear
                 # Sample at `t_max`, the point of maximal deviation, insert our two new periods into `periods_to_check`
-                u_max = as_array(integ(t_max))
+                u_max = as_array(integ(t_max))[u_idxs]
                 pushfirst!(periods_to_check, (t_max, u_max) => (t₁, u₁))
                 pushfirst!(periods_to_check, (t₀, u₀) => (t_max, u_max))
             else
                 # If we were linear enough, push the beginning of this period and continue!
-                push!(saved_values.t, t₀)
-                push!(saved_values.saveval, u₀)
+                push!(save_ts, t₀)
+                push!(save_us, u₀)
             end
         end
     else
@@ -242,12 +264,31 @@ function linearizing_save_affect!(saved_values::SavedValues, integ)
         push!(saved_values.t, t₀)
         push!(saved_values.saveval, u₀)
     end
+end
+
+function linearizing_save_affect!(saved_values::SavedValues, integ)
+    linearizing_save_loop(saved_values.t, saved_values.saveval, integ, Colon())
+    u_modified!(integ, false)
+end
+
+function linearizing_save_affect!(saved_values::Vector{<:SavedValues}, integ)
+    for u_idx in 1:length(saved_values)
+        linearizing_save_loop(saved_values[u_idx].t, saved_values[u_idx].saveval, integ, u_idx)
+    end
     u_modified!(integ, false)
 end
 
 function linearizing_save_finalize!(saved_values::SavedValues, integ)
+    u_end = integ(integ.t)
     push!(saved_values.t, integ.t)
-    push!(saved_values.saveval, integ(integ.t))
+    push!(saved_values.saveval, u_end)
+end
+function linearizing_save_finalize!(saved_values::Vector{<:SavedValues}, integ)
+    u_end = integ(integ.t)
+    for u_idx in 1:length(saved_values)
+        push!(saved_values[u_idx].t, integ.t)
+        push!(saved_values[u_idx].saveval, u_end[u_idx])
+    end
 end
 
 """
@@ -265,11 +306,34 @@ goodness of fit versus the linearly interpolated function; this should be suffic
 interpolations up to the 4th order, higher orders may need more points to ensure good
 fit.  This has not been implemented yet.
 """
-function LinearizingSavingCallback(saved_values::SavedValues{T, <:AbstractArray{T}};
-    tdir = 1) where {T}
+function LinearizingSavingCallback(saved_values::SavedValues{T, <:AbstractArray{T}}) where {T}
     return DiscreteCallback(
         # We will process every timestep
-        (u, t, integ) -> true,
+        (u, t, integ) -> begin
+            return true
+        end,
+        # On each timepoint, we linearize and save the timesteps into `saved_values`
+        integ -> linearizing_save_affect!(saved_values, integ);
+        # We need to save the final step
+        finalize = (c, u, t, integ) -> linearizing_save_finalize(saved_values, integ),
+        # Don't add tstops to the left and right.
+        save_positions = (false, false))
+end
+
+"""
+    LinearizingSavingCallback(saved_values::Vector{SavedValues})
+
+An alternative implementation linearizes each state variable independently; this allows
+one state variable to be sampled more densely while other state variables retain their
+sparse sampling.  In this case, `length(saved_values)` must equal the number of states,
+e.g. `length(sol.u[1])`.
+"""
+function LinearizingSavingCallback(saved_values::Vector{SavedValues{T, T}}) where {T}
+    return DiscreteCallback(
+        # We will process every timestep
+        (u, t, integ) -> begin
+            return true
+        end,
         # On each timepoint, we linearize and save the timesteps into `saved_values`
         integ -> linearizing_save_affect!(saved_values, integ);
         # We need to save the final step

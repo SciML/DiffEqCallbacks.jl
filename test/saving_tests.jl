@@ -194,10 +194,34 @@ if VERSION >= v"1.9" # stack
 
         # Ensure that our two upsampled `u` vectors are approximately equal
         if !isapprox(u_linear_upsampled, u_interp_upsampled; atol = abstol, rtol = reltol)
-            Main.u_err = abs.(u_linear_upsampled .- u_interp_upsampled)
             display(abs.(u_linear_upsampled .- u_interp_upsampled))
         end
         @test isapprox(u_linear_upsampled, u_interp_upsampled; atol = abstol, rtol = reltol)
+
+        # Next, do the same, but with the independently-sampled u vectors:
+        svs = [SavedValues(Float64, Float64) for _ in 1:length(prob.u0)]
+        sol = solve(prob,
+            solver;
+            callback = LinearizingSavingCallback(svs),
+            abstol,
+            reltol)
+        @test sol.retcode == ReturnCode.Success
+
+        # Work around broken `finalize()` behavior and inconsistent `u` type:
+        for u_idx in 1:length(prob.u0)
+            push!(svs[u_idx].t, sol.t[end])
+            push!(svs[u_idx].saveval, as_array(sol.u[end])[u_idx])
+
+            u_orig = svs[u_idx].saveval
+            u_linear_upsampled = stack(LinearInterpolation(u_orig, svs[u_idx].t).(t_upsampled))
+            u_interp_upsampled = stack([u[u_idx] for u in as_array.(sol(t_upsampled).u)])
+
+            # Ensure that our two upsampled `u` vectors are approximately equal
+            if !isapprox(u_linear_upsampled, u_interp_upsampled; atol = abstol, rtol = reltol)
+                display(abs.(u_linear_upsampled .- u_interp_upsampled))
+            end
+            @test isapprox(u_linear_upsampled, u_interp_upsampled; atol = abstol, rtol = reltol)
+        end
     end
 
     test_linearization(prob_ode_linear, Tsit5())
