@@ -47,9 +47,11 @@ constraints.
 ## Keyword Arguments
 
 - `safety_factor` is the factor below the true maximum that will be stepped to
-  which defaults to `9//10`. `max_step=true` makes every step equal to
-- `safety_factor*dtFE(u,p,t)` when the solver is set to `adaptive=false`. `cached_dtcache`
-  should be set to match the type for time when not using Float64 values.
+  which defaults to `9//10`.
+- `max_step=true` makes every step equal to `safety_factor*dtFE(u,p,t)` when the
+  solver is set to `adaptive=false`.
+- `cached_dtcache` should be set to match the type for time when not using
+  Float64 values.
 """
 function StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
     cached_dtcache = 0.0)
