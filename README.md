@@ -10,7 +10,7 @@
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) has an expressive callback system
-which allows for customizable transformations of te solver behavior. DiffEqCallbacks.jl
+which allows for customizable transformations of the solver behavior. DiffEqCallbacks.jl
 is a library of pre-built callbacks which makes it easy to transform the solver into a
 domain-specific simulation tool.
 
