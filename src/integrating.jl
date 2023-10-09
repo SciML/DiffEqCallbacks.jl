@@ -223,7 +223,7 @@ IntegratingCallback(integrand_func,
     cache = nothing)
 ```
 
-Lets one define a function `integrand_func(u, t, integrator)` which
+Let one define a function `integrand_func(u, t, integrator)` which
 returns Integral(integrand_func(u(t),t)dt over the problem tspan.
 
 ## Arguments
