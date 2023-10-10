@@ -178,7 +178,12 @@ function Base.show(io::IO, integrand_values::IntegrandValues)
         "\nintegrand:\n", integrand_values.integrand)
 end
 
-mutable struct SavingIntegrandAffect{IntegrandFunc, tType, integrandType, integrandCacheType}
+mutable struct SavingIntegrandAffect{
+    IntegrandFunc,
+    tType,
+    integrandType,
+    integrandCacheType,
+}
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValues{tType, integrandType}
     integrand_cache::integrandCacheType
@@ -223,7 +228,7 @@ IntegratingCallback(integrand_func,
     cache = nothing)
 ```
 
-Lets one define a function `integrand_func(u, t, integrator)` which
+Let one define a function `integrand_func(u, t, integrator)` which
 returns Integral(integrand_func(u(t),t)dt over the problem tspan.
 
 ## Arguments
