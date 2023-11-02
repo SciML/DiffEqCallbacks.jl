@@ -3,13 +3,13 @@ mutable struct AutoAbstolAffect{T}
 end
 # Now make `affect!` for this:
 function (p::AutoAbstolAffect)(integrator)
-    if typeof(p.curmax) <: AbstractArray
+    if p.curmax isa AbstractArray
         @. p.curmax = max(p.curmax, abs(integrator.u))
     else
         p.curmax = max(p.curmax, maximum(abs.(integrator.u)))
     end
 
-    if typeof(integrator.opts.abstol) <: AbstractArray
+    if integrator.opts.abstol isa AbstractArray
         integrator.opts.abstol .= p.curmax .* integrator.opts.reltol
     else
         integrator.opts.abstol = p.curmax .* integrator.opts.reltol

@@ -43,7 +43,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
 
     # define array of next time step, absolute tolerance, and scale factor
     if uType <: Nothing
-        if typeof(integrator.u) <: Union{Number, StaticArraysCore.SArray}
+        if integrator.u isa Union{Number, StaticArraysCore.SArray}
             u = integrator.u
         else
             u = similar(integrator.u)
@@ -73,7 +73,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
     p = integrator.p
     while tdir * dt > 0
         # calculate estimated value of next step and its residuals
-        if typeof(u) <: Union{Number, StaticArraysCore.SArray}
+        if u isa Union{Number, StaticArraysCore.SArray}
             u = integrator(t)
         else
             integrator(u, t)
@@ -186,7 +186,7 @@ end
 
 # create array of residuals
 function setup(f::GeneralDomainAffect, integrator)
-    typeof(f.resid) <: Nothing ? (similar(integrator.u),) : (f.resid,)
+    f.resid isa Nothing ? (similar(integrator.u),) : (f.resid,)
 end
 
 function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous, F, T, S, uType},
@@ -199,7 +199,7 @@ function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous, F, T, S,
     end
 
     # accept time step if residuals are smaller than the tolerance
-    if typeof(abstol) <: Number
+    if abstol isa Number
         all(x -> x < abstol, resid)
     else
         # element-wise comparison
@@ -267,7 +267,7 @@ function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
     abstol = nothing, scalefactor = nothing,
     autonomous = maximum(SciMLBase.numargs(g)) == 3,
     nlopts = Dict(:ftol => 10 * eps()))
-    if typeof(u) <: Nothing
+    if u isa Nothing
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
     else
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, deepcopy(u),
@@ -341,7 +341,7 @@ Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
-    if typeof(u) <: Nothing
+    if u isa Nothing
         affect! = PositiveDomainAffect(abstol, scalefactor, nothing)
     else
         affect! = PositiveDomainAffect(abstol, scalefactor, deepcopy(u))
