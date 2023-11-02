@@ -191,7 +191,7 @@ end
 
 function (affect!::SavingIntegrandAffect)(integrator)
     n = 0
-    if typeof(integrator.sol.prob) <: Union{SDEProblem, RODEProblem}
+    if integrator.sol.prob isa Union{SDEProblem, RODEProblem}
         n = 10
     else
         n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)

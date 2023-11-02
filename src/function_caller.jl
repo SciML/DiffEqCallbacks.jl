@@ -18,7 +18,7 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
                 # Expand lazy dense for interpolation
                 DiffEqBase.addsteps!(integrator)
             end
-            if typeof(integrator.u) <: Union{Number, StaticArraysCore.SArray}
+            if integrator.u isa Union{Number, StaticArraysCore.SArray}
                 curu = integrator(curt)
             else
                 curu = first(get_tmp_cache(integrator))

@@ -5,17 +5,17 @@ function allDerivPass(integrator, abstol, reltol, min_t)
     if DiffEqBase.isinplace(integrator.sol.prob)
         testval = first(get_tmp_cache(integrator))
         DiffEqBase.get_du!(testval, integrator)
-        if typeof(integrator.sol.prob) <: DiffEqBase.DiscreteProblem
+        if integrator.sol.prob isa DiffEqBase.DiscreteProblem
             @. testval = testval - integrator.u
         end
     else
         testval = get_du(integrator)
-        if typeof(integrator.sol.prob) <: DiffEqBase.DiscreteProblem
+        if integrator.sol.prob isa DiffEqBase.DiscreteProblem
             testval = testval - integrator.u
         end
     end
 
-    if typeof(integrator.u) <: Array
+    if integrator.u isa Array
         any(abs(d) > abstol && abs(d) > reltol * abs(u)
             for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
             Iterators.cycle(reltol), integrator.u)) &&
