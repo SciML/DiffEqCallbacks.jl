@@ -148,11 +148,11 @@ The outputted values are saved into `saved_values`. Time points are found via
 `saved_values.t` and the values are `saved_values.saveval`.
 """
 function SavingCallback(save_func, saved_values::SavedValues;
-    saveat = Vector{eltype(saved_values.t)}(),
-    save_everystep = isempty(saveat),
-    save_start = save_everystep || isempty(saveat) || saveat isa Number,
-    save_end = save_everystep || isempty(saveat) || saveat isa Number,
-    tdir = 1)
+        saveat = Vector{eltype(saved_values.t)}(),
+        save_everystep = isempty(saveat),
+        save_start = save_everystep || isempty(saveat) || saveat isa Number,
+        save_end = save_everystep || isempty(saveat) || saveat isa Number,
+        tdir = 1)
     # saveat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     if saveat isa Number
         # expand to range using tspan in saving_initialize
@@ -179,120 +179,133 @@ end
 as_array(t::Number) = [t]
 as_array(t::AbstractArray) = t
 
-function is_linear_enough((t₀, t₁), (u₀, u₁), integ, u_idxs, abstol, reltol)
+function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ)
+    (; y_linear, y_interp, slopes) = caches
     tspread = t₁ - t₀
-    slopes = (u₁ .- u₀) ./ tspread
-    # Our interpolation dimension is the dimension _after_ all the dimensions in `u₀`
-    interp_dim = ndims(u₀) + 1
+    slopes .= (u₁ .- u₀) ./ tspread
+    t_quartile(t_idx) = t₀ + tspread * t_idx/4.0
 
-    # Take the three quartiles, find the maximum error:
-    t_quartiles = permutedims(cat([
-                t₀ + tspread * 0.25,
-                t₀ + tspread * 0.50,
-                t₀ + tspread * 0.75,
-            ]; dims = interp_dim), reverse(1:interp_dim))
+    # Calculate interpolated and linear samplings in our three quartiles
+    for t_idx in 1:3
+        t = t_quartile(t_idx)
+        # Linear interpolation
+        y_linear[:, t_idx] .= u₀ .+ (t - t₀) .* slopes
 
-    y_linear = u₀ .+ (t_quartiles .- t₀) .* slopes
-    y_interp = stack([as_array(integ(t))[u_idxs] for t in t_quartiles]; dims = interp_dim)
-
-    y_err = maximum(abs.(y_linear - y_interp), dims = 1)
-    worst_idx = argmax(y_err[:])
-    t_max = t_quartiles[worst_idx]
-    e_max = y_err[worst_idx]
-    is_linear = isapprox(y_linear, y_interp; atol = abstol, rtol = reltol)
-
-    #=
-    @info("is_linear_enough",
-        t₀,
-        t₁,
-        slopes = join(string.(slopes), ", "),
-        y_err = join(string.(y_err), ", "),
-        is_linear,
-    )
-
-    if t₁ >= 24.0 && !is_linear && Main.integ === nothing
-        Main.t₀ = t₀
-        Main.t₁ = t₁
-        Main.u₀ = u₀
-        Main.u₁ = u₁
-        Main.integ = integ
-        Main.y_linear = y_linear
-        Main.y_interp = y_interp
-        #error()
+        # Solver interpolation
+        # We would like to use the non-allocating `integ(out, t)` here,
+        # but it silently fails for some solvers such as IDA
+        integ(@view(y_interp[:, t_idx]), t)
     end
-    =#
-    return t_max, e_max, is_linear
-end
 
-function linearizing_save_loop(save_ts::Vector, save_us::Vector, integ, u_idxs)
-    abstol = integ.opts.abstol
-    reltol = integ.opts.reltol
-
-    periods_to_check = [
-        (integ.tprev, as_array(integ(integ.tprev))[u_idxs]) => (integ.t, as_array(integ(integ.t))[u_idxs]),
-    ]
-
-    # Only check linearization after we've made at least a single step forward.
-    if integ.tprev != integ.t
-        # Keep splitting each period until all are linearized
-        while !isempty(periods_to_check)
-            (t₀, u₀), (t₁, u₁) = popfirst!(periods_to_check)
-
-            t_max, e_max, is_linear = is_linear_enough((t₀, t₁),
-                (u₀, u₁),
-                integ,
-                u_idxs,
-                abstol,
-                reltol)
-            if isnan(e_max) || isnan(t_max)
-                throw(ArgumentError("Unable to linearize; ran out of precision"))
-            end
-            if !is_linear
-                # Sample at `t_max`, the point of maximal deviation, insert our two new periods into `periods_to_check`
-                u_max = as_array(integ(t_max))[u_idxs]
-                pushfirst!(periods_to_check, (t_max, u_max) => (t₁, u₁))
-                pushfirst!(periods_to_check, (t₀, u₀) => (t_max, u_max))
-            else
-                # If we were linear enough, push the beginning of this period and continue!
-                push!(save_ts, t₀)
-                push!(save_us, u₀)
+    # Return `is_linear` for each state
+    atol = integ.opts.abstol
+    rtol = integ.opts.reltol
+    for u_idx in 1:length(u₀)
+        is_linear[u_idx] = true
+        for t_idx in 1:3
+            is_linear[u_idx] &= isapprox(y_linear[u_idx, t_idx],
+                y_interp[u_idx, t_idx];
+                atol,
+                rtol)
+        end
+    end
+    # Find worst time index so that we split our period there
+    t_max_idx = 1
+    e_max = 0.0
+    for t_idx in 1:3
+        for u_idx in 1:length(u₀)
+            e = abs(y_linear[u_idx, t_idx] - y_interp[u_idx, t_idx])
+            if e > e_max
+                t_max_idx = t_idx
+                e_max = e
             end
         end
-    else
-        # Just push the first values:
-        t₀, u₀ = first(periods_to_check)
-        push!(saved_values.t, t₀)
-        push!(saved_values.saveval, u₀)
     end
+    return t_quartile(t_max_idx)
 end
 
-function linearizing_save_affect!(saved_values::SavedValues, integ)
-    linearizing_save_loop(saved_values.t, saved_values.saveval, integ, Colon())
-    u_modified!(integ, false)
-end
-
-function linearizing_save_affect!(saved_values::Vector{<:SavedValues}, integ)
-    for u_idx in 1:length(saved_values)
-        linearizing_save_loop(saved_values[u_idx].t, saved_values[u_idx].saveval, integ, u_idx)
+function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin)
+    # Sanity check that we don't accidentally infinitely recurse
+    if t₁ - t₀ < dtmin
+        throw(ArgumentError("Linearization failed, fell below linearization subdivision threshold"))
     end
-    u_modified!(integ, false)
-end
 
-function linearizing_save_finalize!(saved_values::SavedValues, integ)
-    u_end = integ(integ.t)
-    push!(saved_values.t, integ.t)
-    push!(saved_values.saveval, u_end)
-end
-function linearizing_save_finalize!(saved_values::Vector{<:SavedValues}, integ)
-    u_end = integ(integ.t)
-    for u_idx in 1:length(saved_values)
-        push!(saved_values[u_idx].t, integ.t)
-        push!(saved_values[u_idx].saveval, u_end[u_idx])
+    with_cache(caches.u_masks) do is_linear
+        tᵦ = is_linear_enough!(caches,
+            is_linear,
+            t₀, t₁,
+            u₀, u₁,
+            integ)
+
+        # Rename `is_linear` to `is_nonlinear`, invert the meaning
+        # and mask by `u_mask` (but re-use the memory)
+        is_nonlinear = is_linear
+        for u_idx in 1:length(is_linear)
+            is_nonlinear[u_idx] = !is_linear[u_idx] & u_mask[u_idx]
+        end
+
+        if any(is_nonlinear)
+            # If it's not linear, split this period into two and recurse, altering our `u_mask`:
+            with_cache(caches.us) do uᵦ
+                integ(uᵦ, tᵦ)
+                linearize_period(
+                    t₀, tᵦ,
+                    u₀, uᵦ,
+                    integ,
+                    caches,
+                    is_nonlinear,
+                    dtmin)
+
+                # Recurse into the second half of the period as well, as we're not guaranteed that
+                # the second half is linear yet.   Also, use the full `u_mask` as we need to store
+                # everyone this time.
+                linearize_period(
+                    tᵦ, t₁,
+                    uᵦ, u₁,
+                    integ,
+                    caches,
+                    u_mask,
+                    dtmin)
+            end
+        else
+            # If everyone is linear, store this period, according to our `u_mask`!
+            store!(caches.ilsc, t₁, u₁, u_mask)
+        end
     end
 end
 
 """
-    LinearizingSavingCallback(saved_values::SavedValues)
+    CachePool
+
+Simple memory-reusing cache that allows us to grow a cache and keep
+re-using those pieces of memory (in our case, typically `u` vectors)
+until the solve is finished.  Note that this datastructure is _not_
+thread-safe!
+"""
+mutable struct CachePool{T,F}
+    pool::Vector{T}
+    alloc::F
+    write_idx::Int
+
+    function CachePool(T, alloc::F) where {F}
+        return new{T,F}(T[], alloc, 0)
+    end
+end
+
+function with_cache(f::Function, cache::CachePool{T}) where {T}
+    cache.write_idx += 1
+    if length(cache.pool) < cache.write_idx
+        push!(cache.pool, cache.alloc())
+    end
+    try
+        f(cache.pool[cache.write_idx])
+    finally
+        cache.write_idx -= 1
+    end
+end
+
+"""
+    IndependentlyLinearizingSavingCallback(ilsc::IndependentlyLinearizedSolutionChunks)
 
 Provides a saving callback that inserts interpolation points into your signal such that
 a naive linear interpolation of the resultant saved values will be within `abstol`/`reltol`
@@ -305,39 +318,65 @@ The algorithm internally checks 3 equidistant points between each time point to 
 goodness of fit versus the linearly interpolated function; this should be sufficient for
 interpolations up to the 4th order, higher orders may need more points to ensure good
 fit.  This has not been implemented yet.
+
+This callback generator takes in an `IndependentlyLinearizedSolutionChunks` object to
+store output into, but that intermediate object should be collapsed into a final
+`IndependentlyLinearizedSolution` object after the solve is finished.  Example:
+
+```julia
+ilsc = IndependentlyLinearizedSolutionChunks(prob)
+solve(prob, solver; callback=LinearizingSavingCallback(ilsc))
+ils = IndependentlyLinearizedSolution(ilsc)
+```
 """
-function LinearizingSavingCallback(saved_values::SavedValues{T, <:AbstractArray{T}}) where {T}
+function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S}) where {T, S}
+    # Get the internal `ilsc`
+    ilsc = ils.ilsc
+
+    full_mask = BitVector(true for _ in 1:length(ilsc.u_chunks))
+    # caches will be allocated in `initialize()`
+    caches = nothing
     return DiscreteCallback(
         # We will process every timestep
         (u, t, integ) -> begin
             return true
         end,
-        # On each timepoint, we linearize and save the timesteps into `saved_values`
-        integ -> linearizing_save_affect!(saved_values, integ);
-        # We need to save the final step
-        finalize = (c, u, t, integ) -> linearizing_save_finalize(saved_values, integ),
-        # Don't add tstops to the left and right.
-        save_positions = (false, false))
-end
-
-"""
-    LinearizingSavingCallback(saved_values::Vector{SavedValues})
-
-An alternative implementation linearizes each state variable independently; this allows
-one state variable to be sampled more densely while other state variables retain their
-sparse sampling.  In this case, `length(saved_values)` must equal the number of states,
-e.g. `length(sol.u[1])`.
-"""
-function LinearizingSavingCallback(saved_values::Vector{SavedValues{T, T}}) where {T}
-    return DiscreteCallback(
-        # We will process every timestep
-        (u, t, integ) -> begin
-            return true
+        # On each timepoint, we linearize and save the timesteps into `ilsc`
+        integ -> begin
+            t₀ = integ.tprev
+            t₁ = integ.t
+            with_cache(caches.us) do u₀
+                with_cache(caches.us) do u₁
+                    integ(u₀, t₀)
+                    integ(u₁, t₁)
+                    linearize_period(t₀, t₁, u₀, u₁, integ, caches, full_mask, eps(t₁ - t₀)*1000.0)
+                end
+            end
+            u_modified!(integ, false)
         end,
-        # On each timepoint, we linearize and save the timesteps into `saved_values`
-        integ -> linearizing_save_affect!(saved_values, integ);
+        # In our `initialize`, we create some caches so we allocate less
+        initialize = (c, u, t, integ) -> begin
+            u = as_array(u)
+            num_us = length(ilsc.u_chunks)
+            caches = (;
+                ilsc = ilsc,
+                y_linear = Matrix{T}(undef, (num_us, 3)),
+                y_interp = Matrix{T}(undef, (num_us, 3)),
+                slopes = Vector{T}(undef, num_us),
+                us = CachePool(Vector{T}, () -> Vector{T}(undef, num_us)),
+                u_masks = CachePool(BitVector, () -> BitVector(undef, num_us))
+            )
+            # Store first timepoint
+            store!(ilsc, t, u, full_mask)
+            u_modified!(integ, false)
+        end,
         # We need to save the final step
-        finalize = (c, u, t, integ) -> linearizing_save_finalize(saved_values, integ),
+        finalize = (c, u, t, integ) -> begin
+            u = as_array(u)
+            store!(ilsc, t, u, full_mask)
+            finish!(ils)
+            caches = nothing
+        end,
         # Don't add tstops to the left and right.
         save_positions = (false, false))
 end

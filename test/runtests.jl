@@ -18,6 +18,9 @@ using Test
     @time @testset "Function Calling tests" begin
         include("funccall_tests.jl")
     end
+    @time @testset "IndependentlyLinearized tests" begin
+        include("independentlylinearizedtests.jl")
+    end
     @time @testset "Saving tests" begin
         include("saving_tests.jl")
     end
