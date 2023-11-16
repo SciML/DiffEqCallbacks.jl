@@ -195,6 +195,9 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ)
         # We would like to use the non-allocating `integ(out, t)` here,
         # but it silently fails for some solvers such as IDA
         integ(@view(y_interp[:, t_idx]), t)
+        if all(iszero.(@view(y_interp[:, t_idx])))
+            @warn("integrator request failed?!", t, string(y_interp[:, t_idx]))
+        end
     end
 
     # Return `is_linear` for each state
@@ -227,6 +230,7 @@ end
 function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin)
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
+        @debug("Linearization failure", t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
         throw(ArgumentError("Linearization failed, fell below linearization subdivision threshold"))
     end
 
