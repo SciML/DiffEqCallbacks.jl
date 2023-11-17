@@ -26,3 +26,16 @@ sim = solve(prob, Tsit5(), callback = TerminateSteadyState())
 
 @test all(sim(sim.t[end], Val{1}) .< 1e-8)
 @test sim.t[end] < tspan[2]
+
+# Don't wrap function
+test_func = (u, t, integrator) -> DiffEqCallbacks.allDerivPass(integrator, 1e-6, 1e-6,
+    nothing)
+
+@test_throws MethodError solve(prob, Tsit5(), callback = TerminateSteadyState(1e-6, 1e-6,
+    test_func))
+
+sim = solve(prob, Tsit5(), callback = TerminateSteadyState(1e-6, 1e-6, test_func,
+    wrap_test = Val(false)))
+
+@test all(sim(sim.t[end], Val{1}) .< 1e-8)
+@test sim.t[end] < tspan[2]
