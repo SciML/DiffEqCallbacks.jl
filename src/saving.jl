@@ -192,11 +192,14 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ)
         y_linear[:, t_idx] .= u₀ .+ (t - t₀) .* slopes
 
         # Solver interpolation
-        # We would like to use the non-allocating `integ(out, t)` here,
-        # but it silently fails for some solvers such as IDA
-        integ(@view(y_interp[:, t_idx]), t)
-        if all(iszero.(@view(y_interp[:, t_idx])))
-            @warn("integrator request failed?!", t, string(y_interp[:, t_idx]))
+        # We would like to use `integ(@view(y_interp[:, t_idx]))` here,
+        # but in IDA the conversion of views to `NVector` loses the shared
+        # memory that the view would have given us, so we instead use a
+        # temporary array then copy it into `y_interp`, which loses very
+        # little time and still prevents allocations from `integ(t)`.
+        with_cache(caches.us) do u_interp
+            integ(u_interp, t)
+            y_interp[:, t_idx] .= u_interp
         end
     end
 
@@ -362,12 +365,23 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S}) wh
         initialize = (c, u, t, integ) -> begin
             u = as_array(u)
             num_us = length(ilsc.u_chunks)
+
+            # Workaround for Sundials allocations; `NVector()` allocates,
+            # so we first use `typeof(integ.u_nvec)` to pull out the `NVector` type,
+            # then teach our `CachePool` to create pre-wrapped `NVector`s rather
+            # than just `Vector{S}`'s.
+            if hasfield(typeof(integ), :u_nvec)
+                NVector = typeof(integ.u_nvec)
+                us = CachePool(NVector, () -> NVector(Vector{S}(undef, num_us)))
+            else
+                us = CachePool(Vector{S}, () -> Vector{S}(undef, num_us))
+            end
             caches = (;
                 ilsc = ilsc,
-                y_linear = Matrix{T}(undef, (num_us, 3)),
-                y_interp = Matrix{T}(undef, (num_us, 3)),
-                slopes = Vector{T}(undef, num_us),
-                us = CachePool(Vector{T}, () -> Vector{T}(undef, num_us)),
+                y_linear = Matrix{S}(undef, (num_us, 3)),
+                y_interp = Matrix{S}(undef, (num_us, 3)),
+                slopes = Vector{S}(undef, num_us),
+                us = us,
                 u_masks = CachePool(BitVector, () -> BitVector(undef, num_us))
             )
             # Store first timepoint

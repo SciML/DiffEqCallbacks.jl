@@ -62,7 +62,7 @@ given `u_mask`.
 """
 function store!(ilsc::IndependentlyLinearizedSolutionChunks{T, S},
         t::T,
-        u::Vector{S},
+        u::AbstractVector{S},
         u_mask::BitVector) where {T, S}
     ts, time_mask, us = get_chunks(ilsc)
 
