@@ -233,15 +233,14 @@ end
 function Base.seek(ils::IndependentlyLinearizedSolution, t_idx = 1)
     return [ILSStateCursor(ils, u_idx, t_idx) for u_idx in 1:length(ils.us)]
 end
-function default_state(ils::IndependentlyLinearizedSolution{T, S}) where {T, S}
-    t_idx = 1
+function iteration_state(ils::IndependentlyLinearizedSolution{T, S}, t_idx=1) where {T, S}
     # Nice little hack so we don't have to allocate `u` over and over again
     u = S[S(0) for _ in ils.us]
     cursors = seek(ils, t_idx)
     return (t_idx, u, cursors)
 end
 function Base.iterate(ils::IndependentlyLinearizedSolution{T, S},
-        (t_idx, u, cursors) = default_state(ils)) where {T, S}
+        (t_idx, u, cursors) = iteration_state(ils)) where {T, S}
     if t_idx > length(ils.ts)
         return nothing
     end
