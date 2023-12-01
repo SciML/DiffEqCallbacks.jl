@@ -230,7 +230,7 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ)
     return t_quartile(t_max_idx)
 end
 
-function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin)
+function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin, interpolate_mask)
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
         @debug("Linearization failure", t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
@@ -248,7 +248,7 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin)
         # and mask by `u_mask` (but re-use the memory)
         is_nonlinear = is_linear
         for u_idx in 1:length(is_linear)
-            is_nonlinear[u_idx] = !is_linear[u_idx] & u_mask[u_idx]
+            is_nonlinear[u_idx] = !is_linear[u_idx] & u_mask[u_idx] & interpolate_mask[u_idx]
         end
 
         if any(is_nonlinear)
@@ -261,7 +261,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin)
                     integ,
                     caches,
                     is_nonlinear,
-                    dtmin)
+                    dtmin,
+                    interpolate_mask)
 
                 # Recurse into the second half of the period as well, as we're not guaranteed that
                 # the second half is linear yet.   Also, use the full `u_mask` as we need to store
@@ -272,7 +273,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin)
                     integ,
                     caches,
                     u_mask,
-                    dtmin)
+                    dtmin,
+                    interpolate_mask)
             end
         else
             # If everyone is linear, store this period, according to our `u_mask`!
@@ -335,8 +337,15 @@ ilsc = IndependentlyLinearizedSolutionChunks(prob)
 solve(prob, solver; callback=LinearizingSavingCallback(ilsc))
 ils = IndependentlyLinearizedSolution(ilsc)
 ```
+
+# Arguments
+- `interpolate_mask::BitVector`: a set of `u` indices for which the integrator
+  interpolant can be queried. Any false indices will be linearly-interpolated
+  based on the `sol.t` points instead (no subdivision).
 """
-function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S}) where {T, S}
+function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
+        interpolate_mask = BitVector(true for _ in 1:length(ils.ilsc.u_chunks))
+    ) where {T, S}
     # Get the internal `ilsc`
     ilsc = ils.ilsc
 
@@ -356,7 +365,7 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S}) wh
                 with_cache(caches.us) do u₁
                     integ(u₀, t₀)
                     integ(u₁, t₁)
-                    linearize_period(t₀, t₁, u₀, u₁, integ, caches, full_mask, eps(t₁ - t₀)*1000.0)
+                    linearize_period(t₀, t₁, u₀, u₁, integ, caches, full_mask, eps(t₁ - t₀)*1000.0, interpolate_mask)
                 end
             end
             u_modified!(integ, false)
