@@ -54,6 +54,21 @@ function get_chunks(ilsc::IndependentlyLinearizedSolutionChunks{T, S}) where {T,
     [u_chunks[end] for u_chunks in ilsc.u_chunks]
 end
 
+function get_prev_t(ilsc::IndependentlyLinearizedSolutionChunks)
+    # Are we set to write into the beginning of a new chunk?
+    if ilsc.t_offset == 1
+        # Try to reach back to the previous chunk
+        if length(ilsc.t_chunks) == 1
+            # If this is the absolute first timepoint, just return -Inf
+            return -Inf
+        end
+        # Otherwise, return the last element of the previous chunk
+        return ilsc.t_chunks[end-1][end]
+    end
+    # Otherwise return the previous element of the current chunk
+    return ilsc.t_chunks[end][ilsc.t_offset-1]
+end
+
 """
     store!(ilsc::IndependentlyLinearizedSolutionChunks, t, u, u_mask)
 
@@ -64,6 +79,13 @@ function store!(ilsc::IndependentlyLinearizedSolutionChunks{T, S},
         t::T,
         u::AbstractVector{S},
         u_mask::BitVector) where {T, S}
+    # If `t` has been stored before, drop it.
+    # We don't store duplicate timepoints, even though the solver sometimes does.
+    if get_prev_t(ilsc) == t
+        return
+    end
+
+    # Otherwise, let's get new chunks to deal with
     ts, time_mask, us = get_chunks(ilsc)
 
     # Store into the chunks, gated by `u_mask`
