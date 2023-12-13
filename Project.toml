@@ -22,21 +22,33 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 
 [compat]
+Aqua = "0.8"
+DataInterpolations = "4"
 DataStructures = "0.18"
 DiffEqBase = "6.53.3"
 ForwardDiff = "0.10"
 Functors = "0.4"
+LinearAlgebra = "1"
+Markdown = "1"
 NLsolve = "4.2"
+ODEProblemLibrary = "0.1"
 OrdinaryDiffEq = "6.14"
 Parameters = "0.12"
+QuadGK = "2"
 RecipesBase = "0.7, 0.8, 1.0"
 RecursiveArrayTools = "2, 3"
 SciMLBase = "1.48.1, 2"
+SciMLSensitivity = "7"
+StaticArrays = "1"
 StaticArraysCore = "1.4"
 Sundials = "4.19.2"
-julia = "1.6"
+Test = "1"
+Tracker = "0.2"
+Zygote = "0.6"
+julia = "1.9"
 
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
 ODEProblemLibrary = "fdc4e326-1af4-4b90-96e7-779fcce2daa5"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
@@ -49,5 +61,5 @@ Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["DataInterpolations", "OrdinaryDiffEq", "ODEProblemLibrary", "Test", "QuadGK", "SciMLSensitivity", "StaticArrays", "Tracker", "Zygote"]
+test = ["Aqua", "DataInterpolations", "OrdinaryDiffEq", "ODEProblemLibrary", "Test", "QuadGK", "SciMLSensitivity", "StaticArrays", "Tracker", "Zygote"]
 

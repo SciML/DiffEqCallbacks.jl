@@ -3,6 +3,9 @@ using Test
 
 # write your own tests here
 @time begin
+    @time @testset "Quality Assurance" begin
+        include("qa.jl")
+    end
     @time @testset "AutoAbstol" begin
         include("autoabstol_tests.jl")
     end
