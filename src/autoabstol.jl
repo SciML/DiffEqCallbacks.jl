@@ -45,9 +45,9 @@ Otherwise, `save=false` should be set to ensure extra saves do not occur.
 """
 function AutoAbstol(save = true; init_curmax = 0.0)
     affect! = AutoAbstolAffect(abs.(init_curmax))
-    condtion = (u, t, integrator) -> true
+    condition = (u, t, integrator) -> true
     save_positions = (save, false)
-    DiscreteCallback(condtion, affect!;
+    DiscreteCallback(condition, affect!;
         initialize = AutoAbstol_initialize,
         save_positions = save_positions)
 end

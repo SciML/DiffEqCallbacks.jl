@@ -29,7 +29,7 @@ end
 (f::PositiveDomainAffect)(integrator) = affect!(integrator, f)
 (f::GeneralDomainAffect)(integrator) = affect!(integrator, f)
 
-# general method defintions for domain callbacks
+# general method definitions for domain callbacks
 
 """
     affect!(integrator, f::AbstractDomainAffect)
@@ -54,7 +54,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
     abstol = T <: Nothing ? integrator.opts.abstol : f.abstol
     scalefactor = S <: Nothing ? 1 // 2 : f.scalefactor
 
-    # setup callback and save addtional arguments for checking next time step
+    # setup callback and save additional arguments for checking next time step
     args = setup(f, integrator)
 
     # obtain proposed next time step

@@ -32,9 +32,9 @@ Measures for Numerical Solutions of Differential Equations, arXiv:1506.04592
 """
 function ProbIntsUncertainty(σ, order, save = true)
     affect! = ProbIntsCache(σ, order)
-    condtion = (t, u, integrator) -> true
+    condition = (t, u, integrator) -> true
     save_positions = (save, false)
-    DiscreteCallback(condtion, affect!, save_positions = save_positions)
+    DiscreteCallback(condition, affect!, save_positions = save_positions)
 end
 
 struct AdaptiveProbIntsCache
@@ -72,9 +72,9 @@ Measures for Numerical Solutions of Differential Equations, arXiv:1506.04592
 """
 function AdaptiveProbIntsUncertainty(order, save = true)
     affect! = AdaptiveProbIntsCache(order)
-    condtion = (t, u, integrator) -> true
+    condition = (t, u, integrator) -> true
     save_positions = (save, false)
-    DiscreteCallback(condtion, affect!, save_positions = save_positions)
+    DiscreteCallback(condition, affect!, save_positions = save_positions)
 end
 
 export ProbIntsUncertainty, AdaptiveProbIntsUncertainty

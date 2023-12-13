@@ -169,8 +169,8 @@ function SavingCallback(save_func, saved_values::SavedValues;
     end
     affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_cache,
         save_everystep, save_start, save_end, 0)
-    condtion = (u, t, integrator) -> true
-    DiscreteCallback(condtion, affect!;
+    condition = (u, t, integrator) -> true
+    DiscreteCallback(condition, affect!;
         initialize = saving_initialize,
         save_positions = (false, false))
 end

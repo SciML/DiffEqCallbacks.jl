@@ -1,6 +1,6 @@
 # Numerical Integration Callbacks
 
-Sometimes one may want to solve an integral simultaniously to the solution of a differential equation. For example,
+Sometimes one may want to solve an integral simultaneously to the solution of a differential equation. For example,
 assume we want to solve:
 
 ```math
