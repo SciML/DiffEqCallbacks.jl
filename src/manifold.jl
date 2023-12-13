@@ -121,9 +121,9 @@ function ManifoldProjection(g; nlsolve = NLSOLVEJL_SETUP(), save = true,
     autonomous = maximum(SciMLBase.numargs(g)) == 3,
     nlopts = Dict{Symbol, Any}())
     affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
-    condtion = (u, t, integrator) -> true
+    condition = (u, t, integrator) -> true
     save_positions = (false, save)
-    DiscreteCallback(condtion, affect!;
+    DiscreteCallback(condition, affect!;
         initialize = Manifold_initialize,
         save_positions = save_positions)
 end
