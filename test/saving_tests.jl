@@ -180,12 +180,6 @@ if VERSION >= v"1.9" # stack
             abstol,
             reltol)
         @test sol.retcode == ReturnCode.Success
-        # Work around broken `finalize()` behavior and inconsistent `u` type:
-        store!(ils.ilsc,
-            sol.t[end],
-            as_array(sol.u[end]),
-            BitVector(true for _ in 1:length(sol.u[end])))
-        finish!(ils)
 
         N = length(ils)
         t_upsampled = LinearInterpolation(ils.ts, Float64.(1:N))(range(1,
