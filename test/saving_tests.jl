@@ -167,13 +167,14 @@ as_array(T::Type{<:Number}) = Vector{T}
 if VERSION >= v"1.9" # stack
     function test_linearization(prob,
             solver;
+            max_deriv = 0,
             T = as_array(typeof(prob.u0)),
             abstol = 1e-6,
             reltol = 1e-3)
 
-        # Solve the given problem once
-        ils = IndependentlyLinearizedSolution(prob)
-        lsc = LinearizingSavingCallback(ils)
+        # Solve the given problem once, saving the primal, first and second derivatives
+        ilss = [IndependentlyLinearizedSolution(prob) for _ in 0:max_deriv]
+        lsc = LinearizingSavingCallback(ilss)
         sol = solve(prob,
             solver;
             callback = lsc,
@@ -181,30 +182,33 @@ if VERSION >= v"1.9" # stack
             reltol)
         @test sol.retcode == ReturnCode.Success
 
-        N = length(ils)
-        t_upsampled = LinearInterpolation(ils.ts, Float64.(1:N))(range(1,
-            N;
-            length = 10 * N))
+        for deriv_idx in 0:max_deriv
+            ils = ilss[deriv_idx+1]
+            N = length(ils)
+            t_upsampled = LinearInterpolation(ils.ts, Float64.(1:N))(range(1,
+                N;
+                length = 10 * N))
 
-        u_linear_upsampled = sample(ils, t_upsampled)
-        u_interp_upsampled = stack(as_array.(sol(t_upsampled).u))'
+            u_linear_upsampled = sample(ils, t_upsampled)
+            u_interp_upsampled = stack(as_array.(sol(t_upsampled, Val{deriv_idx}).u))'
 
-        check = isapprox(u_linear_upsampled,
-            u_interp_upsampled;
-            atol = abstol,
-            rtol = reltol)
-        if !check
-            display(abs.(u_linear_upsampled .- u_interp_upsampled))
+            check = isapprox(u_linear_upsampled,
+                u_interp_upsampled;
+                atol = abstol,
+                rtol = reltol)
+            if !check
+                display(abs.(u_linear_upsampled .- u_interp_upsampled))
+            end
+            @test check
         end
-        @test check
     end
 
-    test_linearization(prob_ode_linear, Tsit5())
-    test_linearization(prob_ode_linear, Tsit5(); abstol = 1e-9, reltol = 1e-9)
-    test_linearization(prob_ode_vanderpol, Tsit5())
-    test_linearization(prob_ode_rigidbody, Tsit5())
-    test_linearization(prob_ode_nonlinchem, Tsit5())
-    test_linearization(prob_ode_lorenz, Tsit5())
+    test_linearization(prob_ode_linear, Tsit5(); max_deriv=2)
+    test_linearization(prob_ode_linear, Tsit5(); abstol = 1e-9, reltol = 1e-9, max_deriv=1)
+    test_linearization(prob_ode_vanderpol, Tsit5(); max_deriv=2)
+    test_linearization(prob_ode_rigidbody, Tsit5(); max_deriv=1)
+    test_linearization(prob_ode_nonlinchem, Tsit5(); max_deriv=2)
+    test_linearization(prob_ode_lorenz, Tsit5(); max_deriv=1)
 
     # We do not support 2d states yet.
     #test_linearization(prob_ode_2Dlinear, Tsit5())

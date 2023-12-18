@@ -179,7 +179,7 @@ end
 as_array(t::Number) = [t]
 as_array(t::AbstractArray) = t
 
-function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ)
+function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, deriv)
     (; y_linear, y_interp, slopes) = caches
     tspread = t₁ - t₀
     slopes .= (u₁ .- u₀) ./ tspread
@@ -198,7 +198,7 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ)
         # temporary array then copy it into `y_interp`, which loses very
         # little time and still prevents allocations from `integ(t)`.
         with_cache(caches.us) do u_interp
-            integ(u_interp, t)
+            integ(u_interp, t, deriv)
             y_interp[:, t_idx] .= u_interp
         end
     end
@@ -230,7 +230,7 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ)
     return t_quartile(t_max_idx)
 end
 
-function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin, interpolate_mask)
+function linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, u_mask, dtmin, interpolate_mask)
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
         @debug("Linearization failure", t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
@@ -242,7 +242,7 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin, 
             is_linear,
             t₀, t₁,
             u₀, u₁,
-            integ)
+            integ, deriv)
 
         # Rename `is_linear` to `is_nonlinear`, invert the meaning
         # and mask by `u_mask` (but re-use the memory)
@@ -254,11 +254,13 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin, 
         if any(is_nonlinear)
             # If it's not linear, split this period into two and recurse, altering our `u_mask`:
             with_cache(caches.us) do uᵦ
-                integ(uᵦ, tᵦ)
+                integ(uᵦ, tᵦ, deriv)
                 linearize_period(
                     t₀, tᵦ,
                     u₀, uᵦ,
                     integ,
+                    deriv,
+                    ilsc,
                     caches,
                     is_nonlinear,
                     dtmin,
@@ -271,6 +273,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin, 
                     tᵦ, t₁,
                     uᵦ, u₁,
                     integ,
+                    deriv,
+                    ilsc,
                     caches,
                     u_mask,
                     dtmin,
@@ -278,7 +282,7 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, caches, u_mask, dtmin, 
             end
         else
             # If everyone is linear, store this period, according to our `u_mask`!
-            store!(caches.ilsc, t₁, u₁, u_mask)
+            store!(ilsc, t₁, u₁, u_mask)
         end
     end
 end
@@ -314,7 +318,8 @@ function with_cache(f::Function, cache::CachePool{T}) where {T}
 end
 
 """
-    IndependentlyLinearizingSavingCallback(ilsc::IndependentlyLinearizedSolutionChunks)
+    IndependentlyLinearizingSavingCallback(ils::IndependentlyLinearizedSolution)
+    IndependentlyLinearizingSavingCallback(ilss::Vector{IndependentlyLinearizedSolution})
 
 Provides a saving callback that inserts interpolation points into your signal such that
 a naive linear interpolation of the resultant saved values will be within `abstol`/`reltol`
@@ -328,28 +333,27 @@ goodness of fit versus the linearly interpolated function; this should be suffic
 interpolations up to the 4th order, higher orders may need more points to ensure good
 fit.  This has not been implemented yet.
 
-This callback generator takes in an `IndependentlyLinearizedSolutionChunks` object to
-store output into, but that intermediate object should be collapsed into a final
-`IndependentlyLinearizedSolution` object after the solve is finished.  Example:
+This callback generator takes in an `IndependentlyLinearizedSolution` object to store
+output into.  If it is given a vector of these objects, the first stores the linearized
+primal, the second stores the linearized first derivative, and so on.
+
+Example usage:
 
 ```julia
-ilsc = IndependentlyLinearizedSolutionChunks(prob)
-solve(prob, solver; callback=LinearizingSavingCallback(ilsc))
-ils = IndependentlyLinearizedSolution(ilsc)
+ils = IndependentlyLinearizedSolution(prob)
+solve(prob, solver; callback=LinearizingSavingCallback(ils))
 ```
 
-# Arguments
+# Keyword Arguments
 - `interpolate_mask::BitVector`: a set of `u` indices for which the integrator
   interpolant can be queried. Any false indices will be linearly-interpolated
-  based on the `sol.t` points instead (no subdivision).
+  based on the `sol.t` points instead (no subdivision).  This is useful for when
+  a solution needs to ignore certain indices due to badly-behaved interpolation.
 """
-function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
-        interpolate_mask = BitVector(true for _ in 1:length(ils.ilsc.u_chunks))
+function LinearizingSavingCallback(ilss::Vector{IndependentlyLinearizedSolution{T,S}};
+        interpolate_mask = BitVector(true for _ in 1:length(ilss[1].ilsc.u_chunks))
     ) where {T, S}
-    # Get the internal `ilsc`
-    ilsc = ils.ilsc
-
-    full_mask = BitVector(true for _ in 1:length(ilsc.u_chunks))
+    full_mask = BitVector(true for _ in 1:length(ilss[1].ilsc.u_chunks))
     # caches will be allocated in `initialize()`
     caches = nothing
     return DiscreteCallback(
@@ -363,9 +367,20 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
             t₁ = integ.t
             with_cache(caches.us) do u₀
                 with_cache(caches.us) do u₁
-                    integ(u₀, t₀)
-                    integ(u₁, t₁)
-                    linearize_period(t₀, t₁, u₀, u₁, integ, caches, full_mask, eps(t₁ - t₀)*1000.0, interpolate_mask)
+                    for ils_idx in 1:length(ilss)
+                        ilsc = ilss[ils_idx].ilsc
+                        deriv = Val{ils_idx-1}
+                        integ(u₀, t₀, deriv)
+                        integ(u₁, t₁, deriv)
+
+                        # Store first timepoints.  Usually we'd do this in `initialize`
+                        # but `integ(u, t, deriv)` doesn't work that early, and so we
+                        # must wait until we've taken at least a single step.
+                        if isempty(ilsc)
+                            store!(ilsc, t₀, u₀, full_mask)
+                        end
+                        linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, full_mask, eps(t₁ - t₀)*1000.0, interpolate_mask)
+                    end
                 end
             end
             u_modified!(integ, false)
@@ -373,7 +388,7 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
         # In our `initialize`, we create some caches so we allocate less
         initialize = (c, u, t, integ) -> begin
             u = as_array(u)
-            num_us = length(ilsc.u_chunks)
+            num_us = length(ilss[1].ilsc.u_chunks)
 
             # Workaround for Sundials allocations; `NVector()` allocates,
             # so we first use `typeof(integ.u_nvec)` to pull out the `NVector` type,
@@ -386,26 +401,30 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
                 us = CachePool(Vector{S}, () -> Vector{S}(undef, num_us))
             end
             caches = (;
-                ilsc = ilsc,
                 y_linear = Matrix{S}(undef, (num_us, 3)),
                 y_interp = Matrix{S}(undef, (num_us, 3)),
                 slopes = Vector{S}(undef, num_us),
                 us = us,
                 u_masks = CachePool(BitVector, () -> BitVector(undef, num_us))
             )
-            # Store first timepoint
-            store!(ilsc, t, u, full_mask)
             u_modified!(integ, false)
         end,
         # We need to save the final step
         finalize = (c, u, t, integ) -> begin
-            u = as_array(u)
-            store!(ilsc, t, u, full_mask)
-            finish!(ils)
+            with_cache(caches.us) do u_tmp
+                for ils_idx in 1:length(ilss)
+                    integ(u_tmp, t, Val{ils_idx-1})
+                    store!(ilss[ils_idx].ilsc, t, u_tmp, full_mask)
+                    finish!(ilss[ils_idx])
+                end
+            end
             caches = nothing
         end,
         # Don't add tstops to the left and right.
         save_positions = (false, false))
+end
+function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution; kwargs...)
+    return LinearizingSavingCallback([ils]; kwargs...)
 end
 
 export SavingCallback, SavedValues, LinearizingSavingCallback

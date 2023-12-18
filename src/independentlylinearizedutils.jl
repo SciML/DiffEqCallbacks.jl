@@ -32,6 +32,10 @@ mutable struct IndependentlyLinearizedSolutionChunks{T, S}
     end
 end
 
+function Base.isempty(ilsc::IndependentlyLinearizedSolutionChunks)
+    return length(ilsc.t_chunks) == 1 && ilsc.t_offset == 1
+end
+
 function get_chunks(ilsc::IndependentlyLinearizedSolutionChunks{T, S}) where {T, S}
     # Check if we need to allocate new `t` chunk
     if ilsc.t_offset > ilsc.chunk_size
