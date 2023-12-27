@@ -350,7 +350,7 @@ solve(prob, solver; callback=LinearizingSavingCallback(ils))
   based on the `sol.t` points instead (no subdivision).  This is useful for when
   a solution needs to ignore certain indices due to badly-behaved interpolation.
 """
-function LinearizingSavingCallback(ilss::Vector{IndependentlyLinearizedSolution{T,S}};
+function LinearizingSavingCallback(ilss::AbstractVector{<:IndependentlyLinearizedSolution{T,S}};
         interpolate_mask = BitVector(true for _ in 1:length(ilss[1].ilsc.u_chunks))
     ) where {T, S}
     full_mask = BitVector(true for _ in 1:length(ilss[1].ilsc.u_chunks))
