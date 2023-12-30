@@ -179,7 +179,7 @@ end
 as_array(t::Number) = [t]
 as_array(t::AbstractArray) = t
 
-function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, deriv)
+function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, deriv, abstol, reltol)
     (; y_linear, y_interp, slopes) = caches
     tspread = t₁ - t₀
     slopes .= (u₁ .- u₀) ./ tspread
@@ -204,15 +204,13 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, der
     end
 
     # Return `is_linear` for each state
-    atol = integ.opts.abstol
-    rtol = integ.opts.reltol
     for u_idx in 1:length(u₀)
         is_linear[u_idx] = true
         for t_idx in 1:3
             is_linear[u_idx] &= isapprox(y_linear[u_idx, t_idx],
                 y_interp[u_idx, t_idx];
-                atol,
-                rtol)
+                atol=abstol,
+                rtol=reltol)
         end
     end
     # Find worst time index so that we split our period there
@@ -230,7 +228,7 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, der
     return t_quartile(t_max_idx)
 end
 
-function linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, u_mask, dtmin, interpolate_mask)
+function linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, u_mask, dtmin, interpolate_mask, abstol, reltol)
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
         @debug("Linearization failure", t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
@@ -242,7 +240,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, u_
             is_linear,
             t₀, t₁,
             u₀, u₁,
-            integ, deriv)
+            integ, deriv,
+            abstol, reltol)
 
         # Rename `is_linear` to `is_nonlinear`, invert the meaning
         # and mask by `u_mask` (but re-use the memory)
@@ -264,7 +263,9 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, u_
                     caches,
                     is_nonlinear,
                     dtmin,
-                    interpolate_mask)
+                    interpolate_mask,
+                    abstol,
+                    reltol)
 
                 # Recurse into the second half of the period as well, as we're not guaranteed that
                 # the second half is linear yet.   Also, use the full `u_mask` as we need to store
@@ -278,7 +279,9 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, u_
                     caches,
                     u_mask,
                     dtmin,
-                    interpolate_mask)
+                    interpolate_mask,
+                    abstol,
+                    reltol)
             end
         else
             # If everyone is linear, store this period, according to our `u_mask`!
@@ -351,7 +354,9 @@ solve(prob, solver; callback=LinearizingSavingCallback(ils))
   a solution needs to ignore certain indices due to badly-behaved interpolation.
 """
 function LinearizingSavingCallback(ilss::AbstractVector{<:IndependentlyLinearizedSolution{T,S}};
-        interpolate_mask = BitVector(true for _ in 1:length(ilss[1].ilsc.u_chunks))
+        interpolate_mask = BitVector(true for _ in 1:length(ilss[1].ilsc.u_chunks)),
+        abstol::Union{S,Nothing} = nothing,
+        reltol::Union{S,Nothing} = nothing,
     ) where {T, S}
     full_mask = BitVector(true for _ in 1:length(ilss[1].ilsc.u_chunks))
     # caches will be allocated in `initialize()`
@@ -370,6 +375,8 @@ function LinearizingSavingCallback(ilss::AbstractVector{<:IndependentlyLinearize
                     for ils_idx in 1:length(ilss)
                         ilsc = ilss[ils_idx].ilsc
                         deriv = Val{ils_idx-1}
+
+                        # Get `u₀` and `u₁` from the integrator
                         integ(u₀, t₀, deriv)
                         integ(u₁, t₁, deriv)
 
@@ -379,7 +386,15 @@ function LinearizingSavingCallback(ilss::AbstractVector{<:IndependentlyLinearize
                         if isempty(ilsc)
                             store!(ilsc, t₀, u₀, full_mask)
                         end
-                        linearize_period(t₀, t₁, u₀, u₁, integ, deriv, ilsc, caches, full_mask, eps(t₁ - t₀)*1000.0, interpolate_mask)
+                        dtmin = eps(t₁ - t₀)*1000.0
+                        linearize_period(
+                            t₀, t₁, u₀, u₁,
+                            integ, deriv, ilsc, caches,
+                            full_mask, dtmin, interpolate_mask,
+                            # Loosen `abstol` and `reltol` according to the derivative level
+                            something(abstol, integ.opts.abstol)^(2.0^(1-ils_idx)),
+                            something(reltol, integ.opts.reltol)^(2.0^(1-ils_idx)),
+                        )
                     end
                 end
             end

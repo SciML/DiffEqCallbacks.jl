@@ -168,7 +168,6 @@ if VERSION >= v"1.9" # stack
     function test_linearization(prob,
             solver;
             max_deriv = 0,
-            T = as_array(typeof(prob.u0)),
             abstol = 1e-6,
             reltol = 1e-3)
 
@@ -190,25 +189,28 @@ if VERSION >= v"1.9" # stack
                 length = 10 * N))
 
             u_linear_upsampled = sample(ils, t_upsampled)
-            u_interp_upsampled = stack(as_array.(sol(t_upsampled, Val{deriv_idx}).u))'
+            u_interp_upsampled = stack(as_array.(sol(t_upsampled, Val{deriv_idx}; continuity=:left).u))'
 
             check = isapprox(u_linear_upsampled,
                 u_interp_upsampled;
                 atol = abstol,
-                rtol = reltol)
+                rtol = reltol^(2.0^(-deriv_idx)))
             if !check
+                @error("Check failed", solver, deriv_idx)
                 display(abs.(u_linear_upsampled .- u_interp_upsampled))
             end
             @test check
         end
     end
 
-    test_linearization(prob_ode_linear, Tsit5(); max_deriv=2)
-    test_linearization(prob_ode_linear, Tsit5(); abstol = 1e-9, reltol = 1e-9, max_deriv=1)
-    test_linearization(prob_ode_vanderpol, Tsit5(); max_deriv=2)
-    test_linearization(prob_ode_rigidbody, Tsit5(); max_deriv=1)
-    test_linearization(prob_ode_nonlinchem, Tsit5(); max_deriv=2)
-    test_linearization(prob_ode_lorenz, Tsit5(); max_deriv=1)
+    for solver in [Tsit5(), Rodas5P(), Rosenbrock23()]
+        test_linearization(prob_ode_linear, solver; max_deriv=1)
+        test_linearization(prob_ode_linear, solver; abstol = 1e-9, reltol = 1e-9, max_deriv=1)
+        test_linearization(prob_ode_vanderpol, solver; max_deriv=1)
+        test_linearization(prob_ode_rigidbody, solver; max_deriv=1)
+        test_linearization(prob_ode_nonlinchem, solver; max_deriv=1)
+        test_linearization(prob_ode_lorenz, solver; max_deriv=1)
+    end
 
     # We do not support 2d states yet.
     #test_linearization(prob_ode_2Dlinear, Tsit5())
