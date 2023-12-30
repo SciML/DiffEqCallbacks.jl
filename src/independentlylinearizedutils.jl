@@ -73,6 +73,23 @@ function get_prev_t(ilsc::IndependentlyLinearizedSolutionChunks)
     return ilsc.t_chunks[end][ilsc.t_offset-1]
 end
 
+function get_prev_u(ilsc::IndependentlyLinearizedSolutionChunks{T,S}, u_out::Vector{S}) where {T,S}
+    for u_idx in 1:length(ilsc.u_offsets)
+        if ilsc.u_offsets[u_idx] == 1
+            if length(ilsc.u_chunks[u_idx]) == 1
+                # If we have never stored anything for this `u`, just return `0.0`
+                u_out[u_idx] = S(0)
+            end
+            # Otherwise, get the last element of the previous chunk
+            u_out[u_idx] = ilsc.u_chunks[u_idx][end-1][end]
+        else
+            # Otherwise, return the previous element of the current chunk
+            u_out[u_idx] = ilsc.u_chunks[u_idx][end][ilsc.u_offsets[u_idx]-1]
+        end
+    end
+    return u_out
+end
+
 """
     store!(ilsc::IndependentlyLinearizedSolutionChunks, t, u, u_mask)
 
