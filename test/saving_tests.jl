@@ -168,47 +168,58 @@ if VERSION >= v"1.9" # stack
     function test_linearization(prob,
             solver;
             max_deriv = 0,
-            T = as_array(typeof(prob.u0)),
             abstol = 1e-6,
             reltol = 1e-3)
 
-        # Solve the given problem once, saving the primal, first and second derivatives
-        ilss = [IndependentlyLinearizedSolution(prob) for _ in 0:max_deriv]
-        lsc = LinearizingSavingCallback(ilss)
+        # Solve the given problem once, saving the primal and some number of derivatives
+        ils = IndependentlyLinearizedSolution(prob, max_deriv)
+        lsc = LinearizingSavingCallback(ils)
         sol = solve(prob,
             solver;
             callback = lsc,
             abstol,
             reltol)
         @test sol.retcode == ReturnCode.Success
+        @test ils.ilsc === nothing
 
+        N = length(ils)
+        t_upsampled = LinearInterpolation(ils.ts, Float64.(1:N))(range(1,
+            N;
+            length = 10 * N))
         for deriv_idx in 0:max_deriv
-            ils = ilss[deriv_idx+1]
-            N = length(ils)
-            t_upsampled = LinearInterpolation(ils.ts, Float64.(1:N))(range(1,
-                N;
-                length = 10 * N))
-
-            u_linear_upsampled = sample(ils, t_upsampled)
-            u_interp_upsampled = stack(as_array.(sol(t_upsampled, Val{deriv_idx}).u))'
+            u_linear_upsampled = sample(ils, t_upsampled, deriv_idx)
+            u_interp_upsampled = stack(as_array.(sol(t_upsampled, Val{deriv_idx}; continuity=:left).u))'
 
             check = isapprox(u_linear_upsampled,
                 u_interp_upsampled;
-                atol = abstol,
-                rtol = reltol)
+                # We loosen the comparison bounds here as higher derivative orders
+                # have worse accuracy guarantees, approximately `sqrt()` for each order.
+                atol = abstol^(2.0^(-deriv_idx)),
+                rtol = reltol^(2.0^(-deriv_idx)))
             if !check
+                @error("Check failed", solver, deriv_idx)
                 display(abs.(u_linear_upsampled .- u_interp_upsampled))
             end
             @test check
         end
     end
 
-    test_linearization(prob_ode_linear, Tsit5(); max_deriv=2)
-    test_linearization(prob_ode_linear, Tsit5(); abstol = 1e-9, reltol = 1e-9, max_deriv=1)
-    test_linearization(prob_ode_vanderpol, Tsit5(); max_deriv=2)
-    test_linearization(prob_ode_rigidbody, Tsit5(); max_deriv=1)
-    test_linearization(prob_ode_nonlinchem, Tsit5(); max_deriv=2)
-    test_linearization(prob_ode_lorenz, Tsit5(); max_deriv=1)
+    max_deriv_map = Dict(
+        Tsit5 => 2,
+        Rodas5P => 2,
+        Rosenbrock23 => 1,
+    )
+    for solver in [Tsit5, Rodas5P, Rosenbrock23]
+        max_deriv = max_deriv_map[solver]
+        @testset "$(solver)" begin
+            test_linearization(prob_ode_linear, solver(); max_deriv)
+            test_linearization(prob_ode_linear, solver(); abstol = 1e-9, reltol = 1e-9, max_deriv)
+            test_linearization(prob_ode_vanderpol, solver(); max_deriv)
+            test_linearization(prob_ode_rigidbody, solver(); max_deriv)
+            test_linearization(prob_ode_nonlinchem, solver(); max_deriv)
+            test_linearization(prob_ode_lorenz, solver(); max_deriv)
+        end
+    end
 
     # We do not support 2d states yet.
     #test_linearization(prob_ode_2Dlinear, Tsit5())
