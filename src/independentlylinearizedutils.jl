@@ -187,12 +187,14 @@ function IndependentlyLinearizedSolution(ilsc::IndependentlyLinearizedSolutionCh
 end
 # Automatically create an ILS wrapped around an ILSC from a `prob`
 function IndependentlyLinearizedSolution(prob::SciMLBase.AbstractDEProblem, num_derivatives = 0)
-    return IndependentlyLinearizedSolution(
-        IndependentlyLinearizedSolutionChunks{eltype(prob.tspan),eltype(prob.u0)}(length(prob.u0), num_derivatives)
-    )
+    T = eltype(prob.tspan)
+    U = isnothing(prob.u0) ? Float64 : eltype(prob.u0)
+    N = isnothing(prob.u0) ? 0 : length(prob.u0)
+    chunks = IndependentlyLinearizedSolutionChunks{T,U}(N, num_derivatives)
+    return IndependentlyLinearizedSolution(chunks)
 end
 
-num_derivatives(ils::IndependentlyLinearizedSolution) = size(first(ils.us), 1)
+num_derivatives(ils::IndependentlyLinearizedSolution) = !isempty(ils.us) ? size(first(ils.us), 1) : 0
 num_us(ils::IndependentlyLinearizedSolution) = length(ils.us)
 Base.size(ils::IndependentlyLinearizedSolution) = size(ils.time_mask)
 Base.length(ils::IndependentlyLinearizedSolution) = length(ils.ts)
