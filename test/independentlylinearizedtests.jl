@@ -2,16 +2,24 @@ using Test, DiffEqCallbacks
 using DiffEqCallbacks: sample, store!, IndependentlyLinearizedSolutionChunks, finish!
 
 @testset "IndependentlyLinearizedSolution" begin
-    ils = IndependentlyLinearizedSolution{Float64,Float64}([0.0, 0.5, 0.75, 1.0],
+    ils = IndependentlyLinearizedSolution{Float64,Float64}(
+        # t
+        [0.0, 0.5, 0.75, 1.0],
+        # us (primal only, no derivatives)
         [
-            [0.0, 0.5, 1.0],
-            [0.0, 0.75, 1.0],
-            [0.0, 1.0],
+            [0.0 0.5 1.0;],
+            [0.0 0.75 1.0;],
+            [0.0 1.0;],
         ],
-        BitMatrix([1 1 0 1
-            1 0 1 1
-            1 0 0 1]'),
-        nothing)
+        # time_masks
+        BitMatrix(
+            [1 1 0 1
+             1 0 1 1
+             1 0 0 1]
+        ),
+        # ilsc
+        nothing,
+    )
 
     # Test `iterate()`
     for (t, u) in ils
@@ -48,30 +56,42 @@ display(@benchmark sample(ils, many_ts))
 
 @testset "IndependentlyLinearizedSolutionChunks" begin
     num_us = 10
+    num_derivatives = 1
     chunk_size = 10
     num_timepoints = 105
-    ilsc = IndependentlyLinearizedSolutionChunks{Float64, Float64}(num_us, chunk_size)
+    ilsc = IndependentlyLinearizedSolutionChunks{Float64, Float64}(num_us, num_derivatives, chunk_size)
     for t in 1:num_timepoints
         # Storing at `1` and `num_timepoints` is to satisfy that we must sample all points at the start and end
-        store!(ilsc,
-            Float64(t),
-            repeat([Float64(t)], 10),
-            BitVector([(t % u == 0) || (t == 1 || t == num_timepoints) for u in 1:num_us]))
+        # We also store a fake derivative that is just equal to 2*u
+        us = hcat(
+            repeat([1*Float64(t)], 10),
+            repeat([2*Float64(t)], 10),
+        )'
+        time_mask = BitVector([(t % u == 0) || (t == 1 || t == num_timepoints) for u in 1:num_us])
+        store!(ilsc, Float64(t), us, time_mask)
     end
     # Test that `u_chunks` looks right
     @test length(ilsc.u_chunks) == num_us
     @test length.(ilsc.u_chunks) == [11, 6, 4, 3, 3, 2, 2, 2, 2, 2]
-    @test ilsc.u_chunks[1][1] == Float64.(1:chunk_size)
-    @test ilsc.u_chunks[2][end][1:2] == [100, 102]
-    @test ilsc.u_chunks[10][1][1:10] == [1.0, Float64.(10 .* (1:9))...]
+    @test ilsc.u_chunks[1][1] == hcat(
+        1 .* Float64.(1:chunk_size),
+        2 .* Float64.(1:chunk_size),
+    )'
+    # Test that state 2's last chunk starts with these values
+    @test ilsc.u_chunks[2][end][1, 1:2] == [100, 102]
+    @test ilsc.u_chunks[2][end][2, 1:2] == [200, 204]
+
+    # Test that state 10's first chunk has these values
+    @test ilsc.u_chunks[10][1][1, 1:10] == [1.0, Float64.(10 .* (1:9))...]
+    @test ilsc.u_chunks[10][1][2, 1:10] == [2.0, Float64.(20 .* (1:9))...]
 
     # Test that `t_chunks` looks right
     @test length(ilsc.t_chunks) == 11
     @test all([t_chunks[1] % chunk_size == 1 for t_chunks in ilsc.t_chunks])
 
     # Test that `time_masks` looks right
-    @test sum(ilsc.time_masks[1], dims = 1)[:] == [10, 6, 4, 3, 3, 2, 2, 2, 2, 2]
-    @test sum(sum.(ilsc.time_masks[1:10], dims = 1))[:] ==
+    @test sum(ilsc.time_masks[1], dims = 2)[:] == [10, 6, 4, 3, 3, 2, 2, 2, 2, 2]
+    @test sum(sum.(ilsc.time_masks[1:10], dims = 2))[:] ==
           [div(100, idx) + ((idx > 1) ? 1 : 0) for idx in 1:10]
 
     ils = IndependentlyLinearizedSolution(ilsc)
@@ -94,4 +114,5 @@ display(@benchmark sample(ils, many_ts))
 
     finish!(ils)
     @test sample(ils, ils.ts) == repeat(1:num_timepoints, 1, num_us)
+    @test sample(ils, ils.ts, 1) == 2*repeat(1:num_timepoints, 1, num_us)
 end
