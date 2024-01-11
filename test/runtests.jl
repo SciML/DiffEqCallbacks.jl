@@ -1,51 +1,17 @@
-using DiffEqCallbacks
-using Test
+using SafeTestsets, Test
 
-# write your own tests here
-@time begin
-    @time @testset "Quality Assurance" begin
-        include("qa.jl")
-    end
-    @time @testset "AutoAbstol" begin
-        include("autoabstol_tests.jl")
-    end
-    @time @testset "TerminateSteadyState tests" begin
-        include("terminatesteadystate_test.jl")
-    end
-    @time @testset "StepsizeLimiter tests" begin
-        include("stepsizelimiter_tests.jl")
-    end
-    @time @testset "Function Calling tests" begin
-        include("funccall_tests.jl")
-    end
-    @time @testset "IndependentlyLinearized tests" begin
-        include("independentlylinearizedtests.jl")
-    end
-    @time @testset "Saving tests" begin
-        include("saving_tests.jl")
-    end
-    @time @testset "PresetTime tests" begin
-        include("preset_time.jl")
-    end
-    @time @testset "Iterative tests" begin
-        include("iterative_tests.jl")
-    end
-    @time @testset "Periodic tests" begin
-        include("periodic_tests.jl")
-    end
-    @time @testset "Manifold tests" begin
-        include("manifold_tests.jl")
-    end
-    @time @testset "Domain tests" begin
-        include("domain_tests.jl")
-    end
-    @time @testset "ProbInts tests" begin
-        include("probints.jl")
-    end
-    @time @testset "Integrating tests" begin
-        include("integrating_tests.jl")
-    end
-    @time @testset "Integrating sum tests" begin
-        include("integrating_sum_tests.jl")
-    end
-end
+@time @safetestset "Quality Assurance" include("qa.jl")
+@time @safetestset "AutoAbstol" include("autoabstol_tests.jl")
+@time @safetestset "TerminateSteadyState tests" include("terminatesteadystate_test.jl")
+@time @safetestset "StepsizeLimiter tests" include("stepsizelimiter_tests.jl")
+@time @safetestset "Function Calling tests" include("funccall_tests.jl")
+@time @safetestset "IndependentlyLinearized tests" include("independentlylinearizedtests.jl")
+@time @safetestset "Saving tests" include("saving_tests.jl")
+@time @safetestset "PresetTime tests" include("preset_time.jl")
+@time @safetestset "Iterative tests" include("iterative_tests.jl")
+@time @safetestset "Periodic tests" include("periodic_tests.jl")
+@time @safetestset "Manifold tests" include("manifold_tests.jl")
+@time @safetestset "Domain tests" include("domain_tests.jl")
+@time @safetestset "ProbInts tests" include("probints.jl")
+@time @safetestset "Integrating tests" include("integrating_tests.jl")
+@time @safetestset "Integrating sum tests" include("integrating_sum_tests.jl")
