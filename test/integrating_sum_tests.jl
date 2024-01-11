@@ -1,3 +1,4 @@
+using DiffEqCallbacks
 using OrdinaryDiffEq, SciMLSensitivity, Zygote
 using ForwardDiff
 using QuadGK
