@@ -330,8 +330,8 @@ function with_cache(f::Function, cache::CachePool{T}) where {T}
 end
 
 """
-    IndependentlyLinearizingSavingCallback(ils::IndependentlyLinearizedSolution)
-    IndependentlyLinearizingSavingCallback(ilss::Vector{IndependentlyLinearizedSolution})
+    LinearizingSavingCallback(ils::IndependentlyLinearizedSolution)
+    LinearizingSavingCallback(ilss::Vector{IndependentlyLinearizedSolution})
 
 Provides a saving callback that inserts interpolation points into your signal such that
 a naive linear interpolation of the resultant saved values will be within `abstol`/`reltol`
