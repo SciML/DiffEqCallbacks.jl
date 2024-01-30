@@ -346,8 +346,8 @@ interpolations up to the 4th order, higher orders may need more points to ensure
 fit.  This has not been implemented yet.
 
 This callback generator takes in an `IndependentlyLinearizedSolution` object to store
-output into.  If it is given a vector of these objects, the first stores the linearized
-primal, the second stores the linearized first derivative, and so on.
+output into.  An `IndependentlyLinearizedSolution` object itself controls how many
+derivatives (if any) to linearize along with the primal states themselves.
 
 Example usage:
 
