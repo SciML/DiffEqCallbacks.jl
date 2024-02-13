@@ -99,20 +99,20 @@ display(@benchmark sample(ils, many_ts))
     # Muck with the `ilsc` here to explore some failure options
     # Error: timepoints longer than time_matrix
     ilsc.t_offset += 1
-    @test_throws ArgumentError finish!(ils)
+    @test_throws ArgumentError finish!(ils, ReturnCode.Default)
     ilsc.t_offset -= 1
 
     # Error: time matrix row two has N elements, but `us` has N+1
     ilsc.u_offsets[2] += 1
-    @test_throws ArgumentError finish!(ils)
+    @test_throws ArgumentError finish!(ils, ReturnCode.Default)
     ilsc.u_offsets[2] -= 1
 
     # Error: one of our time masks doesn't start with `1`
     ilsc.time_masks[1][1, 1] = 0
-    @test_throws ArgumentError finish!(ils)
+    @test_throws ArgumentError finish!(ils, ReturnCode.Default)
     ilsc.time_masks[1][1, 1] = 1
 
-    finish!(ils)
+    finish!(ils, ReturnCode.Default)
     @test sample(ils, ils.ts) == repeat(1:num_timepoints, 1, num_us)
     @test sample(ils, ils.ts, 1) == 2*repeat(1:num_timepoints, 1, num_us)
 end
