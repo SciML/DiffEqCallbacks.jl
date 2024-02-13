@@ -433,7 +433,10 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
         end,
         # We need to finalize the ils and free our caches
         finalize = (c, u, t, integ) -> begin
-            finish!(ils)
+            # Don't run the `finish!` if ils is in an inconsistent state
+            if check_error(integ) != ReturnCode.InitialFailure
+                finish!(ils)
+            end
             caches = nothing
         end,
         # Don't add tstops to the left and right.
