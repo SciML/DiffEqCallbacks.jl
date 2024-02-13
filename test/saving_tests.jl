@@ -226,7 +226,7 @@ if VERSION >= v"1.9" # stack
         u0 = [1.0];
         du0 = [1.0];
         prob = DAEProblem(f_error2, u0, du0, (0.0, 1.0); differential_vars = [true])
-        ils = IndependentlyLinearizedSolution(unstable_prob, 0)
+        ils = IndependentlyLinearizedSolution(prob, 0)
         lsc = LinearizingSavingCallback(ils)
         sol = solve(prob, DFBDF(); callback = lsc)  # this would if we were not failing with grace
         @test sol.retcode == ReturnCode.InitialFailure
