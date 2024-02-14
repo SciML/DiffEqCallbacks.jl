@@ -199,7 +199,7 @@ num_us(ils::IndependentlyLinearizedSolution) = length(ils.us)
 Base.size(ils::IndependentlyLinearizedSolution) = size(ils.time_mask)
 Base.length(ils::IndependentlyLinearizedSolution) = length(ils.ts)
 
-function finish!(ils::IndependentlyLinearizedSolution)
+function finish!(ils::IndependentlyLinearizedSolution{T, S}, return_code) where {T,S}
     function trim_chunk(chunks::Vector, offset)
         chunks = [chunk for chunk in chunks]
         if eltype(chunks) <: AbstractVector
@@ -216,10 +216,17 @@ function finish!(ils::IndependentlyLinearizedSolution)
     end
 
     ilsc = ils.ilsc::IndependentlyLinearizedSolutionChunks
-    ts = vcat(trim_chunk(ilsc.t_chunks, ilsc.t_offset)...)
-    time_mask = hcat(trim_chunk(ilsc.time_masks, ilsc.t_offset)...)
-    us = [hcat(trim_chunk(ilsc.u_chunks[u_idx], ilsc.u_offsets[u_idx])...)
-          for u_idx in 1:length(ilsc.u_chunks)]
+    if return_code == ReturnCode.InitialFailure
+        # then no (consistent) data to put in, so just put in empty values
+        ts = Vector{T}()
+        us = Vector{Matrix{S}}()
+        time_mask = BitMatrix(undef, 0, 0)
+    else
+        ts = vcat(trim_chunk(ilsc.t_chunks, ilsc.t_offset)...)
+        time_mask = hcat(trim_chunk(ilsc.time_masks, ilsc.t_offset)...)
+        us = [hcat(trim_chunk(ilsc.u_chunks[u_idx], ilsc.u_offsets[u_idx])...)
+            for u_idx in 1:length(ilsc.u_chunks)]
+    end
 
     # Sanity-check lengths
     if length(ts) != size(time_mask, 2)
@@ -227,7 +234,7 @@ function finish!(ils::IndependentlyLinearizedSolution)
     end
 
     # All time masks must start and end with `1`:
-    if !all(@view time_mask[:, 1]) || !all(@view time_mask[:, end])
+    if !isempty(time_mask) && (!all(@view time_mask[:, 1]) || !all(@view time_mask[:, end]))
         throw(ArgumentError("Time mask must start and end with 1s!"))
     end
 

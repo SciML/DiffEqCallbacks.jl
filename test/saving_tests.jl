@@ -220,6 +220,22 @@ if VERSION >= v"1.9" # stack
         end
     end
 
+
+    @testset "fail gracefully" begin
+        f_error2(du, u, p, t) = du .= u ./ t .- 1
+        u0 = [1.0];
+        du0 = [1.0];
+        prob = DAEProblem(f_error2, u0, du0, (0.0, 1.0); differential_vars = [true])
+        ils = IndependentlyLinearizedSolution(prob, 0)
+        lsc = LinearizingSavingCallback(ils)
+        sol = solve(prob, DFBDF(); callback = lsc)  # this would if we were not failing with grace
+        @test sol.retcode == ReturnCode.InitialFailure
+        @test isempty(ils.ts)
+        @test isempty(ils.us)
+        @test isempty(ils.time_mask)
+    end
+    
+
     # We do not support 2d states yet.
     #test_linearization(prob_ode_2Dlinear, Tsit5())
 end
