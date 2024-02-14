@@ -21,8 +21,8 @@ automatic.
     Defaults to true. If false, then tstops can extend the interval of integration.
 """
 function PresetTimeCallback(tstops, user_affect!;
-    initialize = SciMLBase.INITIALIZE_DEFAULT,
-    filter_tstops = true, kwargs...)
+        initialize = SciMLBase.INITIALIZE_DEFAULT,
+        filter_tstops = true, kwargs...)
     condition = function (u, t, integrator)
         t in tstops
     end

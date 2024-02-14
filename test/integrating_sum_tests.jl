@@ -76,7 +76,8 @@ function callback_saving_inplace(du, u, t, integrator, sol)
 end
 cb = IntegratingSumCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingSumCallback((du, u, t, integrator) -> callback_saving_inplace(du,
+cb_inplace = IntegratingSumCallback(
+    (du, u, t, integrator) -> callback_saving_inplace(du,
         u, t, integrator, sol),
     integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), [0.0, 0.0],
@@ -97,7 +98,8 @@ integrand_values_nt = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p_nt))
 integrand_values_inplace_nt = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p_nt))
 cb = IntegratingSumCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
     integrand_values_nt)
-cb_inplace = IntegratingSumCallback((du, u, t, integrator) -> callback_saving_inplace_nt(du,
+cb_inplace = IntegratingSumCallback(
+    (du, u, t, integrator) -> callback_saving_inplace_nt(du,
         u, t, integrator, sol),
     integrand_values_inplace_nt, DiffEqCallbacks.allocate_zeros(p_nt))
 prob_adjoint_nt = ODEProblem((u, p, t) -> adjoint(u, p, t, sol_nt), [0.0, 0.0],
@@ -110,9 +112,16 @@ sol_adjoint_nt_inplace = solve(prob_adjoint_nt_inplace, Tsit5(), abstol = 1e-14,
     reltol = 1e-14)
 
 @test isapprox(dGdp_ForwardDiff, integrand_values.integrand, atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_ForwardDiff, integrand_values_inplace.integrand, atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_ForwardDiff, [integrand_values_nt.integrand.x.αβ[:];integrand_values_nt.integrand.δγ[:]], atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_ForwardDiff, [integrand_values_inplace_nt.integrand.x.αβ[:];integrand_values_inplace_nt.integrand.δγ[:]], atol = 1e-11, rtol = 1e-11)
+@test isapprox(
+    dGdp_ForwardDiff, integrand_values_inplace.integrand, atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff,
+    [integrand_values_nt.integrand.x.αβ[:]; integrand_values_nt.integrand.δγ[:]],
+    atol = 1e-11, rtol = 1e-11)
+@test isapprox(dGdp_ForwardDiff,
+    [integrand_values_inplace_nt.integrand.x.αβ[:];
+     integrand_values_inplace_nt.integrand.δγ[:]],
+    atol = 1e-11,
+    rtol = 1e-11)
 
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 function simple_linear_system(u, p, t)
@@ -203,9 +212,11 @@ end
 function callback_saving_linear_inplace(du, u, t, integrator, sol)
     du .= [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
-cb = IntegratingSumCallback((u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
+cb = IntegratingSumCallback(
+    (u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingSumCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du,
+cb_inplace = IntegratingSumCallback(
+    (du, u, t, integrator) -> callback_saving_linear_inplace(du,
         u,
         t,
         integrator,
@@ -216,7 +227,8 @@ prob_adjoint = ODEProblem((u, p, t) -> adjoint_linear(u, p, t, sol),
     (tspan[end], tspan[1]),
     p,
     callback = cb)
-prob_adjoint_inplace = ODEProblem((du, u, p, t) -> adjoint_linear_inplace(du, u, p, t, sol),
+prob_adjoint_inplace = ODEProblem(
+    (du, u, p, t) -> adjoint_linear_inplace(du, u, p, t, sol),
     [0.0, 0.0],
     (tspan[end], tspan[1]),
     p,
@@ -227,4 +239,5 @@ sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, relto
 dGdp_analytical = analytical_derivative(p, tspan[end])
 
 @test isapprox(dGdp_analytical, integrand_values.integrand, atol = 1e-11, rtol = 1e-11)
-@test isapprox(dGdp_analytical, integrand_values_inplace.integrand, atol = 1e-11, rtol = 1e-11)
+@test isapprox(
+    dGdp_analytical, integrand_values_inplace.integrand, atol = 1e-11, rtol = 1e-11)

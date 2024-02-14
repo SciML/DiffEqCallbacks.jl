@@ -16,7 +16,7 @@ struct GeneralDomainAffect{autonomous, F, T, S, uType} <: AbstractDomainAffect{T
     resid::uType
 
     function GeneralDomainAffect{autonomous}(g::F, abstol::T, scalefactor::S, u::uType,
-        resid::uType) where {autonomous, F, T, S, uType
+            resid::uType) where {autonomous, F, T, S, uType
     }
         new{autonomous, F, T, S, uType}(g, abstol, scalefactor, u, resid)
     end
@@ -94,7 +94,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
         if dtcache == dt
             if integrator.opts.verbose
                 @warn("Could not restrict values to domain. Iteration was canceled since ",
-                    "proposed time step dt = ", dt, " could not be reduced.")
+                    "proposed time step dt = ", dt," could not be reduced.")
             end
             break
         end
@@ -190,7 +190,7 @@ function setup(f::GeneralDomainAffect, integrator)
 end
 
 function isaccepted(u, p, t, abstol, f::GeneralDomainAffect{autonomous, F, T, S, uType},
-    resid) where {autonomous, F, T, S, uType}
+        resid) where {autonomous, F, T, S, uType}
     # calculate residuals
     if autonomous
         f.g(resid, u, p)
@@ -264,9 +264,9 @@ Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
 function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
-    abstol = nothing, scalefactor = nothing,
-    autonomous = maximum(SciMLBase.numargs(g)) == 3,
-    nlopts = Dict(:ftol => 10 * eps()))
+        abstol = nothing, scalefactor = nothing,
+        autonomous = maximum(SciMLBase.numargs(g)) == 3,
+        nlopts = Dict(:ftol => 10 * eps()))
     if u isa Nothing
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
     else
@@ -274,7 +274,8 @@ function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
             deepcopy(u))
     end
     condition = (u, t, integrator) -> true
-    CallbackSet(ManifoldProjection(g; nlsolve = nlsolve, save = false,
+    CallbackSet(
+        ManifoldProjection(g; nlsolve = nlsolve, save = false,
             autonomous = autonomous, nlopts = nlopts),
         DiscreteCallback(condition, affect!; save_positions = (false, save)))
 end

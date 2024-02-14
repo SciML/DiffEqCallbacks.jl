@@ -14,7 +14,7 @@ makedocs(sitename = "DiffEqCallbacks.jl",
     modules = [DiffEqCallbacks],
     clean = true, doctest = false, linkcheck = true,
     linkcheck_ignore = [
-        "https://www.sciencedirect.com/science/article/pii/S0096300304009683",
+        "https://www.sciencedirect.com/science/article/pii/S0096300304009683"
     ],
     warnonly = [:missing_docs],
     format = Documenter.HTML(assets = ["assets/favicon.ico"],

@@ -54,7 +54,7 @@ constraints.
   Float64 values.
 """
 function StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
-    cached_dtcache = 0.0)
+        cached_dtcache = 0.0)
     affect! = StepsizeLimiterAffect(dtFE, cached_dtcache, safety_factor, max_step)
     condition = (u, t, integrator) -> true
     DiscreteCallback(condition, affect!;

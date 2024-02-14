@@ -100,7 +100,7 @@ via `integrand_values.integrand`.
     If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
 """
 function IntegratingSumCallback(integrand_func, integrand_values::IntegrandValuesSum,
-    cache = nothing)
+        cache = nothing)
     affect! = SavingIntegrandSumAffect(integrand_func, integrand_values, cache)
     condition = (u, t, integrator) -> true
     DiscreteCallback(condition, affect!, save_positions = (false, false))

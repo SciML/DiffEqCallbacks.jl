@@ -1,9 +1,9 @@
 using Test, OrdinaryDiffEq, DiffEqCallbacks, LinearAlgebra,
-    SciMLSensitivity, Tracker
+      SciMLSensitivity, Tracker
 import LinearAlgebra: norm
 import ODEProblemLibrary: prob_ode_2Dlinear,
-    prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
-    prob_ode_nonlinchem, prob_ode_lorenz
+                          prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
+                          prob_ode_nonlinchem, prob_ode_lorenz
 using DiffEqCallbacks: sample, store!
 
 # save_everystep, scalar problem
@@ -146,7 +146,8 @@ prob = ODEProblem{false}(rober, u0, tspan, p)
 saved_values = SavedValues(eltype(tspan), eltype(p))
 cb = SavingCallback((u, t, integrator) -> integrator.EEst * integrator.dt, saved_values)
 
-@test !all(iszero.(Tracker.gradient(p -> begin
+@test !all(iszero.(Tracker.gradient(
+    p -> begin
         solve(remake(prob, u0 = u0, p = p, tspan = tspan),
             Tsit5(),
             sensealg = SensitivityADPassThrough(),
@@ -187,7 +188,8 @@ if VERSION >= v"1.9" # stack
             length = 10 * N))
         for deriv_idx in 0:max_deriv
             u_linear_upsampled = sample(ils, t_upsampled, deriv_idx)
-            u_interp_upsampled = stack(as_array.(sol(t_upsampled, Val{deriv_idx}; continuity=:left).u))'
+            u_interp_upsampled = stack(as_array.(sol(
+                t_upsampled, Val{deriv_idx}; continuity = :left).u))'
 
             check = isapprox(u_linear_upsampled,
                 u_interp_upsampled;
@@ -196,7 +198,7 @@ if VERSION >= v"1.9" # stack
                 atol = abstol^(2.0^(-deriv_idx)),
                 rtol = reltol^(2.0^(-deriv_idx)))
             if !check
-                @error("Check failed", solver, deriv_idx)
+                @error("Check failed", solver,deriv_idx)
                 display(abs.(u_linear_upsampled .- u_interp_upsampled))
             end
             @test check
@@ -206,13 +208,14 @@ if VERSION >= v"1.9" # stack
     max_deriv_map = Dict(
         Tsit5 => 2,
         Rodas5P => 2,
-        Rosenbrock23 => 1,
+        Rosenbrock23 => 1
     )
     for solver in [Tsit5, Rodas5P, Rosenbrock23]
         max_deriv = max_deriv_map[solver]
         @testset "$(solver)" begin
             test_linearization(prob_ode_linear, solver(); max_deriv)
-            test_linearization(prob_ode_linear, solver(); abstol = 1e-9, reltol = 1e-9, max_deriv)
+            test_linearization(
+                prob_ode_linear, solver(); abstol = 1e-9, reltol = 1e-9, max_deriv)
             test_linearization(prob_ode_vanderpol, solver(); max_deriv)
             test_linearization(prob_ode_rigidbody, solver(); max_deriv)
             test_linearization(prob_ode_nonlinchem, solver(); max_deriv)
@@ -220,11 +223,10 @@ if VERSION >= v"1.9" # stack
         end
     end
 
-
     @testset "fail gracefully" begin
         f_error2(du, u, p, t) = du .= u ./ t .- 1
-        u0 = [1.0];
-        du0 = [1.0];
+        u0 = [1.0]
+        du0 = [1.0]
         prob = DAEProblem(f_error2, u0, du0, (0.0, 1.0); differential_vars = [true])
         ils = IndependentlyLinearizedSolution(prob, 0)
         lsc = LinearizingSavingCallback(ils)
@@ -234,7 +236,6 @@ if VERSION >= v"1.9" # stack
         @test isempty(ils.us)
         @test isempty(ils.time_mask)
     end
-    
 
     # We do not support 2d states yet.
     #test_linearization(prob_ode_2Dlinear, Tsit5())
