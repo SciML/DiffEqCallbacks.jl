@@ -183,7 +183,7 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abs
     (; y_linear, y_interp, slopes) = caches
     tspread = t₁ - t₀
     slopes .= (u₁ .- u₀) ./ tspread
-    t_quartile(t_idx) = t₀ + tspread * t_idx/4.0
+    t_quartile(t_idx) = t₀ + tspread * t_idx / 4.0
 
     # Calculate interpolated and linear samplings in our three quartiles
     for t_idx in 1:3
@@ -209,8 +209,8 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abs
         for t_idx in 1:3
             is_linear[u_idx] &= isapprox(y_linear[u_idx, t_idx],
                 y_interp[u_idx, t_idx];
-                atol=abstol,
-                rtol=reltol)
+                atol = abstol,
+                rtol = reltol)
         end
     end
     # Find worst time index so that we split our period there
@@ -228,10 +228,12 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abs
     return t_quartile(t_max_idx)
 end
 
-function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask, dtmin, interpolate_mask, abstol, reltol)
+function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
+        dtmin, interpolate_mask, abstol, reltol)
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
-        @debug("Linearization failure", t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
+        @debug("Linearization failure",
+            t₁, t₀, string(u₀), string(u₁), string(u_mask),dtmin)
         throw(ArgumentError("Linearization failed, fell below linearization subdivision threshold"))
     end
 
@@ -247,7 +249,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask, d
         # and mask by `u_mask` (but re-use the memory)
         is_nonlinear = is_linear
         for u_idx in 1:length(is_linear)
-            is_nonlinear[u_idx] = !is_linear[u_idx] & u_mask[u_idx] & interpolate_mask[u_idx]
+            is_nonlinear[u_idx] = !is_linear[u_idx] & u_mask[u_idx] &
+                                  interpolate_mask[u_idx]
         end
 
         if any(is_nonlinear)
@@ -293,7 +296,7 @@ function store_u_block!(ilsc, integ, caches, t₁, u₁, u_mask)
         caches.u_block[1, :] .= u₁
         for deriv_idx in 1:num_derivatives(ilsc)
             integ(u, t₁, Val{deriv_idx})
-            caches.u_block[deriv_idx+1, :] .= u
+            caches.u_block[deriv_idx + 1, :] .= u
         end
         store!(ilsc, t₁, caches.u_block, u_mask)
     end
@@ -307,13 +310,13 @@ re-using those pieces of memory (in our case, typically `u` vectors)
 until the solve is finished.  Note that this datastructure is _not_
 thread-safe!
 """
-mutable struct CachePool{T,F}
+mutable struct CachePool{T, F}
     pool::Vector{T}
     alloc::F
     write_idx::Int
 
     function CachePool(T, alloc::F) where {F}
-        return new{T,F}(T[], alloc, 0)
+        return new{T, F}(T[], alloc, 0)
     end
 end
 
@@ -362,11 +365,11 @@ solve(prob, solver; callback=LinearizingSavingCallback(ils))
   based on the `sol.t` points instead (no subdivision).  This is useful for when
   a solution needs to ignore certain indices due to badly-behaved interpolation.
 """
-function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
+function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
         interpolate_mask = BitVector(true for _ in 1:length(ils.ilsc.u_chunks)),
-        abstol::Union{S,Nothing} = nothing,
-        reltol::Union{S,Nothing} = nothing,
-    ) where {T, S}
+        abstol::Union{S, Nothing} = nothing,
+        reltol::Union{S, Nothing} = nothing
+) where {T, S}
     ilsc = ils.ilsc
     full_mask = BitVector(true for _ in 1:length(ilsc.u_chunks))
     # caches will be allocated in `initialize()`
@@ -393,14 +396,14 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
                         store_u_block!(ilsc, integ, caches, t₀, u₀, full_mask)
                     end
 
-                    dtmin = eps(t₁ - t₀)*1000.0
+                    dtmin = eps(t₁ - t₀) * 1000.0
                     linearize_period(
                         t₀, t₁, u₀, u₁,
                         integ, ilsc, caches,
                         full_mask, dtmin, interpolate_mask,
                         # Loosen `abstol` and `reltol` according to the derivative level
                         something(abstol, integ.opts.abstol),
-                        something(reltol, integ.opts.reltol),
+                        something(reltol, integ.opts.reltol)
                     )
                 end
             end
@@ -426,7 +429,7 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T,S};
                 y_interp = Matrix{S}(undef, (num_us, 3)),
                 slopes = Vector{S}(undef, num_us),
                 us = us,
-                u_block = Matrix{S}(undef, (num_derivatives(ilsc)+1, num_us)),
+                u_block = Matrix{S}(undef, (num_derivatives(ilsc) + 1, num_us)),
                 u_masks = CachePool(BitVector, () -> BitVector(undef, num_us))
             )
             u_modified!(integ, false)

@@ -17,7 +17,7 @@ function allDerivPass(integrator, abstol, reltol, min_t)
 
     if integrator.u isa Array
         any(abs(d) > abstol && abs(d) > reltol * abs(u)
-            for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
+        for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
             Iterators.cycle(reltol), integrator.u)) &&
             (return false)
     else

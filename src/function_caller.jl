@@ -82,10 +82,10 @@ which gets calls at the time points of interest. The constructor is:
     be adapted if `tspan[1] > tspan[end]`.
 """
 function FunctionCallingCallback(func;
-    funcat = Vector{Float64}(),
-    func_everystep = isempty(funcat),
-    func_start = true,
-    tdir = 1)
+        funcat = Vector{Float64}(),
+        func_everystep = isempty(funcat),
+        func_start = true,
+        tdir = 1)
     # funcat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     if funcat isa Number
         # expand to range using tspan in functioncalling_initialize

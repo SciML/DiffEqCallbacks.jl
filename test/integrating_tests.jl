@@ -64,8 +64,8 @@ end
 
 dGdp_ForwardDiff = ForwardDiff.gradient(G, p)
 
-integrand_values = IntegrandValues(Float64,Vector{Float64})
-integrand_values_inplace = IntegrandValues(Float64,Vector{Float64})
+integrand_values = IntegrandValues(Float64, Vector{Float64})
+integrand_values_inplace = IntegrandValues(Float64, Vector{Float64})
 function callback_saving(u, t, integrator, sol)
     temp = sol(t)
     return vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
@@ -76,7 +76,8 @@ function callback_saving_inplace(du, u, t, integrator, sol)
 end
 cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace(du,
+cb_inplace = IntegratingCallback(
+    (du, u, t, integrator) -> callback_saving_inplace(du,
         u, t, integrator, sol),
     integrand_values_inplace, zeros(length(p)))
 prob_adjoint = ODEProblem((u, p, t) -> adjoint(u, p, t, sol), [0.0, 0.0],
@@ -97,7 +98,8 @@ integrand_values_nt = IntegrandValues(Float64, typeof(p_nt))
 integrand_values_inplace_nt = IntegrandValues(Float64, typeof(p_nt))
 cb = IntegratingCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
     integrand_values_nt)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_inplace_nt(du,
+cb_inplace = IntegratingCallback(
+    (du, u, t, integrator) -> callback_saving_inplace_nt(du,
         u, t, integrator, sol),
     integrand_values_inplace_nt, DiffEqCallbacks.allocate_zeros(p_nt))
 prob_adjoint_nt = ODEProblem((u, p, t) -> adjoint(u, p, t, sol_nt), [0.0, 0.0],
@@ -228,9 +230,11 @@ end
 function callback_saving_linear_inplace(du, u, t, integrator, sol)
     du .= [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
-cb = IntegratingCallback((u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
+cb = IntegratingCallback(
+    (u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
     integrand_values)
-cb_inplace = IntegratingCallback((du, u, t, integrator) -> callback_saving_linear_inplace(du,
+cb_inplace = IntegratingCallback(
+    (du, u, t, integrator) -> callback_saving_linear_inplace(du,
         u,
         t,
         integrator,
@@ -241,7 +245,8 @@ prob_adjoint = ODEProblem((u, p, t) -> adjoint_linear(u, p, t, sol),
     (tspan[end], tspan[1]),
     p,
     callback = cb)
-prob_adjoint_inplace = ODEProblem((du, u, p, t) -> adjoint_linear_inplace(du, u, p, t, sol),
+prob_adjoint_inplace = ODEProblem(
+    (du, u, p, t) -> adjoint_linear_inplace(du, u, p, t, sol),
     [0.0, 0.0],
     (tspan[end], tspan[1]),
     p,
