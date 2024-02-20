@@ -84,4 +84,51 @@ function g_oop(u, p)
             u[3]^2 + u[4]^2 - 2]
 end
 
-g_t(resid, u, p, t) = g(resid, u, p)
+g_oop_t(u, p, t) = g_oop(u, p)
+
+prob = ODEProblem(f, u0, (0.0, 100.0))
+
+# autodiff=true
+@inferred ManifoldProjection(g_oop; autonomous = Val(false), isinplace = Val(false))
+cb = ManifoldProjection(g_oop; isinplace = Val(false))
+@test isautonomous(cb.affect!)
+solve(prob, Vern7(), callback = cb)
+@time sol = solve(prob, Vern7(), callback = cb)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+cb_t = ManifoldProjection(g_oop_t; isinplace = Val(false))
+@test !isautonomous(cb_t.affect!)
+solve(prob, Vern7(), callback = cb_t)
+@time sol_t = solve(prob, Vern7(), callback = cb_t)
+@test sol_t.u == sol.u && sol_t.t == sol.t
+
+# autodiff=false
+cb_false = ManifoldProjection(
+    g_oop; nlsolve = GaussNewton(; autodiff = AutoFiniteDiff()), isinplace = Val(false))
+@test isautonomous(cb_false.affect!)
+solve(prob, Vern7(), callback = cb_false)
+sol = solve(prob, Vern7(), callback = cb_false)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+cb_t_false = ManifoldProjection(g_oop_t,
+    nlsolve = GaussNewton(; autodiff = AutoFiniteDiff()), isinplace = Val(false))
+@test !isautonomous(cb_t_false.affect!)
+solve(prob, Vern7(), callback = cb_t_false)
+sol_t = solve(prob, Vern7(), callback = cb_t_false)
+@test sol_t.u == sol.u && sol_t.t == sol.t
+
+# test array partitions
+u₀ = ArrayPartition(ones(2), ones(2))
+prob = ODEProblem(f, u₀, (0.0, 100.0))
+
+sol = solve(prob, Vern7(), callback = cb)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+sol = solve(prob, Vern7(), callback = cb_t)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+sol = solve(prob, Vern7(), callback = cb_false)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
+
+sol = solve(prob, Vern7(), callback = cb_t_false)
+@test sol[end][1]^2 + sol[end][2]^2 ≈ 2
