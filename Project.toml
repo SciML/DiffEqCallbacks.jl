@@ -1,7 +1,7 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "2.37.0"
+version = "3.0.0"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
@@ -10,7 +10,7 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
-NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
+NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
@@ -30,7 +30,6 @@ ForwardDiff = "0.10.19"
 Functors = "0.4"
 LinearAlgebra = "1.10"
 Markdown = "1.10"
-NLsolve = "4.5"
 ODEProblemLibrary = "0.1.5"
 OrdinaryDiffEq = "6.68"
 Parameters = "0.12"
@@ -62,4 +61,3 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
 test = ["Aqua", "DataInterpolations", "OrdinaryDiffEq", "ODEProblemLibrary", "Test", "QuadGK", "SciMLSensitivity", "StaticArrays", "Tracker", "Zygote"]
-
