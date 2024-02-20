@@ -213,7 +213,7 @@ end
 
 """
 ```julia
-GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
+GeneralDomain(g, u = nothing; nlsolve = NewtonRaphson(), save = true,
     abstol = nothing, scalefactor = nothing,
     autonomous = maximum(SciMLBase.numargs(g)) == 3,
     nlopts = Dict(:ftol => 10 * eps()))
@@ -242,7 +242,7 @@ preferred.
 
 ## Keyword Arguments
 
-  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](https://docs.sciml.ai/DiffEqDocs/stable/features/linear_nonlinear/)
+  - `nlsolve`: A nonlinear solver as defined in the [NonlinearSolve.jl format](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/)
     which is passed to a `ManifoldProjection`.
   - `save`: Whether to do the standard saving (applied after the callback).
   - `abstol`: Tolerance up to, which residuals are accepted. Element-wise tolerances
@@ -252,8 +252,8 @@ preferred.
     specified, time steps are halved.
   - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)`.
   - `nlopts`: Optional arguments to nonlinear solver of a `ManifoldProjection` which
-    can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
-    The default value of `ftol = 10*eps()` ensures that convergence is only declared
+    can be any of the [NonlinearSolve.jl keywords](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/).
+    The default value of `abstol = 10 * eps()` ensures that convergence is only declared
     if the infinite norm of residuals is very small and hence the state vector is very
     close to the domain.
 
@@ -263,10 +263,9 @@ Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
-function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
+function GeneralDomain(g, u = nothing; nlsolve = NewtonRaphson(), save = true,
         abstol = nothing, scalefactor = nothing,
-        autonomous = maximum(SciMLBase.numargs(g)) == 3,
-        nlopts = Dict(:ftol => 10 * eps()))
+        autonomous = maximum(SciMLBase.numargs(g)) == 3, nlopts = (; abstol = 10 * eps()))
     if u isa Nothing
         affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
     else

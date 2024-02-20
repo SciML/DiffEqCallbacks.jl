@@ -9,38 +9,40 @@
 #     end
 # end
 
-struct NLSOLVEJL_SETUP{CS, AD} end
-Base.@pure function NLSOLVEJL_SETUP(; chunk_size = 0, autodiff = true)
-    NLSOLVEJL_SETUP{chunk_size, autodiff}()
-end
-(::NLSOLVEJL_SETUP)(f, u0; kwargs...) = (res = NLsolve.nlsolve(f, u0; kwargs...); res.zero)
-function (p::NLSOLVEJL_SETUP{CS, AD})(::Type{Val{:init}}, f, u0_prototype) where {CS, AD}
-    AD ? autodiff = :forward : autodiff = :central
-    OnceDifferentiable(f, u0_prototype, u0_prototype, autodiff,
-        ForwardDiff.Chunk(determine_chunksize(u0_prototype, CS)))
-end
+# struct NLSOLVEJL_SETUP{CS, AD} end
+# Base.@pure function NLSOLVEJL_SETUP(; chunk_size = 0, autodiff = true)
+#     NLSOLVEJL_SETUP{chunk_size, autodiff}()
+# end
+# (::NLSOLVEJL_SETUP)(f, u0; kwargs...) = (res = NLsolve.nlsolve(f, u0; kwargs...); res.zero)
+# function (p::NLSOLVEJL_SETUP{CS, AD})(::Type{Val{:init}}, f, u0_prototype) where {CS, AD}
+#     AD ? autodiff = :forward : autodiff = :central
+#     OnceDifferentiable(f, u0_prototype, u0_prototype, autodiff,
+#         ForwardDiff.Chunk(determine_chunksize(u0_prototype, CS)))
+# end
 
 # wrapper for non-autonomous functions
-mutable struct NonAutonomousFunction{iip, F, autonomous, T}
+mutable struct NonAutonomousFunction{iip, F, autonomous}
     f::F
-    t::T
+    t::Any
 end
+
 (f::NonAutonomousFunction{true, F, true})(res, u, p) where {F} = f.f(res, u, p)
 (f::NonAutonomousFunction{true, F, false})(res, u, p) where {F} = f.f(res, u, p, p.t)
+
 (f::NonAutonomousFunction{false, F, true})(u, p) where {F} = f.f(u, p)
 (f::NonAutonomousFunction{false, F, false})(u, p) where {F} = f.f(u, p, p.t)
 
 SciMLBase.isinplace(::NonAutonomousFunction{iip}) where {iip} = iip
 
 """
-```julia
-ManifoldProjection(g; nlsolve = NLSOLVEJL_SETUP(), save = true)
-```
+    ManifoldProjection(g; nlsolve = missing, save = true, nlls = Val(true),
+        isinplace = Val(true), autonomous = nothing, nlopts = (;),
+        resid_prototype = nothing)
 
 In many cases, you may want to declare a manifold on which a solution lives.
 Mathematically, a manifold `M` is defined by a function `g` as the set of points
-where `g(u)=0`. An embedded manifold can be a lower dimensional object which
-constrains the solution. For example, `g(u)=E(u)-C` where `E` is the energy
+where `g(u) = 0`. An embedded manifold can be a lower dimensional object which
+constrains the solution. For example, `g(u) = E(u) - C` where `E` is the energy
 of the system in state `u`, meaning that the energy must be constant (energy
 preservation). Thus by defining the manifold the solution should live on, you
 can retain desired properties of the solution.
@@ -62,10 +64,12 @@ properties.
 
 ## Keyword Arguments
 
-  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](https://docs.sciml.ai/DiffEqDocs/stable/features/linear_nonlinear/)
+  - `nlsolve`: A nonlinear solver as defined in the
+    [NonlinearSolve.jl format](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/)
   - `save`: Whether to do the standard saving (applied after the callback)
   - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u)`.
-  - `nlopts`: Optional arguments to nonlinear solver which can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
+  - `nlopts`: Optional arguments to nonlinear solver which can be any of the
+    [NonlinearSolve.jl keywords](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/).
 
 ### Saveat Warning
 
@@ -84,56 +88,80 @@ Ernst Hairer, Christian Lubich, Gerhard Wanner. Geometric Numerical Integration:
 Structure-Preserving Algorithms for Ordinary Differential Equations. Berlin ;
 New York :Springer, 2002.
 """
-mutable struct ManifoldProjection{iip, autonomous, F, NL, NO}
+mutable struct ManifoldProjection{iip, nlls, autonomous, F, NL, NO, R}
     g::F
-    nl_rhs::Any
-    nlsolver::NL
+    nlcache::Any
+    nlsolve::NL
     nlopts::NO
+    resid_prototype::R
 
-    # TODO: Caching for NonlinearSolve solvers
-    function ManifoldProjection{iip, autonomous}(g, nlsolve, nlopts) where {iip, autonomous}
-        replace residual function if it is time-dependent
+    function ManifoldProjection{iip, nlls, autonomous}(
+            g, nlsolve, nlopts, resid_prototype) where {iip, nlls, autonomous}
+        # replace residual function if it is time-dependent
         _g = NonAutonomousFunction{iip, typeof(g), autonomous}(g, 0)
-        return new{iip, autonomous, typeof(_g), typeof(nlsolve), typeof(nlopts)}(_g, _g,
-            nlsolve, nlopts)
+        return new{iip, nlls, autonomous, typeof(_g), typeof(nlsolve),
+            typeof(nlopts), typeof(resid_prototype)}(
+            _g, nothing, nlsolve, nlopts, resid_prototype)
     end
 end
 
-# # Now make `affect!` for this:
-# function (p::ManifoldProjection{autonomous, NL})(integrator) where {autonomous, NL}
-#     # update current time if residual function is time-dependent
-#     if !autonomous
-#         p.g.t = integrator.t
-#     end
-#     p.g.p = integrator.p
+# Now make `affect!` for this:
+function (p::ManifoldProjection{iip, nlls, autonomous, NL})(integrator) where {iip, nlls,
+        autonomous, NL}
+    # update current time if residual function is time-dependent
+    if !autonomous
+        p.g.t = integrator.t
+    end
 
-#     integrator.u .= p.nlsolve(p.nl_rhs, integrator.u; p.nlopts...)
-# end
+    # solve the nonlinear problem
+    reinit!(p.nlcache, integrator.u; p = integrator.p)
+    sol = solve!(p.nlcache)
 
-# function Manifold_initialize(cb, u::Number, t, integrator)
-#     cb.affect!.nl_rhs = cb.affect!.nlsolve(Val{:init}, cb.affect!.g, [u])
-#     u_modified!(integrator, false)
-# end
+    if !SciMLBase.successful_retcode(sol) && (nlls && sol.retcode != ReturnCode.Stalled)
+        SciMLBase.terminate!(integrator, sol.retcode)
+        return
+    end
 
-# function Manifold_initialize(cb, u, t, integrator)
-#     cb.affect!.nl_rhs = cb.affect!.nlsolve(Val{:init}, cb.affect!.g, u)
-#     u_modified!(integrator, false)
-# end
+    copyto!(integrator.u, sol.u)
+end
 
-function ManifoldProjection(g; nlsolve = nothing, save = true, isinplace = Val(true),
-        autonomous = nothing, nlopts = (;))
+function Manifold_initialize(cb, u, t, integrator)
+    return Manifold_initialize(cb.affect!, u, t, integrator)
+end
+function Manifold_initialize(
+        affect!::ManifoldProjection{iip, nlls}, u, t, integrator) where {iip, nlls}
+    nlfunc = NonlinearFunction{iip}(affect!.g; affect!.resid_prototype)
+    nlprob = if nlls
+        NonlinearLeastSquaresProblem(nlfunc, u, integrator.p)
+    else
+        NonlinearProblem(nlfunc, u, integrator.p)
+    end
+    affect!.nlcache = init(nlprob, affect!.nlsolve; affect!.nlopts...)
+    u_modified!(integrator, false)
+end
+
+# Since this is applied to every point, we can reasonably assume that the solution is close
+# to the initial guess, so we would want to use NewtonRaphson / RobustMultiNewton instead of
+# the default one.
+function ManifoldProjection(g; nlsolve = missing, save = true, nlls = Val(true),
+        isinplace = Val(true), autonomous = nothing, nlopts = (;),
+        resid_prototype = nothing)
+    # `nothing` is a valid solver, so this need to be `missing`
+    _nlls = SciMLBase._unwrap_val(nlls)
+    _nlsolve = nlsolve === missing ? (_nlls ? GaussNewton() : NewtonRaphson()) : nlsolve
+    iip = SciMLBase._unwrap_val(isinplace)
     if autonomous === nothing
-        if SciMLBase._unwrap_val(isinplace)
+        if iip
             autonomous = maximum(SciMLBase.numargs(g)) == 3
         else
             autonomous = maximum(SciMLBase.numargs(g)) == 2
         end
     end
-    affect! = ManifoldProjection{autonomous}(g, nlsolve, nlopts)
+    affect! = ManifoldProjection{iip, _nlls, autonomous}(
+        g, _nlsolve, nlopts, resid_prototype)
     condition = (u, t, integrator) -> true
-    save_positions = (false, save)
     return DiscreteCallback(condition, affect!; initialize = Manifold_initialize,
-        save_positions = save_positions)
+        save_positions = (false, save))
 end
 
 export ManifoldProjection
