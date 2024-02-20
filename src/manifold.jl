@@ -94,7 +94,8 @@ mutable struct ManifoldProjection{iip, nlls, autonomous, F, NL, R, K}
 end
 
 # Now make `affect!` for this:
-function (p::ManifoldProjection{iip, nlls, autonomous, NL})(integrator) where {iip, nlls,
+function (p::ManifoldProjection{
+        iip, nlls, autonomous, NL})(integrator) where {iip, nlls,
         autonomous, NL}
     # update current time if residual function is time-dependent
     !autonomous && (p.g.t = integrator.t)
@@ -143,7 +144,7 @@ function ManifoldProjection(g; nlsolve = missing, save = true, nlls = Val(true),
             autonomous = maximum(SciMLBase.numargs(g)) == 2
         end
     end
-    affect! = ManifoldProjection{iip, _nlls, autonomous}(
+    affect! = ManifoldProjection{iip, _nlls, SciMLBase._unwrap_val(autonomous)}(
         g, _nlsolve, resid_prototype, kwargs)
     condition = (u, t, integrator) -> true
     return DiscreteCallback(condition, affect!; initialize = Manifold_initialize,
