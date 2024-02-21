@@ -159,7 +159,8 @@ cb = SavingCallback((u, t, integrator) -> integrator.EEst * integrator.dt, saved
 # Test that our `LinearizingSavingCallback` gives back something that when interpolated,
 # respects our `abstol`/`reltol` versus the actual solution:
 using DataInterpolations
-import DiffEqCallbacks: as_array, finish!
+import DiffEqCallbacks: as_array, finish!,
+                        IndependentlyLinearizedSolution, LinearizingSavingCallbackCache
 
 as_array(T::Type{<:AbstractArray}) = T
 as_array(T::Type{<:Number}) = Vector{T}
@@ -198,7 +199,7 @@ if VERSION >= v"1.9" # stack
                 atol = abstol^(2.0^(-deriv_idx)),
                 rtol = reltol^(2.0^(-deriv_idx)))
             if !check
-                @error("Check failed", solver,deriv_idx)
+                @error("Check failed", solver, deriv_idx)
                 display(abs.(u_linear_upsampled .- u_interp_upsampled))
             end
             @test check
@@ -220,6 +221,9 @@ if VERSION >= v"1.9" # stack
             test_linearization(prob_ode_rigidbody, solver(); max_deriv)
             test_linearization(prob_ode_nonlinchem, solver(); max_deriv)
             test_linearization(prob_ode_lorenz, solver(); max_deriv)
+
+            # We do not support 2d states yet.
+            #test_linearization(prob_ode_2Dlinear, solver(); max_deriv)
         end
     end
 
@@ -237,6 +241,32 @@ if VERSION >= v"1.9" # stack
         @test isempty(ils.time_mask)
     end
 
-    # We do not support 2d states yet.
-    #test_linearization(prob_ode_2Dlinear, Tsit5())
+    # Benchmark that shows how to use a cache to speed up linearization of large ensemble solutions:
+    #=
+    num_trajectories = 10000
+    num_derivatives = 1
+    cache = LinearizingSavingCallbackCache(prob_ode_lorenz, Tsit5(); num_derivatives)
+    function p_disturbing_remake(prob, i, repeat; kwargs...)
+        return remake(prob;
+            p=prob.p .+ 0.1*randn(size(prob.p)),
+            kwargs...
+        )
+    end
+    ilss = Vector{IndependentlyLinearizedSolution}(undef, num_trajectories)
+    function linearizer_adding_remake(prob,i,repeat)
+        ilss[i] = IndependentlyLinearizedSolution(prob, num_derivatives; cache_pool=cache.ils_cache)
+        lsc = LinearizingSavingCallback(ilss[i]; cache_pool=cache.lsc_cache)
+        return p_disturbing_remake(prob, i, repeat; callback=lsc)
+    end
+    ensembleprob = EnsembleProblem(
+        prob_ode_lorenz;
+        prob_func=linearizer_adding_remake,
+        safetycopy=false,
+    )
+    @time sol = solve(ensembleprob,
+        Tsit5(),
+        EnsembleThreads();   
+        trajectories=num_trajectories,
+    )
+    =#
 end

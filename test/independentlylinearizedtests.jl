@@ -1,8 +1,60 @@
 using Test, DiffEqCallbacks
 using DiffEqCallbacks: sample, store!, IndependentlyLinearizedSolutionChunks, finish!
 
+using DiffEqCallbacks: CachePool, acquire!, release!, @with_cache
+@testset "CachePool" begin
+    num_us = 10
+    for thread_safe in (false, true)
+        pool = CachePool(Vector{Float64}, () -> Vector{Float64}(undef, num_us); thread_safe)
+
+        @with_cache pool u₀ begin
+            @with_cache pool u₁ begin
+                @test length(u₀) == num_us
+                @test length(u₁) == num_us
+
+                # We get two separate arrays
+                u₀[1] = 0.0
+                u₁[1] = 1.0
+                @test u₀[1] == 0.0
+                @test u₁[1] == 1.0
+            end
+
+            # Test that u₁ gets re-used
+            @with_cache pool u₁ begin
+                @test length(u₁) == num_us
+                @test u₁[1] == 1.0
+            end
+
+            previously_allocated = pool.num_allocated
+            # Test that asking for a vector while we have one free does not allocate
+            function foo(pool)
+                return @with_cache pool u begin
+                    u[1]
+                end
+            end
+            @test foo(pool) == 1.0
+            @test pool.num_allocated == previously_allocated
+        end
+    end
+
+    # Test the threadsafe versions actually lock
+    pool = CachePool(
+        Vector{Float64}, () -> Vector{Float64}(undef, num_us); thread_safe = true)
+    # elapsed acquire once to warm everything up
+    @elapsed acquire!(pool)
+    @test @elapsed(acquire!(pool)) < 0.001
+
+    t_locker = Threads.@spawn begin
+        @lock pool.lock begin
+            sleep(0.01)
+        end
+    end
+    yield()
+    @test @elapsed(acquire!(pool)) > 0.001
+end
+
 @testset "IndependentlyLinearizedSolution" begin
-    ils = IndependentlyLinearizedSolution{Float64, Float64}(
+    ils = IndependentlyLinearizedSolution{Float64, Float64, 0}(
         # t
         [0.0, 0.5, 0.75, 1.0],
         # us (primal only, no derivatives)
@@ -18,6 +70,8 @@ using DiffEqCallbacks: sample, store!, IndependentlyLinearizedSolutionChunks, fi
              1 0 0 1]
         ),
         # ilsc
+        nothing,
+        # ilsc_cache_pool
         nothing
     )
 

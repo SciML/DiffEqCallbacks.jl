@@ -21,6 +21,9 @@ StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 
+[extensions]
+DiffEqCallbacksSundialsExt = "Sundials"
+
 [compat]
 Aqua = "0.8"
 DataInterpolations = "4"

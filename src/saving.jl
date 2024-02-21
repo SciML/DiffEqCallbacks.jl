@@ -1,3 +1,5 @@
+import SciMLBase: AbstractSciMLAlgorithm
+
 """
     SavedValues{tType<:Real, savevalType}
 
@@ -182,14 +184,19 @@ as_array(t::AbstractArray) = t
 function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abstol, reltol)
     (; y_linear, y_interp, slopes) = caches
     tspread = t₁ - t₀
-    slopes .= (u₁ .- u₀) ./ tspread
+    num_us = length(u₀)
+    @inbounds for u_idx in 1:num_us
+        slopes[u_idx] = (u₁[u_idx] - u₀[u_idx]) / tspread
+    end
     t_quartile(t_idx) = t₀ + tspread * t_idx / 4.0
 
     # Calculate interpolated and linear samplings in our three quartiles
-    for t_idx in 1:3
+    @inbounds for t_idx in 1:3
         t = t_quartile(t_idx)
         # Linear interpolation
-        y_linear[:, t_idx] .= u₀ .+ (t - t₀) .* slopes
+        @inbounds for u_idx in 1:num_us
+            y_linear[u_idx, t_idx] = u₀[u_idx] .+ (t - t₀) .* slopes[u_idx]
+        end
 
         # Solver interpolation
         # We would like to use `integ(@view(y_interp[:, t_idx]))` here,
@@ -197,14 +204,16 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abs
         # memory that the view would have given us, so we instead use a
         # temporary array then copy it into `y_interp`, which loses very
         # little time and still prevents allocations from `integ(t)`.
-        with_cache(caches.us) do u_interp
-            integ(u_interp, t)
-            y_interp[:, t_idx] .= u_interp
+        @with_cache caches.us u_interp begin
+            integ(u_interp, t, Val{0}; idxs = nothing)
+            for u_idx in 1:num_us
+                y_interp[u_idx, t_idx] = u_interp[u_idx]
+            end
         end
     end
 
     # Return `is_linear` for each state
-    for u_idx in 1:length(u₀)
+    @inbounds for u_idx in 1:num_us
         is_linear[u_idx] = true
         for t_idx in 1:3
             is_linear[u_idx] &= isapprox(y_linear[u_idx, t_idx],
@@ -216,8 +225,8 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abs
     # Find worst time index so that we split our period there
     t_max_idx = 1
     e_max = 0.0
-    for t_idx in 1:3
-        for u_idx in 1:length(u₀)
+    @inbounds for t_idx in 1:3
+        for u_idx in 1:num_us
             e = abs(y_linear[u_idx, t_idx] - y_interp[u_idx, t_idx])
             if e > e_max
                 t_max_idx = t_idx
@@ -233,11 +242,11 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
         @debug("Linearization failure",
-            t₁, t₀, string(u₀), string(u₁), string(u_mask),dtmin)
+            t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
         throw(ArgumentError("Linearization failed, fell below linearization subdivision threshold"))
     end
 
-    with_cache(caches.u_masks) do is_linear
+    @with_cache caches.u_masks is_linear begin
         tᵦ = is_linear_enough!(caches,
             is_linear,
             t₀, t₁,
@@ -255,8 +264,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
 
         if any(is_nonlinear)
             # If it's not linear, split this period into two and recurse, altering our `u_mask`:
-            with_cache(caches.us) do uᵦ
-                integ(uᵦ, tᵦ)
+            @with_cache caches.us uᵦ begin
+                integ(uᵦ, tᵦ, Val{0}; idxs = nothing)
                 linearize_period(
                     t₀, tᵦ,
                     u₀, uᵦ,
@@ -286,50 +295,164 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
             end
         else
             # If everyone is linear, store this period, according to our `u_mask`!
-            store_u_block!(ilsc, integ, caches, t₁, u₁, u_mask)
+            store_u_block!(ilsc, Val(num_derivatives(ilsc)), integ, caches, t₁, u₁, u_mask)
         end
     end
 end
 
-function store_u_block!(ilsc, integ, caches, t₁, u₁, u_mask)
-    with_cache(caches.us) do u
-        caches.u_block[1, :] .= u₁
-        for deriv_idx in 1:num_derivatives(ilsc)
-            integ(u, t₁, Val{deriv_idx})
-            caches.u_block[deriv_idx + 1, :] .= u
+function store_u_block!(
+        ilsc, ::Val{num_derivatives}, integ, caches, t₁, u₁, u_mask) where {num_derivatives}
+    @with_cache caches.us u begin
+        for u_idx in 1:length(u)
+            caches.u_block[1, u_idx] = u₁[u_idx]
+        end
+        for deriv_idx in 1:num_derivatives
+            integ(u, t₁, Val{deriv_idx}; idxs = nothing)
+            for u_idx in 1:length(u)
+                caches.u_block[deriv_idx + 1, u_idx] = u[u_idx]
+            end
         end
         store!(ilsc, t₁, caches.u_block, u_mask)
     end
 end
 
-"""
-    CachePool
+struct LinearizingSavingCallbackCacheType{S, U}
+    y_linear::Matrix{S}
+    y_interp::Matrix{S}
+    slopes::Vector{S}
+    # U is not necessarily a `Vector{S}` because it can be an `NVector` thanks to Sundials.
+    us::ThreadUnsafeCachePool{U}
+    u_block::Matrix{S}
+    u_masks::ThreadUnsafeCachePool{BitVector}
 
-Simple memory-reusing cache that allows us to grow a cache and keep
-re-using those pieces of memory (in our case, typically `u` vectors)
-until the solve is finished.  Note that this datastructure is _not_
-thread-safe!
-"""
-mutable struct CachePool{T, F}
-    pool::Vector{T}
-    alloc::F
-    write_idx::Int
+    function LinearizingSavingCallbackCacheType{S, U}(
+            num_us::Int, num_derivatives::Int, U_alloc::Function) where {S, U}
+        y_linear = Matrix{S}(undef, (num_us, 3))
+        y_interp = Matrix{S}(undef, (num_us, 3))
+        slopes = Vector{S}(undef, num_us)
+        u_block = Matrix{S}(undef, (num_derivatives + 1, num_us))
+        F_umasks = () -> BitVector(undef, num_us)
+        u_masks = CachePool(BitVector, F_umasks; thread_safe = false)
 
-    function CachePool(T, alloc::F) where {F}
-        return new{T, F}(T[], alloc, 0)
+        # Workaround for Sundials allocations; conversion from `Vector{S}`
+        # to `NVector()` allocates, so we require the caller to pass in a
+        # `U` and a `U_alloc` so that the default of `U = Vector{S}` and
+        # U_alloc = () -> Vector{S}(undef, num_us)` can be overridden.
+        # This is automatically done by `DiffEqCallbacksSundialsExt`, via
+        # the `solver_state_type()` and `solver_state_alloc()` hooks below.
+        us = CachePool(U, U_alloc; thread_safe = false)
+        return new{S, U}(
+            y_linear,
+            y_interp,
+            slopes,
+            us,
+            u_block,
+            u_masks
+        )
     end
 end
 
-function with_cache(f::Function, cache::CachePool{T}) where {T}
-    cache.write_idx += 1
-    if length(cache.pool) < cache.write_idx
-        push!(cache.pool, cache.alloc())
-    end
-    try
-        f(cache.pool[cache.write_idx])
-    finally
-        cache.write_idx -= 1
-    end
+# This exists purely so that different solver types can wrap/alter the
+# type of the state vectors cached by the `LinearizingSavingCallbackCache`.
+# U is typically something like `Vector{Float64}`.
+solver_state_type(solver::AbstractSciMLAlgorithm, U::DataType) = U
+function solver_state_alloc(solver::AbstractSciMLAlgorithm, U::DataType, num_us::Int)
+    () -> U(undef, num_us)
+end
+
+"""
+    LinearizingSavingCallbackCache(prob, solver; num_derivatives=0)
+
+Top-level cache for the `LinearizingSavingCallback`.  Typically used
+to vastly reduce the number of allocations when performing an ensemble
+solve, where allocations from one solution can be used by the next.
+
+Users must pass in `solver` to allow for solver-specific allocation
+strategies.  As an example, `IDA` requires allocation of `NVector`
+objects rather than `Vector{S}` objects, and to automatically
+determine this, the `LinearizingSavingCallbackCache` takes in the
+solver as well.  See the `DiffEqCallbacksSundialsExt` extension
+for the details on how this type adjustment is made.
+
+This top-level cache creates two thread-safe cache pools that are then
+used by each solve to allocate thread-unsafe cache pools.  Those per-
+solution cache pools are then re-used across solutions as the ensemble
+finishes one trajectory and moves to another.
+
+Example usage:
+
+```julia
+# Linearize the primal, and the first derivative
+num_derivatives = 1
+
+# Create a cache, to be used across all ensemble simulations
+cache = LinearizingSavingCallbackCache(prob, solver; num_derivatives)
+
+# Store the results in this array of independently linearized solutions
+ilss = Vector{IndependentlyLinearizedSolution}(undef, num_trajectories)
+
+# Create `prob_func` piece to remake `prob` to have the correct callback,
+# hooking up the necessary caching pieces.
+function linearizer_adding_remake(prob,i,_)
+    ilss[i] = IndependentlyLinearizedSolution(prob, num_derivatives; cache_pool=cache.ils_cache)
+    lsc = LinearizingSavingCallback(ilss[i]; cache_pool=cache.lsc_cache)
+    return remake(prob; callback=lsc)
+end
+
+ensembleprob = EnsembleProblem(prob; prob_func=linearizer_adding_remake)
+solve(ensembleprob, solver, EnsembleThreads(); ...)
+```
+"""
+function LinearizingSavingCallbackCache(prob, solver; num_derivatives = 0, chunk_size = 512)
+    T = eltype(prob.tspan)
+    S = eltype(prob.u0)
+    U = solver_state_type(solver, typeof(prob.u0))
+    num_us = length(prob.u0)
+    U_alloc = solver_state_alloc(solver, typeof(prob.u0), num_us)
+    return LinearizingSavingCallbackCache(
+        T, S, U, U_alloc, num_us; num_derivatives, chunk_size)
+end
+
+function make_lsc_cache(num_us, num_derivatives, S = Float64,
+        U = Vector{S}, U_alloc = () -> U(undef, num_us))
+    return CachePool(
+        LinearizingSavingCallbackCacheType{S, U},
+        () -> LinearizingSavingCallbackCacheType{S, U}(num_us, num_derivatives, U_alloc);
+        thread_safe = true
+    )
+end
+
+function LinearizingSavingCallbackCache(
+        T, S, U, U_alloc, num_us; num_derivatives = 0, chunk_size = 512)
+    return (;
+        # This cache is used by the LinearizingSavingCallback, it creates `LinearizingSavingCallbackCacheType`
+        # objects, which is quite a mouthful, but contains all the temporary values needed for a single
+        # solve's linearization.  Notably, it contains within itself cachepools for `u` vectors and whatnot,
+        # and it is _not_ thread-safe, because we assume that a single solve is single-threaded, so we use a
+        # single thread-safe cache pool (the `lsc_cache`) to spawn off a collection of these smaller, thread-
+        # unsafe (but faster to acquire/release) cache pools.
+        lsc_cache = make_lsc_cache(num_us, num_derivatives, S, U, U_alloc),
+        # This cache is used by the `IndependentlyLinearizedSolutionChunks` to do things like allocate `u`,
+        # `t` and `time_mask` chunks.
+        ils_cache = CachePool(
+            IndependentlyLinearizedSolutionChunksCache{T, S},
+            () -> IndependentlyLinearizedSolutionChunksCache{T, S}(
+                num_us,
+                num_derivatives,
+                chunk_size
+            ),
+            thread_safe = true
+        )
+    )
+end
+
+function default_lsc_cache(T, S, num_us, num_derivatives)
+    return CachePool(
+        LinearizingSavingCallbackCacheType{S, Vector{S}},
+        () -> LinearizingSavingCallbackCacheType{S, Vector{S}}(
+            num_us, num_derivatives, () -> Vector{S}(undef, num_us));
+        thread_safe = true
+    )
 end
 
 """
@@ -368,12 +491,18 @@ solve(prob, solver; callback=LinearizingSavingCallback(ils))
 function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
         interpolate_mask = BitVector(true for _ in 1:length(ils.ilsc.u_chunks)),
         abstol::Union{S, Nothing} = nothing,
-        reltol::Union{S, Nothing} = nothing
-) where {T, S}
+        reltol::Union{S, Nothing} = nothing,
+        cache_pool::CachePool{C} = make_lsc_cache(
+            length(ils.ilsc.u_chunks), num_derivatives(ils.ilsc), S)
+) where {T, S, C}
     ilsc = ils.ilsc
     full_mask = BitVector(true for _ in 1:length(ilsc.u_chunks))
-    # caches will be allocated in `initialize()`
-    caches = nothing
+    num_derivatives_val = Val(num_derivatives(ilsc))
+
+    # `caches` is initialized in `initialize`, but we need to constrain
+    # its type here so that the closures in `DiscreteCallback` are stable
+    local caches::C
+    #caches = acquire!(cache_pool)
     return DiscreteCallback(
         # We will process every timestep
         (u, t, integ) -> begin
@@ -383,17 +512,18 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
         integ -> begin
             t₀ = integ.tprev
             t₁ = integ.t
-            with_cache(caches.us) do u₀
-                with_cache(caches.us) do u₁
+            @with_cache caches.us u₀ begin
+                @with_cache caches.us u₁ begin
                     # Get `u₀` and `u₁` from the integrator
-                    integ(u₀, t₀)
-                    integ(u₁, t₁)
+                    integ(u₀, t₀, Val{0}; idxs = nothing)
+                    integ(u₁, t₁, Val{0}; idxs = nothing)
 
                     # Store first timepoints.  Usually we'd do this in `initialize`
                     # but `integ(u, t, deriv)` doesn't work that early, and so we
                     # must wait until we've taken at least a single step.
                     if isempty(ilsc)
-                        store_u_block!(ilsc, integ, caches, t₀, u₀, full_mask)
+                        store_u_block!(
+                            ilsc, num_derivatives_val, integ, caches, t₀, u₀, full_mask)
                     end
 
                     dtmin = eps(t₁ - t₀) * 1000.0
@@ -409,38 +539,21 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
             end
             u_modified!(integ, false)
         end,
-        # In our `initialize`, we create some caches so we allocate less
+        # In our `initialize`, we create some caches so we allocate less.
         initialize = (c, u, t, integ) -> begin
-            u = as_array(u)
-            num_us = length(ilsc.u_chunks)
-
-            # Workaround for Sundials allocations; `NVector()` allocates,
-            # so we first use `typeof(integ.u_nvec)` to pull out the `NVector` type,
-            # then teach our `CachePool` to create pre-wrapped `NVector`s rather
-            # than just `Vector{S}`'s.
-            if hasfield(typeof(integ), :u_nvec)
-                NVector = typeof(integ.u_nvec)
-                us = CachePool(NVector, () -> NVector(Vector{S}(undef, num_us)))
-            else
-                us = CachePool(Vector{S}, () -> Vector{S}(undef, num_us))
-            end
-            caches = (;
-                y_linear = Matrix{S}(undef, (num_us, 3)),
-                y_interp = Matrix{S}(undef, (num_us, 3)),
-                slopes = Vector{S}(undef, num_us),
-                us = us,
-                u_block = Matrix{S}(undef, (num_derivatives(ilsc) + 1, num_us)),
-                u_masks = CachePool(BitVector, () -> BitVector(undef, num_us))
-            )
+            caches = acquire!(cache_pool)
             u_modified!(integ, false)
         end,
         # We need to finalize the ils and free our caches
         finalize = (c, u, t, integ) -> begin
             finish!(ils, check_error(integ))
-            caches = nothing
+            if cache_pool !== nothing
+                release!(cache_pool, caches)
+            end
         end,
         # Don't add tstops to the left and right.
         save_positions = (false, false))
 end
 
-export SavingCallback, SavedValues, LinearizingSavingCallback
+export SavingCallback, SavedValues, LinearizingSavingCallback,
+       LinearizingSavingCallbackCache
