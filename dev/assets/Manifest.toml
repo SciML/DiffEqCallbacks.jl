@@ -2,7 +2,7 @@
 
 julia_version = "1.10.1"
 manifest_format = "2.0"
-project_hash = "f4ca4283a5c2c5c3c3772a40ab9605b11e60b1cf"
+project_hash = "dab40fb8c786660f8d32742c160338a97840bf74"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "41c37aa88889c171f1300ceac1313c06e891d245"
@@ -1190,9 +1190,9 @@ version = "0.6.12"
 
 [[deps.RecursiveArrayTools]]
 deps = ["Adapt", "ArrayInterface", "DocStringExtensions", "GPUArraysCore", "IteratorInterfaceExtensions", "LinearAlgebra", "RecipesBase", "SparseArrays", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables"]
-git-tree-sha1 = "baa011f308e084cd731e4610b4aeb74a5fee16a1"
+git-tree-sha1 = "1bbc4bb050165cc57ca2876cd53cc23395948650"
 uuid = "731186ca-8d62-57ce-b412-fbd966d074cd"
-version = "3.9.0"
+version = "3.10.0"
 
     [deps.RecursiveArrayTools.extensions]
     RecursiveArrayToolsFastBroadcastExt = "FastBroadcast"
