@@ -94,7 +94,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
         if dtcache == dt
             if integrator.opts.verbose
                 @warn("Could not restrict values to domain. Iteration was canceled since ",
-                    "proposed time step dt = ", dt," could not be reduced.")
+                    "proposed time step dt = ", dt, " could not be reduced.")
             end
             break
         end
@@ -212,12 +212,10 @@ end
 # callback definitions
 
 """
-```julia
-GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
-    abstol = nothing, scalefactor = nothing,
-    autonomous = maximum(SciMLBase.numargs(g)) == 3,
-    nlopts = Dict(:ftol => 10 * eps()))
-```
+    GeneralDomain(
+        g, u = nothing; save = true, abstol = nothing, scalefactor = nothing,
+        autonomous = maximum(SciMLBase.numargs(g)) == 3, nlsolve_kwargs = (;
+            abstol = 10 * eps()), kwargs...)
 
 A `GeneralDomain` callback in DiffEqCallbacks.jl generalizes the concept of
 a `PositiveDomain` callback to arbitrary domains. Domains are specified by
@@ -242,8 +240,6 @@ preferred.
 
 ## Keyword Arguments
 
-  - `nlsolve`: A nonlinear solver as defined [in the nlsolve format](https://docs.sciml.ai/DiffEqDocs/stable/features/linear_nonlinear/)
-    which is passed to a `ManifoldProjection`.
   - `save`: Whether to do the standard saving (applied after the callback).
   - `abstol`: Tolerance up to, which residuals are accepted. Element-wise tolerances
     are allowed. If it is not specified, every application of the callback uses the
@@ -251,11 +247,10 @@ preferred.
   - `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
     specified, time steps are halved.
   - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)`.
-  - `nlopts`: Optional arguments to nonlinear solver of a `ManifoldProjection` which
-    can be any of the [NLsolve keywords](https://github.com/JuliaNLSolvers/NLsolve.jl#fine-tunings).
-    The default value of `ftol = 10*eps()` ensures that convergence is only declared
-    if the infinite norm of residuals is very small and hence the state vector is very
-    close to the domain.
+    If it is not specified, it is determined automatically.
+  - `kwargs`: All other keyword arguments are passed to `ManifoldProjection`.
+  - `nlsolve_kwargs`: All keyword arguments are passed to the nonlinear solver in
+    `ManifoldProjection`. The default is `(; abstol = 10 * eps())`.
 
 ## References
 
@@ -263,20 +258,21 @@ Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 """
-function GeneralDomain(g, u = nothing; nlsolve = NLSOLVEJL_SETUP(), save = true,
-        abstol = nothing, scalefactor = nothing,
-        autonomous = maximum(SciMLBase.numargs(g)) == 3,
-        nlopts = Dict(:ftol => 10 * eps()))
+function GeneralDomain(
+        g, u = nothing; save = true, abstol = nothing, scalefactor = nothing,
+        autonomous = maximum(SciMLBase.numargs(g)) == 3, nlsolve_kwargs = (;
+            abstol = 10 * eps()), kwargs...)
+    _autonomous = SciMLBase._unwrap_val(autonomous)
     if u isa Nothing
-        affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, nothing, nothing)
+        affect! = GeneralDomainAffect{_autonomous}(g, abstol, scalefactor, nothing, nothing)
     else
-        affect! = GeneralDomainAffect{autonomous}(g, abstol, scalefactor, deepcopy(u),
+        affect! = GeneralDomainAffect{_autonomous}(g, abstol, scalefactor, deepcopy(u),
             deepcopy(u))
     end
     condition = (u, t, integrator) -> true
     CallbackSet(
-        ManifoldProjection(g; nlsolve = nlsolve, save = false,
-            autonomous = autonomous, nlopts = nlopts),
+        ManifoldProjection(
+            g; save = false, autonomous, isinplace = Val(true), kwargs..., nlsolve_kwargs...),
         DiscreteCallback(condition, affect!; save_positions = (false, save)))
 end
 

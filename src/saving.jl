@@ -233,7 +233,7 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
         @debug("Linearization failure",
-            t₁, t₀, string(u₀), string(u₁), string(u_mask),dtmin)
+            t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
         throw(ArgumentError("Linearization failed, fell below linearization subdivision threshold"))
     end
 

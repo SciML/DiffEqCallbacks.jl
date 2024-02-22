@@ -198,7 +198,7 @@ if VERSION >= v"1.9" # stack
                 atol = abstol^(2.0^(-deriv_idx)),
                 rtol = reltol^(2.0^(-deriv_idx)))
             if !check
-                @error("Check failed", solver,deriv_idx)
+                @error("Check failed", solver, deriv_idx)
                 display(abs.(u_linear_upsampled .- u_interp_upsampled))
             end
             @test check
