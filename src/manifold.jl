@@ -13,9 +13,8 @@ end
 SciMLBase.isinplace(::NonAutonomousFunction{iip}) where {iip} = iip
 
 """
-    ManifoldProjection(g; nlsolve = missing, save = true, nlls = Val(true),
-        isinplace = Val(true), autonomous = nothing, resid_prototype = nothing,
-        kwargs...)
+    ManifoldProjection(g; nlsolve = nothing, save = true, nlls = Val(true),
+        isinplace = Val(true), autonomous = nothing, resid_prototype = nothing, kwargs...)
 
 In many cases, you may want to declare a manifold on which a solution lives. Mathematically,
 a manifold `M` is defined by a function `g` as the set of points where `g(u) = 0`. An
@@ -45,7 +44,8 @@ properties.
 ## Keyword Arguments
 
   - `nlsolve`: A nonlinear solver as defined in the
-    [NonlinearSolve.jl format](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/)
+    [NonlinearSolve.jl format](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/).
+    Defaults to a PolyAlgorithm.
   - `save`: Whether to do the standard saving (applied after the callback)
   - `nlls`: If the problem is a nonlinear least squares problem. `nlls = Val(false)`
     generates a `NonlinearProblem` which is typically faster than
@@ -127,15 +127,10 @@ function Manifold_initialize(
     u_modified!(integrator, false)
 end
 
-# Since this is applied to every point, we can reasonably assume that the solution is close
-# to the initial guess, so we would want to use NewtonRaphson / RobustMultiNewton instead of
-# the default one.
-function ManifoldProjection(g; nlsolve = missing, save = true, nlls = Val(true),
+function ManifoldProjection(g; nlsolve = nothing, save = true, nlls = Val(true),
         isinplace = Val(true), autonomous = nothing, resid_prototype = nothing,
         kwargs...)
-    # `nothing` is a valid solver, so this need to be `missing`
     _nlls = SciMLBase._unwrap_val(nlls)
-    _nlsolve = nlsolve === missing ? (_nlls ? GaussNewton() : NewtonRaphson()) : nlsolve
     iip = SciMLBase._unwrap_val(isinplace)
     if autonomous === nothing
         if iip
@@ -145,7 +140,7 @@ function ManifoldProjection(g; nlsolve = missing, save = true, nlls = Val(true),
         end
     end
     affect! = ManifoldProjection{iip, _nlls, SciMLBase._unwrap_val(autonomous)}(
-        g, _nlsolve, resid_prototype, kwargs)
+        g, nlsolve, resid_prototype, kwargs)
     condition = (u, t, integrator) -> true
     return DiscreteCallback(condition, affect!; initialize = Manifold_initialize,
         save_positions = (false, save))
