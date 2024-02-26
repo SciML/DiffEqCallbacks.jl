@@ -21,15 +21,30 @@ automatic.
     Defaults to true. If false, then tstops can extend the interval of integration.
 """
 function PresetTimeCallback(tstops, user_affect!;
-        initialize = SciMLBase.INITIALIZE_DEFAULT,
-        filter_tstops = true, kwargs...)
+                            initialize = SciMLBase.INITIALIZE_DEFAULT,
+                            filter_tstops = true, 
+                            sort_inplace = false, kwargs...)
+
+    local tdir
+    if sort_inplace
+        sort!(tstops)
+    else
+        tstops = sort(tstops)
+    end
+    
+    search_start, search_end = firstindex(tstops), lastindex(tstops)
     condition = function (u, t, integrator)
-        t in tstops
+        t in @view(tstops[search_start:search_end])
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
         user_affect!(integrator)
+        if tdir > 0
+            search_start += 1
+        else
+            search_end -= 1
+        end
         nothing
     end
 
@@ -50,6 +65,11 @@ function PresetTimeCallback(tstops, user_affect!;
         end
         if t ∈ tstops
             user_affect!(integrator)
+            if tdir > 0
+                search_start += 1
+            else
+                search_end -= 1
+            end
         end
     end
     DiscreteCallback(condition, affect!; initialize = initialize_preset, kwargs...)
