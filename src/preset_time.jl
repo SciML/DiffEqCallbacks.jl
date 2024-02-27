@@ -26,21 +26,27 @@ function PresetTimeCallback(tstops, user_affect!;
                             sort_inplace = false, kwargs...)
 
     local tdir
-    if sort_inplace
-        sort!(tstops)
+    if tstops isa AbstractVector
+        if sort_inplace
+            sort!(tstops)
+        else
+            tstops = sort(tstops)
+        end
+        search_start, search_end = firstindex(tstops), lastindex(tstops)
+        condition = function (u, t, integrator)
+            t in @view(tstops[search_start:search_end])
+        end
     else
-        tstops = sort(tstops)
-    end
-    
-    search_start, search_end = firstindex(tstops), lastindex(tstops)
-    condition = function (u, t, integrator)
-        t in @view(tstops[search_start:search_end])
+        search_start, search_end = 0, 0
+        condition = function (u, t, integrator)
+            t == tstops
+        end
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
         user_affect!(integrator)
-        if tdir > 0
+        if integrator.tdir > 0
             search_start += 1
         else
             search_end -= 1
@@ -65,7 +71,7 @@ function PresetTimeCallback(tstops, user_affect!;
         end
         if t ∈ tstops
             user_affect!(integrator)
-            if tdir > 0
+            if integrator.tdir > 0
                 search_start += 1
             else
                 search_end -= 1
