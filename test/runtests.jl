@@ -21,9 +21,6 @@ using Test
     @time @testset "IndependentlyLinearized tests" begin
         include("independentlylinearizedtests.jl")
     end
-    @time @testset "Saving tests" begin
-        include("saving_tests.jl")
-    end
     @time @testset "PresetTime tests" begin
         include("preset_time.jl")
     end
@@ -47,5 +44,8 @@ using Test
     end
     @time @testset "Integrating sum tests" begin
         include("integrating_sum_tests.jl")
+    end
+    @time @testset "Saving tests" begin
+        include("saving_tests.jl")
     end
 end
