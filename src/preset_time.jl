@@ -21,10 +21,9 @@ automatic.
     Defaults to true. If false, then tstops can extend the interval of integration.
 """
 function PresetTimeCallback(tstops, user_affect!;
-                            initialize = SciMLBase.INITIALIZE_DEFAULT,
-                            filter_tstops = true, 
-                            sort_inplace = false, kwargs...)
-
+        initialize = SciMLBase.INITIALIZE_DEFAULT,
+        filter_tstops = true,
+        sort_inplace = false, kwargs...)
     local tdir
     if tstops isa AbstractVector
         if sort_inplace
