@@ -1,7 +1,21 @@
-using OrdinaryDiffEq, SciMLSensitivity, Zygote
+using OrdinaryDiffEq, SciMLSensitivity, DiffEqCallbacks, Zygote
 using ForwardDiff
 using QuadGK
 using Test
+
+prob = ODEProblem((u, p, t) -> [1.0], [0.0], (0.0, 1.0))
+integrated = IntegrandValuesSum(zeros(1))
+sol = solve(prob, Euler(),
+    callback = IntegratingSumCallback(
+        (u, t, integrator) -> [1.0], integrated, Float64[0.0]),
+    dt = 0.1)
+@test integrated.integrand[1] == 1
+integrated = IntegrandValuesSum(zeros(1))
+sol = solve(prob, Euler(),
+    callback = IntegratingSumCallback(
+        (u, t, integrator) -> [u[1]], integrated, Float64[0.0]),
+    dt = 0.1)
+@test integrated.integrand[1] == 0.5
 
 #### TESTING ON LOTKA-VOLTERA ####
 # function for computing vector-jacobian products using Zygote
@@ -68,14 +82,15 @@ integrand_values = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
 integrand_values_inplace = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
 function callback_saving(u, t, integrator, sol)
     temp = sol(t)
-    return vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
+    return DiffEqCallbacks.recursive_neg!(vjp(
+        (x) -> lotka_volterra(temp, x, t), integrator.p, u)[1])
 end
 function callback_saving_inplace(du, u, t, integrator, sol)
     temp = sol(t)
-    du .= vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
+    du .= -vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
 end
 cb = IntegratingSumCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
-    integrand_values)
+    integrand_values, deepcopy(p))
 cb_inplace = IntegratingSumCallback(
     (du, u, t, integrator) -> callback_saving_inplace(du,
         u, t, integrator, sol),
@@ -92,12 +107,12 @@ function callback_saving_inplace_nt(du, u, t, integrator, sol)
     temp = sol(t)
     res = vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
     DiffEqCallbacks.fmap((y, x) -> copyto!(y, x), du, res)
-    return du
+    return DiffEqCallbacks.recursive_neg!(du)
 end
 integrand_values_nt = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p_nt))
 integrand_values_inplace_nt = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p_nt))
 cb = IntegratingSumCallback((u, t, integrator) -> callback_saving(u, t, integrator, sol),
-    integrand_values_nt)
+    integrand_values_nt, deepcopy(p_nt))
 cb_inplace = IntegratingSumCallback(
     (du, u, t, integrator) -> callback_saving_inplace_nt(du,
         u, t, integrator, sol),
@@ -207,14 +222,14 @@ end
 integrand_values = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
 integrand_values_inplace = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p))
 function callback_saving_linear(u, t, integrator, sol)
-    return [-sol(t)[2] 0; 0 sol(t)[1]]' * u
+    return -1 .* [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
 function callback_saving_linear_inplace(du, u, t, integrator, sol)
-    du .= [-sol(t)[2] 0; 0 sol(t)[1]]' * u
+    du .= -1 .* [-sol(t)[2] 0; 0 sol(t)[1]]' * u
 end
 cb = IntegratingSumCallback(
     (u, t, integrator) -> callback_saving_linear(u, t, integrator, sol),
-    integrand_values)
+    integrand_values, DiffEqCallbacks.allocate_zeros(p))
 cb_inplace = IntegratingSumCallback(
     (du, u, t, integrator) -> callback_saving_linear_inplace(du,
         u,
