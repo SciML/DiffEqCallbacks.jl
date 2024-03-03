@@ -1,29 +1,3 @@
-# allocate_zeros
-function allocate_zeros(p::AbstractArray{T}) where {T}
-    integral = similar(p)
-    fill!(integral, zero(T))
-    return integral
-end
-allocate_zeros(p::Tuple) = allocate_zeros.(p)
-allocate_zeros(p::NamedTuple{F}) where {F} = NamedTuple{F}(allocate_zeros(values(p)))
-allocate_zeros(p) = fmap(allocate_zeros, p)
-
-# axpy!
-recursive_axpy!(α, x::AbstractArray, y::AbstractArray) = axpy!(α, x, y)
-recursive_axpy!(α, x::Tuple, y::Tuple) = recursive_axpy!.(α, x, y)
-function recursive_axpy!(α, x::NamedTuple{F}, y::NamedTuple{F}) where {F}
-    return NamedTuple{F}(recursive_axpy!(α, values(x), values(y)))
-end
-recursive_axpy!(α, x, y) = fmap(Base.Fix1(recursive_axpy!, α), x, y)
-
-# scalar_mul!
-recursive_scalar_mul!(x::AbstractArray, α) = x .*= α
-recursive_scalar_mul!(x::Tuple, α) = recursive_scalar_mul!.(x, α)
-function recursive_scalar_mul!(x::NamedTuple{F}, α) where {F}
-    return NamedTuple{F}(recursive_scalar_mul!(values(x), α))
-end
-recursive_scalar_mul!(x, α) = fmap(Base.Fix1(recursive_scalar_mul!, α), x)
-
 """
     gauss_points::Vector{Vector{Float64}}
 

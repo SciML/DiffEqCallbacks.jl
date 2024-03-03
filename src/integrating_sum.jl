@@ -1,10 +1,3 @@
-# addition
-recursive_add!(x::AbstractArray, y::AbstractArray) = x .+= y
-recursive_add!(x::Tuple, y::Tuple) = recursive_add!.(x, y)
-function recursive_add!(x::NamedTuple{F}, y::NamedTuple{F}) where {F}
-    return NamedTuple{F}(recursive_add!(values(x), values(y)))
-end
-
 """
     IntegrandValuesSum{integrandType}
 
