@@ -1,29 +1,3 @@
-# allocate_zeros
-function allocate_zeros(p::AbstractArray{T}) where {T}
-    integral = similar(p)
-    fill!(integral, zero(T))
-    return integral
-end
-allocate_zeros(p::Tuple) = allocate_zeros.(p)
-allocate_zeros(p::NamedTuple{F}) where {F} = NamedTuple{F}(allocate_zeros(values(p)))
-allocate_zeros(p) = fmap(allocate_zeros, p)
-
-# axpy!
-recursive_axpy!(α, x::AbstractArray, y::AbstractArray) = axpy!(α, x, y)
-recursive_axpy!(α, x::Tuple, y::Tuple) = recursive_axpy!.(α, x, y)
-function recursive_axpy!(α, x::NamedTuple{F}, y::NamedTuple{F}) where {F}
-    return NamedTuple{F}(recursive_axpy!(α, values(x), values(y)))
-end
-recursive_axpy!(α, x, y) = fmap(Base.Fix1(recursive_axpy!, α), x, y)
-
-# scalar_mul!
-recursive_scalar_mul!(x::AbstractArray, α) = x .*= α
-recursive_scalar_mul!(x::Tuple, α) = recursive_scalar_mul!.(x, α)
-function recursive_scalar_mul!(x::NamedTuple{F}, α) where {F}
-    return NamedTuple{F}(recursive_scalar_mul!(values(x), α))
-end
-recursive_scalar_mul!(x, α) = fmap(Base.Fix1(recursive_scalar_mul!, α), x)
-
 """
     gauss_points::Vector{Vector{Float64}}
 
@@ -181,12 +155,13 @@ end
 mutable struct SavingIntegrandAffect{
     IntegrandFunc,
     tType,
-    integrandType,
-    integrandCacheType
+    IntegrandType,
+    IntegrandCacheType
 }
     integrand_func::IntegrandFunc
-    integrand_values::IntegrandValues{tType, integrandType}
-    integrand_cache::integrandCacheType
+    integrand_values::IntegrandValues{tType, IntegrandType}
+    integrand_cache::IntegrandCacheType
+    accumulation_cache::IntegrandCacheType
 end
 
 function (affect!::SavingIntegrandAffect)(integrator)
@@ -196,7 +171,7 @@ function (affect!::SavingIntegrandAffect)(integrator)
     else
         n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
     end
-    integral = allocate_zeros(integrator.p)
+    accumulation_cache = recursive_zero!(affect!.accumulation_cache)
     for i in 1:n
         t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] +
                  (integrator.t + integrator.tprev) / 2
@@ -205,30 +180,30 @@ function (affect!::SavingIntegrandAffect)(integrator)
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing
                 recursive_axpy!(gauss_weights[n][i],
-                    affect!.integrand_func(curu, t_temp, integrator), integral)
+                    affect!.integrand_func(curu, t_temp, integrator), accumulation_cache)
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-                recursive_axpy!(gauss_weights[n][i], affect!.integrand_cache, integral)
+                recursive_axpy!(
+                    gauss_weights[n][i], affect!.integrand_cache, accumulation_cache)
             end
         else
             recursive_axpy!(gauss_weights[n][i],
-                affect!.integrand_func(integrator(t_temp), t_temp, integrator), integral)
+                affect!.integrand_func(integrator(t_temp), t_temp, integrator), accumulation_cache)
         end
     end
-    recursive_scalar_mul!(integral, -(integrator.t - integrator.tprev) / 2)
+    recursive_scalar_mul!(accumulation_cache, (integrator.t - integrator.tprev) / 2)
     push!(affect!.integrand_values.ts, integrator.t)
-    push!(affect!.integrand_values.integrand, integral)
+    push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache))
     u_modified!(integrator, false)
 end
 
 """
 ```julia
 IntegratingCallback(integrand_func,
-    integrand_values::IntegrandValues,
-    cache = nothing)
+    integrand_values::IntegrandValues, integrand_prototype)
 ```
 
-Let one define a function `integrand_func(u, t, integrator)` which
+Let one define a function `integrand_func(u, t, integrator)::typeof(integrand_prototype)` which
 returns Integral(integrand_func(u(t),t)dt over the problem tspan.
 
 ## Arguments
@@ -240,9 +215,7 @@ returns Integral(integrand_func(u(t),t)dt over the problem tspan.
     `integrand_func(t, u, integrator)::integrandType`. It's specified via
     `IntegrandValues(integrandType)`, i.e. give the type
     that `integrand_func` will output (or higher compatible type).
-  - `cache` is provided to store `integrand_func` output for in-place problems.
-    if `cache` is `nothing` but the problem is in-place, then `integrand_func`
-    is assumed to not be in-place and will be called as `out = integrand_func(u, t, integrator)`.
+  - `integrand_prototype` is a prototype of the output from the integrand.
 
 The outputted values are saved into `integrand_values`. The values are found
 via `integrand_values.integrand`.
@@ -254,9 +227,10 @@ via `integrand_values.integrand`.
 
     If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
 """
-function IntegratingCallback(integrand_func, integrand_values::IntegrandValues,
-        cache = nothing)
-    affect! = SavingIntegrandAffect(integrand_func, integrand_values, cache)
+function IntegratingCallback(
+        integrand_func, integrand_values::IntegrandValues, integrand_prototype)
+    affect! = SavingIntegrandAffect(integrand_func, integrand_values, integrand_prototype,
+        allocate_zeros(integrand_prototype))
     condition = (u, t, integrator) -> true
     DiscreteCallback(condition, affect!, save_positions = (false, false))
 end

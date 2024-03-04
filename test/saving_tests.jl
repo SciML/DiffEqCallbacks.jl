@@ -5,6 +5,7 @@ import ODEProblemLibrary: prob_ode_2Dlinear,
                           prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
                           prob_ode_nonlinchem, prob_ode_lorenz
 using DiffEqCallbacks: sample, store!
+using NonlinearSolve
 
 # save_everystep, scalar problem
 prob = prob_ode_linear
@@ -230,7 +231,8 @@ if VERSION >= v"1.9" # stack
         prob = DAEProblem(f_error2, u0, du0, (0.0, 1.0); differential_vars = [true])
         ils = IndependentlyLinearizedSolution(prob, 0)
         lsc = LinearizingSavingCallback(ils)
-        sol = solve(prob, DFBDF(); callback = lsc)  # this would if we were not failing with grace
+        sol = solve(prob, DFBDF(autodiff = false); callback = lsc,
+            initializealg = BrownFullBasicInit(nlsolve = NewtonRaphson()))  # this would if we were not failing with grace
         @test sol.retcode == ReturnCode.InitialFailure
         @test isempty(ils.ts)
         @test isempty(ils.us)

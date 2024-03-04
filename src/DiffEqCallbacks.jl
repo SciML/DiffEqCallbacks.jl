@@ -11,6 +11,7 @@ using Parameters: @unpack
 
 import SciMLBase
 
+include("functor_helpers.jl")
 include("autoabstol.jl")
 include("manifold.jl")
 include("domain.jl")

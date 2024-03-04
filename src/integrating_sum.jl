@@ -1,10 +1,3 @@
-# addition
-recursive_add!(x::AbstractArray, y::AbstractArray) = x .+= y
-recursive_add!(x::Tuple, y::Tuple) = recursive_add!.(x, y)
-function recursive_add!(x::NamedTuple{F}, y::NamedTuple{F}) where {F}
-    return NamedTuple{F}(recursive_add!(values(x), values(y)))
-end
-
 """
     IntegrandValuesSum{integrandType}
 
@@ -29,10 +22,11 @@ function Base.show(io::IO, integrand_values::IntegrandValuesSum)
         "\nintegrand:\n", integrand_values.integrand)
 end
 
-mutable struct SavingIntegrandSumAffect{IntegrandFunc, integrandType, integrandCacheType}
+mutable struct SavingIntegrandSumAffect{IntegrandFunc, integrandType, IntegrandCacheType}
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValuesSum{integrandType}
-    integrand_cache::integrandCacheType
+    integrand_cache::IntegrandCacheType
+    accumulation_cache::IntegrandCacheType
 end
 
 function (affect!::SavingIntegrandSumAffect)(integrator)
@@ -42,7 +36,7 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
     else
         n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
     end
-    integral = allocate_zeros(integrator.p)
+    accumulation_cache = recursive_zero!(affect!.accumulation_cache)
     for i in 1:n
         t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] +
                  (integrator.t + integrator.tprev) / 2
@@ -51,18 +45,19 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing
                 recursive_axpy!(gauss_weights[n][i],
-                    affect!.integrand_func(curu, t_temp, integrator), integral)
+                    affect!.integrand_func(curu, t_temp, integrator), accumulation_cache)
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-                recursive_axpy!(gauss_weights[n][i], affect!.integrand_cache, integral)
+                recursive_axpy!(
+                    gauss_weights[n][i], affect!.integrand_cache, accumulation_cache)
             end
         else
             recursive_axpy!(gauss_weights[n][i],
-                affect!.integrand_func(integrator(t_temp), t_temp, integrator), integral)
+                affect!.integrand_func(integrator(t_temp), t_temp, integrator), accumulation_cache)
         end
     end
-    recursive_scalar_mul!(integral, -(integrator.t - integrator.tprev) / 2)
-    recursive_add!(affect!.integrand_values.integrand, integral)
+    recursive_scalar_mul!(accumulation_cache, (integrator.t - integrator.tprev) / 2)
+    recursive_add!(affect!.integrand_values.integrand, accumulation_cache)
     u_modified!(integrator, false)
 end
 
@@ -85,9 +80,7 @@ returns Integral(integrand_func(u(t),t)dt over the problem tspan.
     `integrand_func(t, u, integrator)::integrandType`. It's specified via
     `IntegrandValues(integrandType)`, i.e. give the type
     that `integrand_func` will output (or higher compatible type).
-  - `cache` is provided to store `integrand_func` output for in-place problems.
-    if `cache` is `nothing` but the problem is in-place, then `integrand_func`
-    is assumed to not be in-place and will be called as `out = integrand_func(u, t, integrator)`.
+  - `integrand_prototype` is a prototype of the output from the integrand.
 
 The outputted values are saved into `integrand_values`. The values are found
 via `integrand_values.integrand`.
@@ -96,12 +89,12 @@ via `integrand_values.integrand`.
 
     This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
     solvers are required.
-
-    If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
 """
-function IntegratingSumCallback(integrand_func, integrand_values::IntegrandValuesSum,
-        cache = nothing)
-    affect! = SavingIntegrandSumAffect(integrand_func, integrand_values, cache)
+function IntegratingSumCallback(
+        integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype)
+    affect! = SavingIntegrandSumAffect(
+        integrand_func, integrand_values, integrand_prototype,
+        allocate_zeros(integrand_prototype))
     condition = (u, t, integrator) -> true
     DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
