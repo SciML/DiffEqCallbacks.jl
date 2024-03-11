@@ -98,7 +98,6 @@ prob = ODEProblem(fff, u0, tspan, p)
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.t[end] == tspan[2]
 
-
 # Fix indexing repeats
 # https://github.com/SciML/ModelingToolkit.jl/issues/2528
 
