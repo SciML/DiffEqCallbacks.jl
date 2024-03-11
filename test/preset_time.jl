@@ -77,8 +77,8 @@ cb2 = PresetTimeCallback(times2, affect!)
 prob1 = ODEProblem(mod, u0, tspan, p, callback=cb1)
 prob2 = ODEProblem(mod, u0, tspan, p)
 
-sol1 = solve(prob1)
-sol2 = solve(prob2, callback=cb1)
+sol1 = solve(prob1, Tsit5())
+sol2 = solve(prob2, Tsit5(), callback=cb1)
 
 @test sol1(0.0) == [10.0]
 @test sol1(24.0 + eps(24.0)) ≈ [10.0]
