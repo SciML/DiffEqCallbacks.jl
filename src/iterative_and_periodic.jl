@@ -102,8 +102,8 @@ function add_next_tstop!(integrator, S)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
+    index[] += 1
     if tdir_tnew < maximum(tstops.valtree)
-        index[] += 1
         add_tstop!(integrator, tnew)
     end
 end
@@ -143,7 +143,8 @@ function PeriodicCallback(f, Δt::Number;
     index = Ref(0)
 
     condition = function (u, t, integrator)
-        t == (t0[] + index[] * Δt) || (final_affect && isfinished(integrator))
+        fin = isfinished(integrator)
+        (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext

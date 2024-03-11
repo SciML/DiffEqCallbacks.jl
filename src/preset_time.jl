@@ -56,6 +56,12 @@ function PresetTimeCallback(tstops, user_affect!;
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_preset = function (c, u, t, integrator)
         initialize(c, u, t, integrator)
+        if tstops isa AbstractVector
+            search_start, search_end = firstindex(tstops), lastindex(tstops)
+        else
+            search_start, search_end = 0, 0
+        end
+
         if filter_tstops
             tdir = integrator.tdir
             _tstops = tstops[@.((tdir * tstops >
