@@ -102,8 +102,8 @@ function add_next_tstop!(integrator, S)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
+    index[] += 1
     if tdir_tnew < maximum(tstops.valtree)
-        index[] += 1
         add_tstop!(integrator, tnew)
     end
 end
