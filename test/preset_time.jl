@@ -61,12 +61,12 @@ sol = solve(prob, Tsit5(), callback = cb)
 # https://github.com/SciML/DifferentialEquations.jl/issues/1022
 
 function mod(du, u, p, t)
-    du[1] = -p[1]*u[1]
+    du[1] = -p[1] * u[1]
 end
 
 p = [1.0]
 u0 = [10.0]
-tspan = (0.0,72.0)
+tspan = (0.0, 72.0)
 
 times1 = 0.0:24.0:tspan[2]
 times2 = 24.0:24.0:tspan[2]
@@ -74,11 +74,11 @@ affect!(integrator) = integrator.u[1] += 10.0
 cb1 = PresetTimeCallback(times1, affect!)
 cb2 = PresetTimeCallback(times2, affect!)
 
-prob1 = ODEProblem(mod, u0, tspan, p, callback=cb1)
+prob1 = ODEProblem(mod, u0, tspan, p, callback = cb1)
 prob2 = ODEProblem(mod, u0, tspan, p)
 
 sol1 = solve(prob1, Tsit5())
-sol2 = solve(prob2, Tsit5(), callback=cb1)
+sol2 = solve(prob2, Tsit5(), callback = cb1)
 
 @test sol1(0.0) == [10.0]
 @test sol1(24.0 + eps(24.0)) ≈ [10.0]

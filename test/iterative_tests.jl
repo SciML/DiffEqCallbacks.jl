@@ -12,7 +12,7 @@ sol = solve(prob, Tsit5(), callback = cb)
 # Fix indexing repeats
 # https://github.com/SciML/ModelingToolkit.jl/issues/2528
 
-function lineardecay(du,u,p,t)
+function lineardecay(du, u, p, t)
     du[1] = -u[1]
 end
 
@@ -21,7 +21,7 @@ function bumpaffect!(integ)
 end
 
 cb = PeriodicCallback(bumpaffect!, 24.0)
-prob = ODEProblem(lineardecay,[0.0], (0.0, 130.0))
+prob = ODEProblem(lineardecay, [0.0], (0.0, 130.0))
 sol1 = solve(prob, Tsit5(), callback = cb)
 
 @test sol1(0.0) == [0.0]
