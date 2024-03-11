@@ -143,7 +143,8 @@ function PeriodicCallback(f, Δt::Number;
     index = Ref(0)
 
     condition = function (u, t, integrator)
-        t == (t0[] + index[] * Δt) || (final_affect && isfinished(integrator))
+        fin = isfinished(integrator)
+        (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
