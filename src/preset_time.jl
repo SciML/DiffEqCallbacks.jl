@@ -24,63 +24,43 @@ function PresetTimeCallback(tstops, user_affect!;
         initialize = SciMLBase.INITIALIZE_DEFAULT,
         filter_tstops = true,
         sort_inplace = false, kwargs...)
-    local tdir
     if tstops isa AbstractVector
         if sort_inplace
             sort!(tstops)
         else
             tstops = sort(tstops)
         end
-        search_start, search_end = firstindex(tstops), lastindex(tstops)
         condition = function (u, t, integrator)
-            t in @view(tstops[search_start:search_end])
+            insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
+        end
+    elseif tstops isa Number
+        condition = function (u, t, integrator)
+            t == tstops && (integrator.t - integrator.dt) != integrator.t
         end
     else
-        search_start, search_end = 0, 0
-        condition = function (u, t, integrator)
-            t == tstops
-        end
+        throw(ArgumentError("tstops must either be a number or a Vector. Was $tstops"))
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
     affect! = function (integrator)
         user_affect!(integrator)
-        if integrator.tdir > 0
-            search_start += 1
-        else
-            search_end -= 1
-        end
         nothing
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_preset = function (c, u, t, integrator)
         initialize(c, u, t, integrator)
-        if tstops isa AbstractVector
-            search_start, search_end = firstindex(tstops), lastindex(tstops)
-        else
-            search_start, search_end = 0, 0
-        end
 
         if filter_tstops
             tdir = integrator.tdir
-            _tstops = tstops[@.((tdir * tstops >
-                                 tdir *
-                                 integrator.sol.prob.tspan[1])*(tdir *
-                                                                tstops <
-                                                                tdir *
-                                                                integrator.sol.prob.tspan[2]))]
+            tspan = integrator.sol.prob.tspan
+            _tstops = tstops[@. tdir * tspan[1] <= tdir * tstops < tdir * tspan[2]]
             add_tstop!.((integrator,), _tstops)
         else
             add_tstop!.((integrator,), tstops)
         end
         if t ∈ tstops
             user_affect!(integrator)
-            if integrator.tdir > 0
-                search_start += 1
-            else
-                search_end -= 1
-            end
         end
     end
     DiscreteCallback(condition, affect!; initialize = initialize_preset, kwargs...)
