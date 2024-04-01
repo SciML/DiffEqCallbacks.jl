@@ -31,11 +31,19 @@ function PresetTimeCallback(tstops, user_affect!;
             tstops = sort(tstops)
         end
         condition = function (u, t, integrator)
-            insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
+            if hasproperty(integrator, :dt)
+                insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
+            else
+                insorted(t, tstops)
+            end
         end
     elseif tstops isa Number
         condition = function (u, t, integrator)
-            t == tstops && (integrator.t - integrator.dt) != integrator.t
+            if hasproperty(integrator, :dt)
+                t == tstops && (integrator.t - integrator.dt) != integrator.t
+            else
+                t == tstops
+            end
         end
     else
         throw(ArgumentError("tstops must either be a number or a Vector. Was $tstops"))
