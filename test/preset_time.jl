@@ -25,8 +25,11 @@ p = rand(4, 4)
 startp = copy(p)
 
 prob = ODEProblem(some_dynamics, u0, tspan, p)
-cb = PresetTimeCallback([0.3, 0.6], integrator -> integrator.p .= rand(4, 4))
-sol = solve(prob, Tsit5(), callback = cb)
+cb = PresetTimeCallback([0.0, 0.3, 0.6], integrator -> integrator.p .= rand(4, 4))
+integrator = init(prob, Tsit5(), callback = cb)
+@test first_tstop(integrator) == 0.3
+solve!(integrator)
+sol = integrator.sol
 @test 0.3 ∈ sol.t
 @test 0.6 ∈ sol.t
 @test p != startp
