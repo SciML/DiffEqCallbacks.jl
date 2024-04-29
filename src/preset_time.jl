@@ -30,19 +30,23 @@ function PresetTimeCallback(tstops, user_affect!;
         else
             tstops = sort(tstops)
         end
-        condition = function (u, t, integrator)
-            if hasproperty(integrator, :dt)
-                insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
-            else
-                insorted(t, tstops)
+        condition = let tstops = tstops
+            function (u, t, integrator)
+                if hasproperty(integrator, :dt)
+                    insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
+                else
+                    insorted(t, tstops)
+                end
             end
         end
     elseif tstops isa Number
-        condition = function (u, t, integrator)
-            if hasproperty(integrator, :dt)
-                t == tstops && (integrator.t - integrator.dt) != integrator.t
-            else
-                t == tstops
+        condition = let tstops = tstops
+            function (u, t, integrator)
+                if hasproperty(integrator, :dt)
+                    t == tstops && (integrator.t - integrator.dt) != integrator.t
+                else
+                    t == tstops
+                end
             end
         end
     else
