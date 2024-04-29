@@ -30,7 +30,7 @@ function PresetTimeCallback(tstops, user_affect!;
         else
             tstops = sort(tstops)
         end
-        condition = let tstops=tstops
+        condition = let tstops = tstops
             function (u, t, integrator)
                 if hasproperty(integrator, :dt)
                     insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
@@ -40,7 +40,7 @@ function PresetTimeCallback(tstops, user_affect!;
             end
         end
     elseif tstops isa Number
-        condition = let tstops=tstops
+        condition = let tstops = tstops
             function (u, t, integrator)
                 if hasproperty(integrator, :dt)
                     t == tstops && (integrator.t - integrator.dt) != integrator.t
