@@ -126,3 +126,37 @@ sol2 = solve(prob, Tsit5(), callback = cb)
 @test sol2(72.0 + eps(72.0)) ≈ [10.0]
 @test sol2(96.0 + eps(96.0)) ≈ [10.0]
 @test sol2(120.0 + eps(120.0)) ≈ [10.0]
+
+# Test phase offset
+approxin(needle, haystack) = any(isapprox(needle), haystack)
+
+function integ(du, u, p, t)
+    du[1] = 1
+    du[2] = 0
+end
+
+function nullaffect!(integ)
+    integ.u[2] += 1
+end
+
+cb = PeriodicCallback(nullaffect!, 1.0; phase = 0.1)
+prob = ODEProblem(integ, [0.0, 0], (0.0, 10.0))
+sol = solve(prob, Tsit5(), callback = cb)
+@test sol.u[end][2] == 10 # Test expected number of calls to affect
+for t in 0.1:1:10
+    @test approxin(t, sol.t) # Test that the integrator stopped at all expected points
+end
+sol.t[end] ≈ 10 # test that we did not step over end
+
+# With negative phase
+@test_throws ArgumentError PeriodicCallback(nullaffect!, 1.0; phase = -0.1)
+
+# Phase offset larger than period
+cb = PeriodicCallback(nullaffect!, 1.0; phase = 1.1)
+prob = ODEProblem(integ, [0.0, 0], (0.0, 10.0))
+sol = solve(prob, Tsit5(), callback = cb)
+@test sol.u[end][2] == 9 # Test expected number of calls to affect
+for t in 1.1:1:10
+    @test approxin(t, sol.t) # Test that the integrator stopped at all expected points
+end
+sol.t[end] ≈ 10 # test that we did not step over end
