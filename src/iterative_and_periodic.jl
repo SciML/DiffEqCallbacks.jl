@@ -82,11 +82,9 @@ struct PeriodicCallbackAffect{A, dT, Ref1, Ref2}
 end
 
 function (S::PeriodicCallbackAffect)(integrator)
-    @unpack affect!, Δt, t0, index = S
-
     add_next_tstop!(integrator, S)
 
-    affect!(integrator)
+    S.affect!(integrator)
 end
 
 function add_next_tstop!(integrator, S)
@@ -110,34 +108,42 @@ end
 
 """
 ```julia
-PeriodicCallback(f, Δt::Number; initial_affect = false,
+PeriodicCallback(f, Δt::Number; phase = 0, initial_affect = false,
     final_affect = false,
     kwargs...)
 ```
 
 `PeriodicCallback` can be used when a function should be called periodically in terms of
 integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`,
-`t = tspan[1] + 2Δt`, and so on. This callback can, for example, be used to model a
+`t = tspan[1] + 2Δt`, and so on.
+
+If a non-zero `phase` is provided, the invokations of the callback will be shifted by `phase` time units, i.e., the calls will occur at
+`t = tspan[1] + phase`, `t = tspan[1] + phase + Δt`,
+`t = tspan[1] + phase + 2Δt`, and so on.
+
+This callback can, for example, be used to model a
 discrete-time controller for a continuous-time system, running at a fixed rate.
 
 ## Arguments
 
   - `f` the `affect!(integrator)` function to be called periodically
   - `Δt` is the period
-
-## Keyword Arguments
-
+  
+  ## Keyword Arguments
+  
+  - `phase` is a phase offset
   - `initial_affect` is whether to apply the affect at `t=0`, which defaults to `false`
   - `final_affect` is whether to apply the affect at the final time, which defaults to `false`
   - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
 """
 function PeriodicCallback(f, Δt::Number;
+        phase = 0,
         initial_affect = false,
         final_affect = false,
         initialize = (cb, u, t, integrator) -> u_modified!(integrator,
             initial_affect),
         kwargs...)
-
+    phase < 0 && throw(ArgumentError("phase offset must be non-negative"))
     # Value of `t` at which `f` should be called next:
     t0 = Ref(typemax(Δt))
     index = Ref(0)
@@ -154,8 +160,8 @@ function PeriodicCallback(f, Δt::Number;
     initialize_periodic = function (c, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
         initialize(c, u, t, integrator)
-        t0[] = t
-        index[] = 0
+        t0[] = t + phase
+        index[] = iszero(phase) ? 0 : -1
         if initial_affect
             affect!(integrator)
         else
