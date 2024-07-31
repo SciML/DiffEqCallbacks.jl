@@ -117,7 +117,8 @@ PeriodicCallback(f, Δt::Number; phase = 0, initial_affect = false,
 integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`,
 `t = tspan[1] + 2Δt`, and so on.
 
-If a non-zero `phase` is provided, the invokations of the callback will be shifted by `phase` time units, i.e., the calls will occur at
+If a non-zero `phase` is provided, the invocations of the callback will be shifted by 
+`phase` time units, i.e., the calls will occur at
 `t = tspan[1] + phase`, `t = tspan[1] + phase + Δt`,
 `t = tspan[1] + phase + 2Δt`, and so on.
 
