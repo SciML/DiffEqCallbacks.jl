@@ -94,7 +94,7 @@ cb = ManifoldProjection(g_oop; isinplace = Val(false))
 @test isautonomous(cb.affect!)
 solve(prob, Vern7(), callback = cb)
 @time sol = solve(prob, Vern7(), callback = cb)
-@test sol.u[end[1]^2 + sol.u[end[2]^2 ≈ 2
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 cb_t = ManifoldProjection(g_oop_t; isinplace = Val(false))
 @test !isautonomous(cb_t.affect!)
@@ -108,7 +108,7 @@ cb_false = ManifoldProjection(
 @test isautonomous(cb_false.affect!)
 solve(prob, Vern7(), callback = cb_false)
 sol = solve(prob, Vern7(), callback = cb_false)
-@test sol.u[end[1]^2 + sol.u[end[2]^2 ≈ 2
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 cb_t_false = ManifoldProjection(g_oop_t,
     nlsolve = GaussNewton(; autodiff = AutoFiniteDiff()), isinplace = Val(false))
@@ -122,13 +122,13 @@ u₀ = ArrayPartition(ones(2), ones(2))
 prob = ODEProblem(f, u₀, (0.0, 100.0))
 
 sol = solve(prob, Vern7(), callback = cb)
-@test sol.u[end[1]^2 + sol.u[end[2]^2 ≈ 2
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_t)
-@test sol.u[end[1]^2 + sol.u[end[2]^2 ≈ 2
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_false)
-@test sol.u[end[1]^2 + sol.u[end[2]^2 ≈ 2
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_t_false)
-@test sol.u[end[1]^2 + sol.u[end[2]^2 ≈ 2
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
