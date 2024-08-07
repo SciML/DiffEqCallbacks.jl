@@ -133,7 +133,7 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
   ## Keyword Arguments
   
   - `phase` is a phase offset
-  - `initial_affect` is whether to apply the affect at `t=0`, which defaults to `false`
+  - `initial_affect` is whether to apply the affect at the initial time, which defaults to `false`
   - `final_affect` is whether to apply the affect at the final time, which defaults to `false`
   - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
 """
