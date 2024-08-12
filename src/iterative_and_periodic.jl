@@ -35,7 +35,7 @@ function IterativeCallback(time_choice, user_affect!, tType = Float64;
         # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
         tnew = time_choice(integrator)
         tnew === nothing && (tnext[] = tnew; return)
-        tstops = integrator.opts.tstops
+        tstops = get_tstops(integrator)
         #=
         Okay yeah, this is nasty
         the comparer is always less than for type stability, so in order
@@ -43,12 +43,13 @@ function IterativeCallback(time_choice, user_affect!, tType = Float64;
         tdir
         =#
         tdir_tnew = integrator.tdir * tnew
+        tstops_array = get_tstops_array(integrator)
         for i in length(tstops):-1:1 # reverse iterate to encounter large elements earlier
-            if tdir_tnew < tstops.valtree[i] # TODO: relying on implementation details
+            if tdir_tnew < tstops_array[i] # TODO: relying on implementation details
                 tnext[] = tnew
                 add_tstop!(integrator, tnew)
                 break
-            elseif tdir_tnew == tstops.valtree[i]
+            elseif tdir_tnew == tstops_array[i]
                 # If it's already a tstop, no need to re-add! This is for the final point
                 tnext[] = tnew
             end
@@ -92,7 +93,6 @@ function add_next_tstop!(integrator, S)
 
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
     tnew = t0[] + (index[] + 1) * Δt
-    tstops = integrator.opts.tstops
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -100,8 +100,9 @@ function add_next_tstop!(integrator, S)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
+    @show tdir_tnew, integrator.t, get_max_tstops(integrator)
     index[] += 1
-    if tdir_tnew < maximum(tstops.valtree)
+    if tdir_tnew < get_max_tstops(integrator)
         add_tstop!(integrator, tnew)
     end
 end
@@ -117,7 +118,7 @@ PeriodicCallback(f, Δt::Number; phase = 0, initial_affect = false,
 integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`,
 `t = tspan[1] + 2Δt`, and so on.
 
-If a non-zero `phase` is provided, the invocations of the callback will be shifted by 
+If a non-zero `phase` is provided, the invocations of the callback will be shifted by
 `phase` time units, i.e., the calls will occur at
 `t = tspan[1] + phase`, `t = tspan[1] + phase + Δt`,
 `t = tspan[1] + phase + 2Δt`, and so on.
@@ -129,9 +130,9 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
 
   - `f` the `affect!(integrator)` function to be called periodically
   - `Δt` is the period
-  
+
   ## Keyword Arguments
-  
+
   - `phase` is a phase offset
   - `initial_affect` is whether to apply the affect at the initial time, which defaults to `false`
   - `final_affect` is whether to apply the affect at the final time, which defaults to `false`
@@ -151,7 +152,11 @@ function PeriodicCallback(f, Δt::Number;
 
     condition = function (u, t, integrator)
         fin = isfinished(integrator)
-        (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
+        @show isempty(get_tstops(integrator))
+        val = (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
+        @show t,t0[],index[],Δt,fin
+        @show val
+        val
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
@@ -177,8 +182,7 @@ end
     # Checking for floating point equality is OK here as `DifferentialEquations.jl`
     # sets the time exactly to the final time in the last iteration
     return integrator.t == last(integrator.sol.prob.tspan) ||
-           isempty(integrator.opts.tstops) ||
-           integrator.iter == integrator.opts.maxiters
+           (hasiter(integrator) && (integrator.iter == integrator.opts.maxiters))
 end
 
 export PeriodicCallback

@@ -11,6 +11,8 @@ using Parameters: @unpack
 
 import SciMLBase
 
+using DiffEqBase: get_tstops, get_tstops_array, get_max_tstops, hasiter
+
 include("functor_helpers.jl")
 include("autoabstol.jl")
 include("manifold.jl")
