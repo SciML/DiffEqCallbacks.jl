@@ -100,7 +100,6 @@ function add_next_tstop!(integrator, S)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
-    @show tdir_tnew, integrator.t, get_max_tstops(integrator)
     index[] += 1
     if tdir_tnew < get_max_tstops(integrator)
         add_tstop!(integrator, tnew)
@@ -152,10 +151,7 @@ function PeriodicCallback(f, Δt::Number;
 
     condition = function (u, t, integrator)
         fin = isfinished(integrator)
-        @show isempty(get_tstops(integrator))
         val = (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
-        @show t,t0[],index[],Δt,fin
-        @show val
         val
     end
 
