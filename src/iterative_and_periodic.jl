@@ -182,7 +182,7 @@ end
     # Checking for floating point equality is OK here as `DifferentialEquations.jl`
     # sets the time exactly to the final time in the last iteration
     return integrator.t == last(integrator.sol.prob.tspan) ||
-           (hasiter(integrator) && (integrator.iter == integrator.opts.maxiters))
+           (hasfield(integrator, :iter) && (integrator.iter == integrator.opts.maxiters))
 end
 
 export PeriodicCallback
