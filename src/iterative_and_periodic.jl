@@ -45,7 +45,7 @@ function IterativeCallback(time_choice, user_affect!, tType = Float64;
         tdir_tnew = integrator.tdir * tnew
         tstops_array = get_tstops_array(integrator)
         for i in length(tstops):-1:1 # reverse iterate to encounter large elements earlier
-            if tdir_tnew < tstops_array[i] # TODO: relying on implementation details
+            if tdir_tnew < tstops_array[i]
                 tnext[] = tnew
                 add_tstop!(integrator, tnew)
                 break
