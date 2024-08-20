@@ -89,3 +89,6 @@ sol2 = solve(prob2, Tsit5(), callback = cb1)
 @test sol2(0.0) == [10.0]
 @test sol2(24.0 + eps(24.0)) ≈ [10.0]
 @test sol2(48.0 + eps(48.0)) ≈ [10.0]
+
+_some_test_func(integrator) = u_modified!(integrator, false)
+@inferred PresetTimeCallback(collect(range(0, 10, 100)), _some_test_func, save_positions=(false, false))
