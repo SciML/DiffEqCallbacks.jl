@@ -24,33 +24,30 @@ function PresetTimeCallback(tstops, user_affect!;
         initialize = SciMLBase.INITIALIZE_DEFAULT,
         filter_tstops = true,
         sort_inplace = false, kwargs...)
+
+    # define an intrinsic version of insorted
+    # extend a new method to avoid type instability of condition (anonymous function)
+    _insorted(x::Number, y::Number) = x == y
+    _insorted(x, v) = insorted(x, v)
+
     if tstops isa AbstractVector
         if sort_inplace
             sort!(tstops)
         else
             tstops = sort(tstops)
         end
-        condition = let tstops = tstops
-            function (u, t, integrator)
-                if hasproperty(integrator, :dt)
-                    insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
-                else
-                    insorted(t, tstops)
-                end
-            end
-        end
-    elseif tstops isa Number
-        condition = let tstops = tstops
-            function (u, t, integrator)
-                if hasproperty(integrator, :dt)
-                    t == tstops && (integrator.t - integrator.dt) != integrator.t
-                else
-                    t == tstops
-                end
-            end
-        end
-    else
+    elseif !(tstops isa Number)
         throw(ArgumentError("tstops must either be a number or a Vector. Was $tstops"))
+    end
+
+    condition = let
+        function (u, t, integrator)
+            if hasproperty(integrator, :dt)
+                _insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
+            else
+                _insorted(t, tstops)
+            end
+        end
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
