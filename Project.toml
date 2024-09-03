@@ -19,6 +19,7 @@ StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 
 [weakdeps]
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+OrdinaryDiffEqCore = "bbf590c4-e513-4bbe-9b18-05decba2e5d8"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 
 [compat]
@@ -33,6 +34,7 @@ Markdown = "1.10"
 NonlinearSolve = "3.7.2"
 ODEProblemLibrary = "0.1.5"
 OrdinaryDiffEq = "6.88"
+OrdinaryDiffEqCore = "1"
 Parameters = "0.12"
 QuadGK = "2.9"
 RecipesBase = "1.3.4"
