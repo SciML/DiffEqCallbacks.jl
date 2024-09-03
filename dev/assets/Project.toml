@@ -8,5 +8,5 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 [compat]
 DiffEqCallbacks = "3"
 Documenter = "1"
-OrdinaryDiffEq = "6.31"
+OrdinaryDiffEq = "6.88"
 Plots = "1.36"
