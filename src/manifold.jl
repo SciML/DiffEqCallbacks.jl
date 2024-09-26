@@ -44,8 +44,7 @@ properties.
     `nlsolve` is not `missing`.
   - `autodiff`: The autodifferentiation algorithm to use to compute the Jacobian if
     `manifold_jacobian` is not specified. This must be specified if `manifold_jacobian` is
-    not specified and `nlsolve` is `missing`. If `nlsolve` is not `missing`, then
-    `autodiff` is ignored.
+    not specified.
   - `manifold_jacobian`: The Jacobian of the manifold (wrt the state). This has the same
     signature as `manifold` and the first argument is the Jacobian if inplace.
 
@@ -118,13 +117,7 @@ function (proj::ManifoldProjection)(integrator)
     proj.manifold_jacobian !== nothing && (proj.manifold_jacobian.t = integrator.t)
 
     SciMLBase.reinit!(proj.nlcache, integrator.u; integrator.p)
-
-    if proj.nlsolve === missing
-        _, u, retcode = SciMLBase.solve!(proj.nlcache)
-    else
-        sol = SciMLBase.solve!(proj.nlcache)
-        (; u, retcode) = sol
-    end
+    _, u, retcode = SciMLBase.solve!(proj.nlcache)
 
     if !SciMLBase.successful_retcode(retcode)
         SciMLBase.terminate!(integrator, retcode)
@@ -146,17 +139,17 @@ function initialize_manifold_projection(affect!::ManifoldProjection, u, t, integ
             (affect!.manifold_jacobian.autonomous = autonomous)
     end
 
+    affect!.manifold.t = t
+    affect!.manifold_jacobian !== nothing && (affect!.manifold_jacobian.t = t)
+
     if affect!.nlsolve === missing
-        affect!.manifold.t = t
-        affect!.manifold_jacobian !== nothing && (affect!.manifold_jacobian.t = t)
         cache = init_manifold_projection(
             Val(SciMLBase.isinplace(integrator.f)), affect!.manifold, affect!.autodiff,
             affect!.manifold_jacobian, u, integrator.p; affect!.kwargs...)
     else
-        # nlfunc = NonlinearFunction{iip}(affect!.g; affect!.resid_prototype)
-        # nlprob = NonlinearProblem(nlfunc, u, integrator.p)
-        # affect!.nlcache = init(nlprob, affect!.nlsolve; affect!.kwargs...)
-        error("Not Implemented")
+        cache = init_manifold_projection_nonlinear_problem(
+            Val(SciMLBase.isinplace(integrator.f)), affect!.manifold, affect!.autodiff,
+            affect!.manifold_jacobian, u, integrator.p, affect!.nlsolve; affect!.kwargs...)
     end
     affect!.nlcache = cache
     u_modified!(integrator, false)
@@ -186,6 +179,97 @@ function (f::UntypedNonAutonomousFunction)(res, u, p)
     return f.autonomous ? f.f(res, u, p) : f.f(res, u, p, f.t)
 end
 (f::UntypedNonAutonomousFunction)(u, p) = f.autonomous ? f.f(u, p) : f.f(u, p, f.t)
+
+# This is solving the langrange multiplier formulation. This is more accurate but at the
+# same time significantly more expensive.
+@concrete mutable struct NonlinearSolveManifoldProjectionCache{iip}
+    manifold
+    p
+    λ
+    z
+    ũ
+    gu_cache
+    nlcache
+
+    first_call::Bool
+    J
+    manifold_jacobian
+    autodiff
+    di_extras
+end
+
+function SciMLBase.reinit!(
+        cache::NonlinearSolveManifoldProjectionCache{iip}, u; p = cache.p) where {iip}
+    if !cache.first_call || (cache.ũ !== u || cache.p !== p)
+        compute_manifold_jacobian!(cache.J, cache.manifold_jacobian, cache.autodiff,
+            Val(iip), cache.manifold, cache.gu_cache, u, p, cache.di_extras)
+    end
+    cache.first_call = false
+    cache.ũ = u
+    cache.p = p
+
+    cache.z[1:length(cache.λ)] .= false
+    cache.z[(length(cache.λ) + 1):end] .= vec(u)
+    SciMLBase.reinit!(cache.nlcache, cache.z; p = (u, cache.J, p))
+end
+
+function init_manifold_projection_nonlinear_problem(
+        IIP::Val{iip}, manifold, autodiff, manifold_jacobian, ũ, p, alg;
+        resid_prototype = nothing, kwargs...) where {iip}
+    if iip
+        if resid_prototype !== nothing
+            gu = similar(resid_prototype)
+            λ = similar(resid_prototype)
+        else
+            @warn "`resid_prototype` not provided for in-place problem. Assuming size of \
+                   output is the same as input. This might be incorrect." maxlog=1
+            gu = similar(ũ)
+            λ = similar(ũ)
+        end
+    else
+        gu = nothing
+        λ = manifold(ũ, p)
+    end
+
+    J, di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
+        gu, ũ, p)
+    z = vcat(vec(λ), vec(ũ))
+
+    nlfunc = if iip
+        let λlen = length(λ), λsz = size(λ), zsz = size(ũ)
+            @views (resid, u, ps) -> begin
+                ũ2, J2, p2 = ps
+                λ2, z2 = u[1:λlen], u[(λlen + 1):end]
+                manifold(reshape(resid[1:λlen], λsz), reshape(z2, zsz), p2)
+                resid[(λlen + 1):end] .= z2 .- vec(ũ2) .+ vec(vec(J2' * λ2))
+            end
+        end
+    else
+        let λlen = length(λ), zsz = size(ũ)
+            @views (u, ps) -> begin
+                ũ2, J2, p2 = ps
+                λ2, z2 = u[1:λlen], u[(λlen + 1):end]
+                gz = vec(manifold(reshape(z2, zsz), p2))
+                resid = z2 .- vec(ũ2) .+ vec(J2' * λ2)
+                return vcat(gz, resid)
+            end
+        end
+    end
+
+    nlprob = NonlinearProblem(NonlinearFunction{iip}(nlfunc), z, (ũ, J, p))
+    nlcache = SciMLBase.init(nlprob, alg; kwargs...)
+
+    return NonlinearSolveManifoldProjectionCache{iip}(
+        manifold, p, λ, z, ũ, gu, nlcache, true, J, manifold_jacobian, autodiff, di_extras)
+end
+
+@views function SciMLBase.solve!(cache::NonlinearSolveManifoldProjectionCache{iip}) where {iip}
+    sol = SciMLBase.solve!(cache.nlcache)
+    (; u, retcode) = sol
+    λ = reshape(u[1:length(cache.λ)], size(cache.λ))
+    ũ = reshape(u[(length(cache.λ) + 1):end], size(cache.ũ))
+    return λ, ũ, retcode
+end
 
 # This is the algorithm described in Hairer III.
 @concrete mutable struct SingleFactorizeManifoldProjectionCache{iip}
@@ -225,7 +309,7 @@ default_abstol(::Type{T}) where {T} = real(oneunit(T)) * (eps(real(one(T))))^(4 
 
 function init_manifold_projection(IIP::Val{iip}, manifold, autodiff, manifold_jacobian, ũ,
         p; abstol = default_abstol(eltype(ũ)), maxiters = 1000,
-        resid_prototype = nothing) where {iip}
+        resid_prototype = nothing, kwargs...) where {iip}
     if iip
         if resid_prototype !== nothing
             gu = similar(resid_prototype)
@@ -309,6 +393,11 @@ function setup_manifold_jacobian(
     return J, di_extras
 end
 
+function setup_manifold_jacobian(
+        ::Nothing, ::Nothing, ::Val{iip}, manifold, gu, ũ, p) where {iip}
+    error("`autodiff` is set to `nothing` and analytic manifold jacobian is not provided.")
+end
+
 function compute_manifold_jacobian!(J, manifold_jacobian, autodiff, ::Val{iip},
         manifold, gu, ũ, p, di_extras) where {iip}
     if iip
@@ -327,10 +416,6 @@ function compute_manifold_jacobian!(J, ::Nothing, autodiff, ::Val{iip}, manifold
         DI.jacobian!(manifold, J, di_extras, autodiff, ũ, Constant(p))
     end
     return J
-end
-
-function setup_manifold_jacobian(::Nothing, ::Nothing, args...)
-    error("`autodiff` is set to `nothing` and analytic manifold jacobian is not provided.")
 end
 
 function safe_factorize!(A::AbstractMatrix)

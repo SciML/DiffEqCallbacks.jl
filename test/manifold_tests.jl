@@ -32,20 +32,27 @@ solve(prob, Vern7(), callback = cb_t)
 
 # autodiff=false
 cb_false = ManifoldProjection(
-    g; nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), resid_prototype = zeros(2))
+    g; nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), resid_prototype = zeros(2),
+    autodiff = AutoFiniteDiff())
 solve(prob, Vern7(), callback = cb_false)
 sol = solve(prob, Vern7(), callback = cb_false)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 cb_t_false = ManifoldProjection(g_t,
-    nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), resid_prototype = zeros(2))
+    nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), resid_prototype = zeros(2),
+    autodiff = AutoFiniteDiff())
 solve(prob, Vern7(), callback = cb_t_false)
 sol_t = solve(prob, Vern7(), callback = cb_t_false)
 @test sol_t.u == sol.u && sol_t.t == sol.t
 
 # test array partitions
+function f_ap!(du, u, p, t)
+    du[1:2] .= u[3:4]
+    du[3:4] .= u[1:2]
+end
+
 u₀ = ArrayPartition(ones(2), ones(2))
-prob = ODEProblem(f, u₀, (0.0, 100.0))
+prob = ODEProblem(f_ap!, u₀, (0.0, 100.0))
 
 sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
@@ -67,6 +74,12 @@ end
 
 cb_unsat = ManifoldProjection(
     g_unsat; resid_prototype = zeros(2), autodiff = AutoForwardDiff())
+sol = solve(prob, Vern7(), callback = cb_unsat)
+@test !SciMLBase.successful_retcode(sol)
+@test last(sol.t) != 100.0
+
+cb_unsat = ManifoldProjection(
+    g_unsat; resid_prototype = zeros(2), autodiff = AutoForwardDiff(), nlsolve = NewtonRaphson())
 sol = solve(prob, Vern7(), callback = cb_unsat)
 @test !SciMLBase.successful_retcode(sol)
 @test last(sol.t) != 100.0
@@ -98,20 +111,22 @@ solve(prob, Vern7(), callback = cb_t)
 
 # autodiff=false
 cb_false = ManifoldProjection(
-    g_oop; nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), isinplace = Val(false))
+    g_oop; nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), autodiff = AutoFiniteDiff())
 solve(prob, Vern7(), callback = cb_false)
 sol = solve(prob, Vern7(), callback = cb_false)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 cb_t_false = ManifoldProjection(g_oop_t,
-    nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), isinplace = Val(false))
+    nlsolve = NewtonRaphson(; autodiff = AutoFiniteDiff()), autodiff = AutoFiniteDiff())
 solve(prob, Vern7(), callback = cb_t_false)
 sol_t = solve(prob, Vern7(), callback = cb_t_false)
 @test sol_t.u == sol.u && sol_t.t == sol.t
 
 # test array partitions
+f_ap(u, p, t) = ArrayPartition(u[3:4], u[1:2])
+
 u₀ = ArrayPartition(ones(2), ones(2))
-prob = ODEProblem(f, u₀, (0.0, 100.0))
+prob = ODEProblem(f_ap, u₀, (0.0, 100.0))
 
 sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
