@@ -89,7 +89,7 @@ function (S::PeriodicCallbackAffect)(integrator)
 end
 
 function add_next_tstop!(integrator, S)
-    @unpack Δt, t0, index = S
+    (; Δt, t0, index) = S
 
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
     tnew = t0[] + (index[] + 1) * Δt
