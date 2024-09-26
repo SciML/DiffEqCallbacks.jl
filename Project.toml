@@ -1,7 +1,7 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "4.0.0"
+version = "3.10.0"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
@@ -16,12 +16,14 @@ StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 
 [compat]
 Aqua = "0.8"
-DataInterpolations = "4.6"
+DataInterpolations = "4.6, 5, 6"
 DataStructures = "0.18.13"
 DiffEqBase = "6.154"
+ForwardDiff = "0.10.36"
 Functors = "0.4"
 LinearAlgebra = "1.10"
 Markdown = "1.10"
+NonlinearSolve = "3.7.2"
 ODEProblemLibrary = "0.1.5"
 OrdinaryDiffEq = "6.88"
 QuadGK = "2.9"
@@ -40,6 +42,7 @@ julia = "1.10"
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
 ODEProblemLibrary = "fdc4e326-1af4-4b90-96e7-779fcce2daa5"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
@@ -52,4 +55,4 @@ Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "DataInterpolations", "OrdinaryDiffEq", "ODEProblemLibrary", "Test", "QuadGK", "SciMLSensitivity", "StaticArrays", "Tracker", "Zygote", "NonlinearSolve"]
+test = ["Aqua", "DataInterpolations", "ForwardDiff", "NonlinearSolve", "ODEProblemLibrary", "OrdinaryDiffEq", "QuadGK", "SciMLSensitivity", "StaticArrays", "Test", "Tracker", "Zygote"]
