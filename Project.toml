@@ -4,8 +4,10 @@ authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 version = "3.10.0"
 
 [deps]
+ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
@@ -15,10 +17,13 @@ SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 
 [compat]
+ADTypes = "1.9.0"
 Aqua = "0.8"
+ConcreteStructs = "0.2.3"
 DataInterpolations = "4.6, 5, 6"
 DataStructures = "0.18.13"
 DiffEqBase = "6.154"
+DifferentiationInterface = "0.6.1"
 ForwardDiff = "0.10.36"
 Functors = "0.4"
 LinearAlgebra = "1.10"
@@ -40,6 +45,7 @@ Zygote = "0.6.69"
 julia = "1.10"
 
 [extras]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -55,4 +61,4 @@ Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Aqua", "DataInterpolations", "ForwardDiff", "NonlinearSolve", "ODEProblemLibrary", "OrdinaryDiffEq", "QuadGK", "SciMLSensitivity", "StaticArrays", "Test", "Tracker", "Zygote"]
+test = ["ADTypes", "Aqua", "DataInterpolations", "ForwardDiff", "NonlinearSolve", "ODEProblemLibrary", "OrdinaryDiffEq", "QuadGK", "SciMLSensitivity", "StaticArrays", "Test", "Tracker", "Zygote"]

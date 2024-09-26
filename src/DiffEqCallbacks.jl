@@ -1,9 +1,11 @@
 module DiffEqCallbacks
 
+using ConcreteStructs: @concrete
 using DataStructures: DataStructures, BinaryMaxHeap, BinaryMinHeap
 using DiffEqBase: DiffEqBase, get_tstops, get_tstops_array, get_tstops_max
+using DifferentiationInterface: DifferentiationInterface, Constant
 using Functors: fmap
-using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!
+using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!, mul!, ldiv!
 using Markdown: @doc_str
 using RecipesBase: @recipe
 using RecursiveArrayTools: RecursiveArrayTools, DiffEqArray, copyat_or_push!
@@ -13,6 +15,8 @@ using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, NonlinearFunction,
                  get_proposed_dt, get_tmp_cache, init, reinit!,
                  set_proposed_dt!, solve!, terminate!, u_modified!
 using StaticArraysCore: StaticArraysCore
+
+const DI = DifferentiationInterface
 
 include("functor_helpers.jl")
 include("autoabstol.jl")
