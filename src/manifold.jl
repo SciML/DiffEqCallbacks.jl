@@ -211,21 +211,8 @@ end
 function SciMLBase.reinit!(
         cache::SingleFactorizeManifoldProjectionCache{iip}, u; p = cache.p) where {iip}
     if !cache.first_call || (cache.ũ !== u || cache.p !== p)
-        if cache.manifold_jacobian !== nothing
-            if iip
-                cache.manifold_jacobian(cache.J, u, p)
-            else
-                cache.J = cache.manifold_jacobian(u, p)
-            end
-        else
-            if iip
-                DI.jacobian!(cache.manifold, cache.gu_cache, cache.J,
-                    cache.di_extras, cache.autodiff, u, Constant(p))
-            else
-                DI.jacobian!(cache.manifold, cache.J, cache.di_extras,
-                    cache.autodiff, u, Constant(p))
-            end
-        end
+        compute_manifold_jacobian!(cache.J, cache.manifold_jacobian, cache.autodiff,
+            Val(iip), cache.manifold, cache.gu_cache, u, p, cache.di_extras)
         mul!(cache.JJᵀ, cache.J, cache.J')
         cache.JJᵀfact = safe_factorize!(cache.JJᵀ)
     end
@@ -236,7 +223,7 @@ end
 
 default_abstol(::Type{T}) where {T} = real(oneunit(T)) * (eps(real(one(T))))^(4 // 5)
 
-function init_manifold_projection(::Val{iip}, manifold, autodiff, manifold_jacobian, ũ,
+function init_manifold_projection(IIP::Val{iip}, manifold, autodiff, manifold_jacobian, ũ,
         p; abstol = default_abstol(eltype(ũ)), maxiters = 1000,
         resid_prototype = nothing) where {iip}
     if iip
@@ -254,26 +241,8 @@ function init_manifold_projection(::Val{iip}, manifold, autodiff, manifold_jacob
         λ = manifold(ũ, p)
     end
 
-    if manifold_jacobian !== nothing
-        if iip
-            J = similar(ũ, promote_type(eltype(gu), eltype(ũ)), (length(gu), length(ũ)))
-            manifold_jacobian(J, ũ, p)
-        else
-            J = manifold_jacobian(ũ, p)
-        end
-        di_extras = nothing
-    elseif autodiff !== nothing
-        if iip
-            di_extras = DI.prepare_jacobian(manifold, gu, autodiff, ũ, Constant(p))
-            J = DI.jacobian(manifold, gu, di_extras, autodiff, ũ, Constant(p))
-        else
-            di_extras = DI.prepare_jacobian(manifold, autodiff, ũ, Constant(p))
-            J = DI.jacobian(manifold, di_extras, autodiff, ũ, Constant(p))
-        end
-    else
-        error("`autodiff` is set to `nothing` and analytic manifold jacobian is not \
-               provided.")
-    end
+    J, di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
+        gu, ũ, p)
     JJᵀ = J * J'
     JJᵀfact = safe_factorize!(JJᵀ)
 
@@ -317,9 +286,56 @@ function SciMLBase.solve!(cache::SingleFactorizeManifoldProjectionCache{iip}) wh
         ifelse(internal_solve_failed, ReturnCode.ConvergenceFailure, ReturnCode.Success))
 end
 
+function setup_manifold_jacobian(
+        manifold_jacobian::M, autodiff, ::Val{iip}, manifold, gu, ũ, p) where {M, iip}
+    if iip
+        J = similar(ũ, promote_type(eltype(gu), eltype(ũ)), (length(gu), length(ũ)))
+        manifold_jacobian(J, ũ, p)
+    else
+        J = manifold_jacobian(ũ, p)
+    end
+    return J, nothing
+end
+
+function setup_manifold_jacobian(
+        ::Nothing, autodiff, ::Val{iip}, manifold, gu, ũ, p) where {iip}
+    if iip
+        di_extras = DI.prepare_jacobian(manifold, gu, autodiff, ũ, Constant(p))
+        J = DI.jacobian(manifold, gu, di_extras, autodiff, ũ, Constant(p))
+    else
+        di_extras = DI.prepare_jacobian(manifold, autodiff, ũ, Constant(p))
+        J = DI.jacobian(manifold, di_extras, autodiff, ũ, Constant(p))
+    end
+    return J, di_extras
+end
+
+function compute_manifold_jacobian!(J, manifold_jacobian, autodiff, ::Val{iip},
+        manifold, gu, ũ, p, di_extras) where {iip}
+    if iip
+        manifold_jacobian(J, ũ, p)
+    else
+        J = manifold_jacobian(ũ, p)
+    end
+    return J
+end
+
+function compute_manifold_jacobian!(J, ::Nothing, autodiff, ::Val{iip}, manifold, gu,
+        ũ, p, di_extras) where {iip}
+    if iip
+        DI.jacobian!(manifold, gu, J, di_extras, autodiff, ũ, Constant(p))
+    else
+        DI.jacobian!(manifold, J, di_extras, autodiff, ũ, Constant(p))
+    end
+    return J
+end
+
+function setup_manifold_jacobian(::Nothing, ::Nothing, args...)
+    error("`autodiff` is set to `nothing` and analytic manifold jacobian is not provided.")
+end
+
 function safe_factorize!(A::AbstractMatrix)
     if issquare(A)
-        fact = LinearAlgebra.lu(A; check = false)
+        fact = LinearAlgebra.cholesky(A; check = false)
         fact_sucessful(fact) && return fact
     elseif size(A, 1) > size(A, 2)
         fact = LinearAlgebra.qr(A)
