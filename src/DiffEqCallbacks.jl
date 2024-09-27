@@ -1,17 +1,22 @@
 module DiffEqCallbacks
 
-using DiffEqBase, RecursiveArrayTools, DataStructures, RecipesBase, LinearAlgebra,
-      StaticArraysCore, NonlinearSolve, ForwardDiff, Functors
+using ConcreteStructs: @concrete
+using DataStructures: DataStructures, BinaryMaxHeap, BinaryMinHeap
+using DiffEqBase: DiffEqBase, get_tstops, get_tstops_array, get_tstops_max
+using DifferentiationInterface: DifferentiationInterface, Constant
+using Functors: fmap
+using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!, mul!, ldiv!
+using Markdown: @doc_str
+using RecipesBase: @recipe
+using RecursiveArrayTools: RecursiveArrayTools, DiffEqArray, copyat_or_push!
+using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, NonlinearFunction,
+                 NonlinearLeastSquaresProblem, NonlinearProblem, RODEProblem,
+                 ReturnCode, SDEProblem, add_tstop!, check_error, get_du,
+                 get_proposed_dt, get_tmp_cache, init, reinit!,
+                 set_proposed_dt!, solve!, terminate!, u_modified!
+using StaticArraysCore: StaticArraysCore
 
-import Base.Iterators
-
-using Markdown
-
-using Parameters: @unpack
-
-import SciMLBase
-
-using DiffEqBase: get_tstops, get_tstops_array, get_tstops_max
+const DI = DifferentiationInterface
 
 include("functor_helpers.jl")
 include("autoabstol.jl")

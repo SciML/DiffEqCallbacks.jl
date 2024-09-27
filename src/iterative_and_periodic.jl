@@ -89,7 +89,7 @@ function (S::PeriodicCallbackAffect)(integrator)
 end
 
 function add_next_tstop!(integrator, S)
-    @unpack Δt, t0, index = S
+    (; Δt, t0, index) = S
 
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
     tnew = t0[] + (index[] + 1) * Δt
@@ -177,7 +177,8 @@ end
     # Checking for floating point equality is OK here as `DifferentialEquations.jl`
     # sets the time exactly to the final time in the last iteration
     return integrator.t == last(integrator.sol.prob.tspan) ||
-           (hasfield(typeof(integrator), :iter) && (integrator.iter == integrator.opts.maxiters))
+           (hasfield(typeof(integrator), :iter) &&
+            (integrator.iter == integrator.opts.maxiters))
 end
 
 export PeriodicCallback
