@@ -2,7 +2,7 @@
 
 julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "bf6a29b6f3aad050dc673b152b7a9005f07cbfb2"
+project_hash = "8682ab36fc91ad2009eefa28c6c65dd0a7504edd"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "eea5d80188827b35333801ef97a40c2ed653b081"
@@ -341,7 +341,7 @@ version = "6.155.3"
 deps = ["ConcreteStructs", "DataStructures", "DiffEqBase", "DifferentiationInterface", "Functors", "LinearAlgebra", "Markdown", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArraysCore"]
 path = "/home/runner/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
-version = "3.10.0"
+version = "4.0.0"
 
 [[deps.DiffResults]]
 deps = ["StaticArraysCore"]
