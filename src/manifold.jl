@@ -31,7 +31,8 @@ properties.
     would work in most cases (See [1] for details). Alternatively, a nonlinear solver as
     defined in the
     [NonlinearSolve.jl format](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/)
-    can be specified.
+    can be specified. Additionally if NonlinearSolve.jl is loaded and `nothing` is specified
+    a polyalgorithm is used.
   - `save`: Whether to do the standard saving (applied after the callback)
   - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)` or
     `g(u, p)`. Specify it as `Val(::Bool)` to disable runtime branching. If `nothing`,
@@ -88,25 +89,8 @@ end
 
 function ManifoldProjection(
         manifold, autodiff, manifold_jacobian, nlsolve, kwargs, autonomous)
-    if autonomous isa Val{true} || autonomous isa Val{false}
-        wrapped_manifold = TypedNonAutonomousFunction{SciMLBase._unwrap_val(autonomous)}(
-            manifold, nothing)
-        wrapped_manifold_jacobian = if manifold_jacobian === nothing
-            nothing
-        else
-            TypedNonAutonomousFunction{SciMLBase._unwrap_val(autonomous)}(
-                manifold_jacobian, nothing)
-        end
-        autonomous = SciMLBase._unwrap_val(autonomous)
-    else
-        _autonomous = autonomous === nothing ? false : autonomous
-        wrapped_manifold = UntypedNonAutonomousFunction(_autonomous, manifold, nothing)
-        wrapped_manifold_jacobian = if manifold_jacobian === nothing
-            nothing
-        else
-            UntypedNonAutonomousFunction(_autonomous, manifold_jacobian, nothing)
-        end
-    end
+    wrapped_manifold = wrap_autonomous_function(autonomous, manifold)
+    wrapped_manifold_jacobian = wrap_autonomous_function(autonomous, manifold_jacobian)
     return ManifoldProjection(wrapped_manifold, wrapped_manifold_jacobian,
         autodiff, nothing, nlsolve, kwargs, autonomous)
 end
@@ -158,7 +142,20 @@ end
 export ManifoldProjection
 
 # wrapper for non-autonomous functions
-@concrete mutable struct TypedNonAutonomousFunction{autonomous}
+function wrap_autonomous_function(autonomous::Union{Val{true}, Val{false}}, g)
+    g === nothing && return nothing
+    return TypedNonAutonomousFunction{SciMLBase._unwrap_val(autonomous)}(g, nothing)
+end
+function wrap_autonomous_function(autonomous::Union{Bool, Nothing}, g)
+    g === nothing && return nothing
+    autonomous = autonomous === nothing ? false : autonomous
+    return UntypedNonAutonomousFunction(autonomous, g, nothing)
+end
+
+abstract type AbstractNonAutonomousFunction end
+
+@concrete mutable struct TypedNonAutonomousFunction{autonomous} <:
+                         AbstractNonAutonomousFunction
     f
     t::Any
 end
@@ -169,7 +166,7 @@ end
 (f::TypedNonAutonomousFunction{false})(u, p) = f.f(u, p, f.t)
 (f::TypedNonAutonomousFunction{true})(u, p) = f.f(u, p)
 
-@concrete mutable struct UntypedNonAutonomousFunction
+@concrete mutable struct UntypedNonAutonomousFunction <: AbstractNonAutonomousFunction
     autonomous::Bool
     f
     t::Any

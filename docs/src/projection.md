@@ -12,7 +12,7 @@ ManifoldProjection
 Here we solve the harmonic oscillator:
 
 ```@example manifold
-using OrdinaryDiffEq, DiffEqCallbacks, Plots
+using OrdinaryDiffEq, DiffEqCallbacks, Plots, ADTypes
 
 u0 = ones(2)
 function f(du, u, p, t)
@@ -28,14 +28,13 @@ to conserve the sum of squares:
 ```@example manifold
 function g(resid, u, p, t)
     resid[1] = u[2]^2 + u[1]^2 - 2
-    resid[2] = 0
 end
 ```
 
 To build the callback, we just call
 
 ```@example manifold
-cb = ManifoldProjection(g)
+cb = ManifoldProjection(g; autodiff = AutoForwardDiff(), resid_prototype = zeros(1))
 ```
 
 Using this callback, the Runge-Kutta method `Vern7` conserves energy. Note that the
