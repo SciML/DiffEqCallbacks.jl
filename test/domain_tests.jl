@@ -43,7 +43,7 @@ general_sol_absval = solve(
     prob_absval, BS3();
     callback = GeneralDomain(g, [1.0];
         autodiff = AutoForwardDiff(),
-        nlsolve=NewtonRaphson(; autodiff = AutoForwardDiff())),
+        nlsolve = NewtonRaphson(; autodiff = AutoForwardDiff())),
     save_everystep = false)
 @test all(x -> x[1] ≥ 0, general_sol_absval.u)
 @test general_sol_absval.errors[:l∞] < 9.9e-5
@@ -57,7 +57,7 @@ general_t_sol_absval = solve(
     prob_absval, BS3();
     callback = GeneralDomain(g_t, [1.0];
         autodiff = AutoForwardDiff(),
-        nlsolve=NewtonRaphson(; autodiff = AutoForwardDiff())),
+        nlsolve = NewtonRaphson(; autodiff = AutoForwardDiff())),
     save_everystep = false)
 @test general_sol_absval.t ≈ general_t_sol_absval.t
 @test general_sol_absval.u ≈ general_t_sol_absval.u
