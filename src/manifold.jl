@@ -418,19 +418,19 @@ end
 function safe_factorize!(A::AbstractMatrix)
     if issquare(A)
         fact = LinearAlgebra.cholesky(A; check = false)
-        fact_sucessful(fact) && return fact
+        fact_successful(fact) && return fact
     elseif size(A, 1) > size(A, 2)
         fact = LinearAlgebra.qr(A)
-        fact_sucessful(fact) && return fact
+        fact_successful(fact) && return fact
     end
     return LinearAlgebra.qr!(A, LinearAlgebra.ColumnNorm())
 end
 
-function fact_sucessful(F::LinearAlgebra.QRCompactWY)
+function fact_successful(F::LinearAlgebra.QRCompactWY)
     m, n = size(F)
     U = view(F.factors, 1:min(m, n), 1:n)
     return all(!iszero, Iterators.reverse(@view U[diagind(U)]))
 end
-function fact_sucessful(F::FT) where {FT}
+function fact_successful(F::FT) where {FT}
     return hasmethod(LinearAlgebra.issuccess, (FT,)) ? LinearAlgebra.issuccess(F) : true
 end
