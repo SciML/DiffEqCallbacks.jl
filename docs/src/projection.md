@@ -12,7 +12,7 @@ ManifoldProjection
 Here we solve the harmonic oscillator:
 
 ```@example manifold
-using OrdinaryDiffEq, DiffEqCallbacks, Plots, ADTypes
+using OrdinaryDiffEq, DiffEqCallbacks, NonlinearSolve, Plots, ADTypes
 
 u0 = ones(2)
 function f(du, u, p, t)
@@ -21,6 +21,9 @@ function f(du, u, p, t)
 end
 prob = ODEProblem(f, u0, (0.0, 100.0))
 ```
+
+!!! note
+    Note that NonlinearSolve.jl is required to be imported for ManifoldProjection
 
 However, this problem is supposed to conserve energy, and thus we define our manifold
 to conserve the sum of squares:
