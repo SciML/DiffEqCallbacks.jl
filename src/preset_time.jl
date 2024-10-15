@@ -28,7 +28,7 @@ function PresetTimeCallback(tstops, user_affect!;
         throw(ArgumentError("tstops must either be a number or a Vector. Was $tstops"))
     end
 
-    tstops = sort_inplace ? sort!(tstops) : sort(tstops)
+    tstops = tstops isa Number ? [tstops] : (sort_inplace ? sort!(tstops) : sort(tstops))
 
     condition = let
         function (u, t, integrator)
@@ -57,7 +57,7 @@ function PresetTimeCallback(tstops, user_affect!;
         else
             _tstops = tstops
         end
-        for tstop in tstops
+        for tstop in _tstops
             add_tstop!(integrator, tstop)
         end
         if t ∈ tstops
