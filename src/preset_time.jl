@@ -24,28 +24,18 @@ function PresetTimeCallback(tstops, user_affect!;
         initialize = SciMLBase.INITIALIZE_DEFAULT,
         filter_tstops = true,
         sort_inplace = false, kwargs...)
-
-    # define an intrinsic version of insorted
-    # extend a new method to avoid type instability of condition (anonymous function)
-    _insorted(x::Number, y::Number) = x == y
-    _insorted(x, v) = insorted(x, v)
-
-    if tstops isa AbstractVector
-        if sort_inplace
-            sort!(tstops)
-        else
-            tstops = sort(tstops)
-        end
-    elseif !(tstops isa Number)
+    if !(tstops isa AbstractVector) && !(tstops isa Number)
         throw(ArgumentError("tstops must either be a number or a Vector. Was $tstops"))
     end
+
+    tstops = sort_inplace ? sort!(tstops) : sort(tstops)
 
     condition = let
         function (u, t, integrator)
             if hasproperty(integrator, :dt)
-                _insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
+                insorted(t, tstops) && !iszero(integrator.dt)
             else
-                _insorted(t, tstops)
+                insorted(t, tstops)
             end
         end
     end
@@ -64,9 +54,11 @@ function PresetTimeCallback(tstops, user_affect!;
             tdir = integrator.tdir
             tspan = integrator.sol.prob.tspan
             _tstops = tstops[@. tdir * tspan[1] < tdir * tstops < tdir * tspan[2]]
-            add_tstop!.((integrator,), _tstops)
         else
-            add_tstop!.((integrator,), tstops)
+            _tstops = tstops
+        end
+        for tstop in tstops
+            add_tstop!(integrator, tstop)
         end
         if t ∈ tstops
             user_affect!(integrator)
