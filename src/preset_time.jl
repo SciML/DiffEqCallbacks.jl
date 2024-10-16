@@ -33,7 +33,7 @@ function PresetTimeCallback(tstops, user_affect!;
     condition = let
         function (u, t, integrator)
             if hasproperty(integrator, :dt)
-                insorted(t, tstops) && !iszero(integrator.dt)
+                insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
             else
                 insorted(t, tstops)
             end
