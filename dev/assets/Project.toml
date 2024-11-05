@@ -1,12 +1,16 @@
 [deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
-DiffEqCallbacks = "3"
+ADTypes = "1.9.0"
+DiffEqCallbacks = "4"
 Documenter = "1"
+NonlinearSolve = "3, 4"
 OrdinaryDiffEq = "6.88"
 Plots = "1.36"
