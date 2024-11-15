@@ -23,6 +23,7 @@ prob = ODEProblem(f, u0, (0.0, 100.0))
 ```
 
 !!! note
+    
     Note that NonlinearSolve.jl is required to be imported for ManifoldProjection
 
 However, this problem is supposed to conserve energy, and thus we define our manifold

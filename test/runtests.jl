@@ -3,7 +3,7 @@ using Test
 const GROUP = get(ENV, "GROUP", "All")
 
 # write your own tests here
-@time begin
+@time @testset "DiffEqCallbacks" begin
     if GROUP == "QA"
         @time @testset "Quality Assurance" begin
             include("qa.jl")

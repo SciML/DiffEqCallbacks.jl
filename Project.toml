@@ -1,7 +1,7 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "4.1.0"
+version = "4.2.0"
 
 [deps]
 ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
@@ -25,10 +25,10 @@ DataStructures = "0.18.13"
 DiffEqBase = "6.155.3"
 DifferentiationInterface = "0.6.1"
 ForwardDiff = "0.10.36"
-Functors = "0.4"
+Functors = "0.5"
 LinearAlgebra = "1.10"
 Markdown = "1.10"
-NonlinearSolve = "3.14"
+NonlinearSolve = "3.14, 4"
 ODEProblemLibrary = "0.1.8"
 OrdinaryDiffEq = "6.88"
 QuadGK = "2.9"
