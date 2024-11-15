@@ -43,7 +43,7 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
         if DiffEqBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
-            if affect!.integrand_cache == nothing
+            if affect!.integrand_cache === nothing
                 recursive_axpy!(gauss_weights[n][i],
                     affect!.integrand_func(curu, t_temp, integrator), accumulation_cache)
             else

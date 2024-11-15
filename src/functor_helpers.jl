@@ -19,7 +19,6 @@ end
 """
 recursive_neg!(x) = fmap(internal_neg!, x)
 
-internal_neg!(x::Number) = -x
 internal_neg!(x::AbstractArray) = x .*= -1
 internal_neg!(x) = nothing
 
@@ -30,8 +29,7 @@ internal_neg!(x) = nothing
 """
 recursive_zero!(x) = fmap(internal_zero!, x)
 
-internal_zero!(x::Number) = zero(x)
-internal_zero!(x::AbstractArray) = fill!(x, zero(eltype(x)))
+internal_zero!(x::AbstractArray) = fill!(x, false)
 internal_zero!(x) = nothing
 
 """
@@ -41,9 +39,8 @@ internal_zero!(x) = nothing
 """
 recursive_sub!(y, x) = fmap(internal_sub!, y, x)
 
-internal_sub!(x::Number, y::Number) = x - y
-internal_sub!(x::AbstractArray, y::AbstractArray) = axpy!(-1, y, x)
-internal_sub!(x, y) = nothing
+internal_sub!(y::AbstractArray, x::AbstractArray) = axpy!(-1, x, y)
+internal_sub!(y, x) = nothing
 
 """
     recursive_add!(y, x)
@@ -52,9 +49,8 @@ internal_sub!(x, y) = nothing
 """
 recursive_add!(y, x) = fmap(internal_add!, y, x)
 
-internal_add!(x::Number, y::Number) = x + y
-internal_add!(x::AbstractArray, y::AbstractArray) = y .+= x
-internal_add!(x, y) = nothing
+internal_add!(y::AbstractArray, x::AbstractArray) = y .+= x
+internal_add!(y, x) = nothing
 
 """
     allocate_vjp(λ, x)
@@ -62,17 +58,10 @@ internal_add!(x, y) = nothing
 
 `similar(λ, size(x))` for generic `x`. This is used to handle non-array parameters!
 """
-allocate_vjp(λ::AbstractArray, x::AbstractArray) = similar(λ, size(x))
-allocate_vjp(λ::AbstractArray, x::Tuple) = allocate_vjp.((λ,), x)
-function allocate_vjp(λ::AbstractArray, x::NamedTuple{F}) where {F}
-    NamedTuple{F}(allocate_vjp.((λ,), values(x)))
-end
-allocate_vjp(λ::AbstractArray, x) = fmap(Base.Fix1(allocate_vjp, λ), x)
+allocate_vjp(λ::AbstractArray, x) = fmap(Base.Fix1(allocate_vjp_internal, λ), x)
+allocate_vjp(x) = fmap(similar, x)
 
-allocate_vjp(x::AbstractArray) = similar(x)
-allocate_vjp(x::Tuple) = allocate_vjp.(x)
-allocate_vjp(x::NamedTuple{F}) where {F} = NamedTuple{F}(allocate_vjp.(values(x)))
-allocate_vjp(x) = fmap(allocate_vjp, x)
+allocate_vjp_internal(λ::AbstractArray, x) = similar(λ, size(x))
 
 """
     allocate_zeros(x)
@@ -111,6 +100,5 @@ internal_scalar_mul!(x, α) = nothing
 # axpy!
 recursive_axpy!(α, x, y) = fmap((xᵢ, yᵢ) -> internal_axpy!(α, xᵢ, yᵢ), x, y)
 
-internal_axpy!(α, x::Number, y::Number) = y + α * x
 internal_axpy!(α, x::AbstractArray, y::AbstractArray) = axpy!(α, x, y)
 internal_axpy!(α, x, y) = nothing
