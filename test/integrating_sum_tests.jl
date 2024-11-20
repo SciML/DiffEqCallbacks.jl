@@ -1,4 +1,5 @@
-using OrdinaryDiffEq, SciMLSensitivity, DiffEqCallbacks, Zygote
+using OrdinaryDiffEq, SciMLSensitivity, DiffEqCallbacks, Zygote, Functors
+using JLArrays, ComponentArrays
 using ForwardDiff
 using QuadGK
 using Test
@@ -106,7 +107,7 @@ sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, relto
 function callback_saving_inplace_nt(du, u, t, integrator, sol)
     temp = sol(t)
     res = vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
-    DiffEqCallbacks.fmap((y, x) -> copyto!(y, x), du, res)
+    fmap((y, x) -> copyto!(y, x), du, res)
     return DiffEqCallbacks.recursive_neg!(du)
 end
 integrand_values_nt = IntegrandValuesSum(DiffEqCallbacks.allocate_zeros(p_nt))
@@ -256,3 +257,23 @@ dGdp_analytical = analytical_derivative(p, tspan[end])
 @test isapprox(dGdp_analytical, integrand_values.integrand, atol = 1e-11, rtol = 1e-11)
 @test isapprox(
     dGdp_analytical, integrand_values_inplace.integrand, atol = 1e-11, rtol = 1e-11)
+
+# Functors Helpers with GPUArrays
+ca = ComponentArray(; a = rand(2), b = (; c = rand(2)), d = rand(2))
+ca = ComponentArray(JLArray(getdata(ca)), getaxes(ca))
+ca2 = zero(ca)
+
+@test DiffEqCallbacks.recursive_copyto!(ca2, ca) == ca
+@test ca2 == ca
+
+@test all(x -> x < 0, DiffEqCallbacks.recursive_neg!(ca2))
+@test all(x -> x < 0, ca2)
+
+@test all(iszero, DiffEqCallbacks.recursive_zero!(ca2))
+@test all(iszero, ca2)
+
+@test DiffEqCallbacks.recursive_add!(ca2, ca) == ca
+@test ca2 == ca
+
+@test all(iszero, DiffEqCallbacks.recursive_sub!(ca2, ca))
+@test all(iszero, ca2)

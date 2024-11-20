@@ -1,7 +1,7 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "4.2.1"
+version = "4.2.2"
 
 [deps]
 ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
@@ -19,6 +19,7 @@ StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 [compat]
 ADTypes = "1.9.0"
 Aqua = "0.8"
+ComponentArrays = "0.15.18"
 ConcreteStructs = "0.2.3"
 DataInterpolations = "4.6, 5, 6"
 DataStructures = "0.18.13"
@@ -26,6 +27,7 @@ DiffEqBase = "6.155.3"
 DifferentiationInterface = "0.6.1"
 ForwardDiff = "0.10.36"
 Functors = "0.5"
+JLArrays = "0.1, 0.2"
 LinearAlgebra = "1.10"
 Markdown = "1.10"
 NonlinearSolve = "3.14, 4"
@@ -47,8 +49,10 @@ julia = "1.10"
 [extras]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+JLArrays = "27aeb0d3-9eb9-45fb-866b-73c2ecf80fcb"
 NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
 ODEProblemLibrary = "fdc4e326-1af4-4b90-96e7-779fcce2daa5"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
@@ -61,4 +65,4 @@ Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["ADTypes", "Aqua", "DataInterpolations", "ForwardDiff", "NonlinearSolve", "ODEProblemLibrary", "OrdinaryDiffEq", "QuadGK", "SciMLSensitivity", "StaticArrays", "Test", "Tracker", "Zygote"]
+test = ["ADTypes", "Aqua", "ComponentArrays", "DataInterpolations", "ForwardDiff", "JLArrays", "NonlinearSolve", "ODEProblemLibrary", "OrdinaryDiffEq", "QuadGK", "SciMLSensitivity", "StaticArrays", "Test", "Tracker", "Zygote"]
