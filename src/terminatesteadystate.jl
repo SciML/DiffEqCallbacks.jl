@@ -22,7 +22,7 @@ function allDerivPass(integrator, abstol, reltol, min_t)
 
     if integrator.u isa Array
         return all(abs(d) <= max(abstol, reltol * abs(u))
-            for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
+        for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
             Iterators.cycle(reltol), integrator.u))
     else
         return all(abs.(testval) .<= max.(abstol, reltol .* abs.(integrator.u)))
