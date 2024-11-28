@@ -26,14 +26,15 @@ function allDerivPass(integrator, abstol, reltol, min_t)
             Iterators.cycle(reltol), integrator.u)) &&
             (return false)
     else
-        any((abs.(testval) .> abstol) .|| (abs.(testval) .> reltol .* abs.(integrator.u))) &&
+        any((abs.(testval) .> abstol) .||
+            (abs.(testval) .> reltol .* abs.(integrator.u))) &&
             (return false)
     end
 
     return true
 end
 
-struct WrappedTest{T,A,R,M}
+struct WrappedTest{T, A, R, M}
     test::T
     abstol::A
     reltol::R
@@ -72,7 +73,7 @@ the [Steady State Solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/stead
     to terminate.
 """
 function TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test::T = allDerivPass;
-        min_t = nothing, wrap_test::Val{WT} = Val(true)) where {T,WT}
+        min_t = nothing, wrap_test::Val{WT} = Val(true)) where {T, WT}
     condition = if WT
         WrappedTest(test, abstol, reltol, min_t)
     else
