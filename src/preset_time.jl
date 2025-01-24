@@ -4,6 +4,8 @@ PresetTimeCallback(tstops, user_affect!;
     initialize = DiffEqBase.INITIALIZE_DEFAULT,
     filter_tstops = true,
     kwargs...)
+
+PresetTimeCallback(user_affect!::Function, tstops; kwargs...)
 ```
 
 A callback that adds callback `affect!` calls at preset times. No playing around with
@@ -60,5 +62,7 @@ function PresetTimeCallback(tstops, user_affect!;
     end
     DiscreteCallback(condition, user_affect!; initialize = initialize_preset, kwargs...)
 end
+
+PresetTimeCallback(affect!::Function, ts; kwargs...) = PresetTimeCallback(ts, affect!; kwargs...)
 
 export PresetTimeCallback

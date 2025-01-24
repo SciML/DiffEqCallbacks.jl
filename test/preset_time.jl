@@ -21,6 +21,15 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test 0.5 ∈ sol.t
 @test p != startp
 
+# test do synax
+p .= startp # reset startp
+cbdoo = PresetTimeCallback(0.5) do integrator
+    integrator.p .= rand(4, 4)
+end
+sol = solve(prob, Tsit5(), callback = cbdoo)
+@test 0.5 ∈ sol.t
+@test p != startp
+
 p = rand(4, 4)
 startp = copy(p)
 
