@@ -21,7 +21,7 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test 0.5 ∈ sol.t
 @test p != startp
 
-# test do synax
+# test do syntax
 p .= startp # reset startp
 cbdoo = PresetTimeCallback(0.5) do integrator
     integrator.p .= rand(4, 4)

@@ -63,6 +63,8 @@ function PresetTimeCallback(tstops, user_affect!;
     DiscreteCallback(condition, user_affect!; initialize = initialize_preset, kwargs...)
 end
 
-PresetTimeCallback(affect!::Function, ts; kwargs...) = PresetTimeCallback(ts, affect!; kwargs...)
+function PresetTimeCallback(affect!::Function, ts; kwargs...)
+    PresetTimeCallback(ts, affect!; kwargs...)
+end
 
 export PresetTimeCallback
