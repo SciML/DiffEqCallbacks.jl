@@ -46,7 +46,7 @@ function functioncalling_initialize(cb, u, t, integrator)
             if !cb.affect!.func_start
                 t0 += step
             end
-            integrator.tdir > 0 ? collect(t0:step:tf) : collect(reverse(t0:step:tf))
+            collect(t0:step:tf)
         else
             funcat_cache # Already reversed in the main function if td < 0
         end
