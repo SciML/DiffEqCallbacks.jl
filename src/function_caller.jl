@@ -1,4 +1,5 @@
-mutable struct FunctionCallingAffect{funcFunc, funcatType, funcatCacheType}
+mutable struct FunctionCallingAffect{funcFunc, funcatType <: AbstractVector,
+    funcatCacheType <: Union{AbstractVector, Number}}
     func::funcFunc
     funcat::funcatType
     funcat_cache::funcatCacheType
@@ -9,10 +10,10 @@ end
 
 function (affect!::FunctionCallingAffect)(integrator, force_func = false)
     # see OrdinaryDiffEq.jl -> integrator_utils.jl, function funcvalues!
-    while !isempty(affect!.funcat) &&
-        integrator.tdir * first(affect!.funcat) <= integrator.tdir * integrator.t # Perform funcat
+    while affect!.funciter <= length(affect!.funcat) &&
+        integrator.tdir * affect!.funcat[affect!.funciter] <= integrator.tdir * integrator.t # Perform funcat
+        curt = affect!.funcat[affect!.funciter] # current time
         affect!.funciter += 1
-        curt = pop!(affect!.funcat) # current time
         if curt != integrator.t # If <t, interpolate
             if integrator isa SciMLBase.AbstractODEIntegrator
                 # Expand lazy dense for interpolation
@@ -30,7 +31,6 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
         end
     end
     if affect!.func_everystep || force_func
-        affect!.funciter += 1
         affect!.func(integrator.u, integrator.t, integrator)
     end
     u_modified!(integrator, false)
@@ -38,25 +38,20 @@ end
 
 function functioncalling_initialize(cb, u, t, integrator)
     funcat_cache = cb.affect!.funcat_cache
-    if cb.affect!.funciter != 0 || funcat_cache isa Number
+    if cb.affect!.funciter != 1 || funcat_cache isa Number
         tspan = integrator.sol.prob.tspan
-        funcat_cache = cb.affect!.funcat_cache
         funcat_vec = if funcat_cache isa Number
             step = funcat_cache
             t0, tf = tspan
             if !cb.affect!.func_start
                 t0 += step
             end
-            range(t0, tf; step)
+            collect(t0:step:tf)
         else
-            funcat_cache
+            funcat_cache # Already reversed in the main function if td < 0
         end
-        if integrator.tdir > 0
-            cb.affect!.funcat = BinaryMinHeap(funcat_vec)
-        else
-            cb.affect!.funcat = BinaryMaxHeap(funcat_vec)
-        end
-        cb.affect!.funciter = 0
+        cb.affect!.funcat = funcat_vec
+        cb.affect!.funciter = 1
     end
     cb.affect!.func_start && cb.affect!(integrator)
     u_modified!(integrator, false)
@@ -89,19 +84,15 @@ function FunctionCallingCallback(func;
     # funcat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     if funcat isa Number
         # expand to range using tspan in functioncalling_initialize
+        funcat_internal = fill(funcat, 0)
         funcat_cache = funcat
-        funcat_heap = fill(funcat, 0)
     else
-        funcat_heap = funcat_cache = collect(funcat)
+        funcat_internal = tdir > 0 ? collect(sort(funcat)) : collect(reverse(sort(funcat)))
+        funcat_cache = funcat_internal
     end
 
-    if tdir > 0
-        funcat_internal = BinaryMinHeap(funcat_heap)
-    else
-        funcat_internal = BinaryMaxHeap(funcat_heap)
-    end
     affect! = FunctionCallingAffect(func, funcat_internal,
-        funcat_cache, func_everystep, func_start, 0)
+        funcat_cache, func_everystep, func_start, 1)
     condition = (u, t, integrator) -> true
     DiscreteCallback(condition, affect!;
         initialize = functioncalling_initialize,
