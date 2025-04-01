@@ -25,15 +25,13 @@ solve(prob, Vern7(), callback = cb)
 @time sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
-solve(prob, Vern7(), callback = cb, dt=eps(1.0))
-@time sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
-@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
-
-
 cb_t = ManifoldProjection(g_t; resid_prototype = zeros(2), autodiff = AutoForwardDiff())
 solve(prob, Vern7(), callback = cb_t)
 @time sol_t = solve(prob, Vern7(), callback = cb_t)
 @test sol_t.u == sol.u && sol_t.t == sol.t
+
+sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 # autodiff=false
 cb_false = ManifoldProjection(
@@ -62,8 +60,7 @@ prob = ODEProblem(f_ap!, u₀, (0.0, 100.0))
 sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
-solve(prob, Vern7(), callback = cb, dt=eps(1.0))
-@time sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_t)
@@ -113,14 +110,13 @@ solve(prob, Vern7(), callback = cb)
 @time sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
-solve(prob, Vern7(), callback = cb, dt=eps(1.0))
-@time sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
-@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
-
 cb_t = ManifoldProjection(g_oop_t; autodiff = AutoForwardDiff())
 solve(prob, Vern7(), callback = cb_t)
 @time sol_t = solve(prob, Vern7(), callback = cb_t)
 @test sol_t.u == sol.u && sol_t.t == sol.t
+
+sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 # autodiff=false
 cb_false = ManifoldProjection(
@@ -142,6 +138,9 @@ u₀ = ArrayPartition(ones(2), ones(2))
 prob = ODEProblem(f_ap, u₀, (0.0, 100.0))
 
 sol = solve(prob, Vern7(), callback = cb)
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
+
+sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_t)
