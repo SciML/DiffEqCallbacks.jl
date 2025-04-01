@@ -25,6 +25,11 @@ solve(prob, Vern7(), callback = cb)
 @time sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
+solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+@time sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
+
+
 cb_t = ManifoldProjection(g_t; resid_prototype = zeros(2), autodiff = AutoForwardDiff())
 solve(prob, Vern7(), callback = cb_t)
 @time sol_t = solve(prob, Vern7(), callback = cb_t)
@@ -55,6 +60,10 @@ u₀ = ArrayPartition(ones(2), ones(2))
 prob = ODEProblem(f_ap!, u₀, (0.0, 100.0))
 
 sol = solve(prob, Vern7(), callback = cb)
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
+
+solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+@time sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_t)
@@ -102,6 +111,10 @@ prob = ODEProblem(f_oop, u0, (0.0, 100.0))
 cb = ManifoldProjection(g_oop; autodiff = AutoForwardDiff())
 solve(prob, Vern7(), callback = cb)
 @time sol = solve(prob, Vern7(), callback = cb)
+@test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
+
+solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+@time sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 cb_t = ManifoldProjection(g_oop_t; autodiff = AutoForwardDiff())
