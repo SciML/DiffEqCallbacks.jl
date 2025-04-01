@@ -30,7 +30,7 @@ solve(prob, Vern7(), callback = cb_t)
 @time sol_t = solve(prob, Vern7(), callback = cb_t)
 @test sol_t.u == sol.u && sol_t.t == sol.t
 
-sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+sol = solve(prob, Vern7(), callback = cb, dt = eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 # autodiff=false
@@ -60,7 +60,7 @@ prob = ODEProblem(f_ap!, u₀, (0.0, 100.0))
 sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
-sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+sol = solve(prob, Vern7(), callback = cb, dt = eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_t)
@@ -115,7 +115,7 @@ solve(prob, Vern7(), callback = cb_t)
 @time sol_t = solve(prob, Vern7(), callback = cb_t)
 @test sol_t.u == sol.u && sol_t.t == sol.t
 
-sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+sol = solve(prob, Vern7(), callback = cb, dt = eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 # autodiff=false
@@ -140,7 +140,7 @@ prob = ODEProblem(f_ap, u₀, (0.0, 100.0))
 sol = solve(prob, Vern7(), callback = cb)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
-sol = solve(prob, Vern7(), callback = cb, dt=eps(1.0))
+sol = solve(prob, Vern7(), callback = cb, dt = eps(1.0))
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 
 sol = solve(prob, Vern7(), callback = cb_t)
