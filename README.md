@@ -26,6 +26,8 @@ the documentation, which contains the unreleased features.
 Here we solve the harmonic oscillator:
 
 ```julia
+using OrdinaryDiffEq
+
 u0 = ones(2)
 function f(du, u, p, t)
     du[1] = u[2]
@@ -40,14 +42,14 @@ to conserve the sum of squares:
 ```julia
 function g(resid, u, p, t)
     resid[1] = u[2]^2 + u[1]^2 - 2
-    resid[2] = 0
 end
 ```
 
-To build the callback, we just call
+To build the callback, we call
 
 ```julia
-cb = ManifoldProjection(g)
+using DiffEqCallbacks, ADTypes
+cb = ManifoldProjection(g, autodiff = AutoForwardDiff(), resid_prototype = zeros(1))
 ```
 
 Using this callback, the Runge-Kutta method `Vern7` conserves energy. Note that the
@@ -56,6 +58,7 @@ standard saving occurs after the step and before the callback, and thus we set
 save after the projection is applied.
 
 ```julia
+using Test
 sol = solve(prob, Vern7(), save_everystep = false, callback = cb)
 @test sol[end][1]^2 + sol[end][2]^2 ≈ 2
 ```
