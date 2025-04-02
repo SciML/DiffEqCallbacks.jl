@@ -49,7 +49,7 @@ To build the callback, we call
 
 ```julia
 using DiffEqCallbacks, ADTypes
-cb = ManifoldProjection(g, autodiff=AutoForwardDiff(), resid_prototype = zeros(1))
+cb = ManifoldProjection(g, autodiff = AutoForwardDiff(), resid_prototype = zeros(1))
 ```
 
 Using this callback, the Runge-Kutta method `Vern7` conserves energy. Note that the
