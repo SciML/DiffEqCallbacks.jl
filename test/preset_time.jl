@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, DiffEqCallbacks, Test
+using OrdinaryDiffEqTsit5, DiffEqCallbacks, Test
 
 function some_dynamics(u, p, t)
     du = zeros(length(u))

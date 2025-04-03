@@ -1,4 +1,4 @@
-using DiffEqCallbacks, OrdinaryDiffEq, Test, ADTypes, NonlinearSolve
+using DiffEqCallbacks, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, OrdinaryDiffEqRosenbrock, Test, ADTypes, NonlinearSolve
 
 # Non-negative ODE examples
 #
@@ -106,11 +106,11 @@ prob_knee = ODEProblem(knee, [1.0], (0.0, 2.0))
 
 # unfortunately callbacks do not work with solver CVODE_BDF which is comparable to ode15s
 # used in MATLAB example, so we use Rodas5
-naive_sol_knee = solve(prob_knee, Rodas5())
+naive_sol_knee = solve(prob_knee, Rodas5P())
 @test naive_sol_knee[1, end]≈-1.0 atol=1e-5
 
 # positive domain approach
-positive_sol_knee = solve(prob_knee, Rodas5(); callback = PositiveDomain([1.0]),
+positive_sol_knee = solve(prob_knee, Rodas5P(); callback = PositiveDomain([1.0]),
     save_everystep = false)
 @test all(x -> x[1] ≥ 0, positive_sol_knee.u)
 @test positive_sol_knee[1, end]≈0.0 atol=1e-5

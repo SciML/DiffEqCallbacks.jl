@@ -1,5 +1,6 @@
-using Test, OrdinaryDiffEq, DiffEqCallbacks, LinearAlgebra,
+using Test, OrdinaryDiffEqBDF, OrdinaryDiffEqTsit5, OrdinaryDiffEqRosenbrock, DiffEqCallbacks, LinearAlgebra,
       SciMLSensitivity, Tracker
+using OrdinaryDiffEqNonlinearSolve
 import LinearAlgebra: norm
 import ODEProblemLibrary: prob_ode_2Dlinear,
                           prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,

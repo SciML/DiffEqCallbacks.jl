@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, DiffEqCallbacks, Test
+using OrdinaryDiffEqTsit5, DiffEqCallbacks, Test
 
 f2(u, p, t) = 1.01 * u
 u0 = 1 / 2

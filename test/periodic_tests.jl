@@ -1,4 +1,4 @@
-using Test, OrdinaryDiffEq, DiffEqCallbacks
+using Test, OrdinaryDiffEqTsit5, DiffEqCallbacks
 
 tmin = 0.1
 tmax = 5.2
