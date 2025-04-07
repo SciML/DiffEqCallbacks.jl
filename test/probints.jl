@@ -1,4 +1,4 @@
-using DiffEqCallbacks, DiffEqBase, OrdinaryDiffEq
+using DiffEqCallbacks, DiffEqBase, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5
 using Test
 
 function g(du, u, p, t)
