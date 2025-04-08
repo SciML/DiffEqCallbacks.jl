@@ -328,7 +328,7 @@ function init_manifold_projection(IIP::Val{iip}, manifold, autodiff, manifold_ja
     JJᵀfact = safe_factorize!(JJᵀ)
 
     return SingleFactorizeManifoldProjectionCache{iip}(
-        manifold, p, abstol, maxiters, ũ, JJᵀfact, ũ, λ, gu,
+        manifold, p, abstol, maxiters, ũ, JJᵀfact, similar(ũ), λ, gu,
         true, J, JJᵀ, manifold_jacobian, autodiff, di_extras)
 end
 
@@ -337,7 +337,7 @@ function SciMLBase.solve!(cache::SingleFactorizeManifoldProjectionCache{iip}) wh
     ũ = cache.ũ
     gu = cache.gu_cache
 
-    copyto!(cache.u_cache, ũ)
+    copyto!(cache.u_cache, ũ)
     internal_solve_failed = true
 
     if cache.gu_cache !== nothing
