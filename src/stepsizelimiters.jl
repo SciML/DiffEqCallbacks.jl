@@ -56,7 +56,7 @@ constraints.
 function StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
         cached_dtcache = 0.0)
     affect! = StepsizeLimiterAffect(dtFE, cached_dtcache, safety_factor, max_step)
-    condition = (u, t, integrator) -> true
+    condition = true_condition
     DiscreteCallback(condition, affect!;
         initialize = StepsizeLimiter_initialize,
         save_positions = (false, false))

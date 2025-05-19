@@ -1,3 +1,34 @@
+struct PresetTimeFunction{T}
+    tstops::T
+    filter_tstops::Bool
+end
+function (f::PresetTimeFunction)(u, t, integrator)
+    if hasproperty(integrator, :dt)
+        insorted(t, f.tstops) && (integrator.t - integrator.dt) != integrator.t
+    else
+        insorted(t, f.tstops)
+    end
+end
+
+function (f::PresetTimeFunction)(c, u, t, integrator)
+    initialize(c, u, t, integrator)
+    tstops = f.tstops
+
+    if f.filter_tstops
+        tdir = integrator.tdir
+        tspan = integrator.sol.prob.tspan
+        _tstops = tstops[@. tdir * tspan[1] < tdir * tstops < tdir * tspan[2]]
+    else
+        _tstops = tstops
+    end
+    for tstop in _tstops
+        add_tstop!(integrator, tstop)
+    end
+    if t ∈ tstops
+        user_affect!(integrator)
+    end
+end
+
 """
 ```julia
 PresetTimeCallback(tstops, user_affect!;
@@ -29,36 +60,8 @@ function PresetTimeCallback(tstops, user_affect!;
     end
 
     tstops = tstops isa Number ? [tstops] : (sort_inplace ? sort!(tstops) : sort(tstops))
-
-    condition = let
-        function (u, t, integrator)
-            if hasproperty(integrator, :dt)
-                insorted(t, tstops) && (integrator.t - integrator.dt) != integrator.t
-            else
-                insorted(t, tstops)
-            end
-        end
-    end
-
-    # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize_preset = function (c, u, t, integrator)
-        initialize(c, u, t, integrator)
-
-        if filter_tstops
-            tdir = integrator.tdir
-            tspan = integrator.sol.prob.tspan
-            _tstops = tstops[@. tdir * tspan[1] < tdir * tstops < tdir * tspan[2]]
-        else
-            _tstops = tstops
-        end
-        for tstop in _tstops
-            add_tstop!(integrator, tstop)
-        end
-        if t ∈ tstops
-            user_affect!(integrator)
-        end
-    end
-    DiscreteCallback(condition, user_affect!; initialize = initialize_preset, kwargs...)
+    ptf = PresetTimeFunction(tstops,filter_tstops)
+    DiscreteCallback(ptf, user_affect!; initialize = ptf, kwargs...)
 end
 
 export PresetTimeCallback

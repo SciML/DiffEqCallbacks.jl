@@ -367,7 +367,7 @@ function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor 
     else
         affect! = PositiveDomainAffect(abstol, scalefactor, deepcopy(u))
     end
-    condition = (u, t, integrator) -> true
+    condition = true_condition
     DiscreteCallback(condition, affect!; save_positions = (false, save))
 end
 

@@ -93,7 +93,7 @@ function FunctionCallingCallback(func;
 
     affect! = FunctionCallingAffect(func, funcat_internal,
         funcat_cache, func_everystep, func_start, 1)
-    condition = (u, t, integrator) -> true
+    condition = true_condition
     DiscreteCallback(condition, affect!;
         initialize = functioncalling_initialize,
         save_positions = (false, false))

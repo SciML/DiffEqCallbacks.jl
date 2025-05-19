@@ -17,6 +17,7 @@ using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, NonlinearFunction,
 using StaticArraysCore: StaticArraysCore
 
 const DI = DifferentiationInterface
+true_condition(u, t, integrator) = true
 
 include("functor_helpers.jl")
 include("autoabstol.jl")
