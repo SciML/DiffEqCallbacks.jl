@@ -12,7 +12,7 @@ function (f::PresetTimeFunction)(u, t, integrator)
 end
 
 function (f::PresetTimeFunction)(c, u, t, integrator)
-    initialize(c, u, t, integrator)
+    f.initialize(c, u, t, integrator)
     tstops = f.tstops
 
     if f.filter_tstops
