@@ -95,7 +95,7 @@ function IntegratingSumCallback(
     affect! = SavingIntegrandSumAffect(
         integrand_func, integrand_values, integrand_prototype,
         allocate_zeros(integrand_prototype))
-    condition = (u, t, integrator) -> true
+    condition = true_condition
     DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
 

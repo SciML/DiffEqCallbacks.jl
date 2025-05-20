@@ -231,7 +231,7 @@ function IntegratingCallback(
         integrand_func, integrand_values::IntegrandValues, integrand_prototype)
     affect! = SavingIntegrandAffect(integrand_func, integrand_values, integrand_prototype,
         allocate_zeros(integrand_prototype))
-    condition = (u, t, integrator) -> true
+    condition = true_condition
     DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
 
