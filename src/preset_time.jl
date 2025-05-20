@@ -1,7 +1,8 @@
-struct PresetTimeFunction{T, T2}
+struct PresetTimeFunction{T, T2, T3}
     tstops::T
     filter_tstops::Bool
     initialize::T2
+    user_affect!::T3
 end
 function (f::PresetTimeFunction)(u, t, integrator)
     if hasproperty(integrator, :dt)
@@ -26,7 +27,7 @@ function (f::PresetTimeFunction)(c, u, t, integrator)
         add_tstop!(integrator, tstop)
     end
     if t ∈ tstops
-        user_affect!(integrator)
+        f.user_affect!(integrator)
     end
 end
 
@@ -61,7 +62,7 @@ function PresetTimeCallback(tstops, user_affect!;
     end
 
     tstops = tstops isa Number ? [tstops] : (sort_inplace ? sort!(tstops) : sort(tstops))
-    ptf = PresetTimeFunction(tstops, filter_tstops, initialize)
+    ptf = PresetTimeFunction(tstops, filter_tstops, initialize, user_affect!)
     DiscreteCallback(ptf, user_affect!; initialize = ptf, kwargs...)
 end
 
