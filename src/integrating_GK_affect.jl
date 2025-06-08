@@ -52,7 +52,7 @@ end
 
 
 # Calculates integral value over (bound_l,bound_r)
-function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bound_r; order=3, tol=1e-10)
+function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bound_r; order=7, tol=1e-10)
 	affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)		 # clears caches
 	affect!.gk_err_cache  = recursive_zero!(affect!.gk_err_cache)
 	for i in 1:(2*order+1)							 # iterates over gk points of 1 interval
@@ -85,19 +85,20 @@ function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bo
 			end		
 		end
 	end
-	if abs((affect!.gk_step_cache[1] - affect!.gk_err_cache[1])*(bound_r-bound_l)/2)<tol
-		affect!.accumulation_cache += affect!.gk_step_cache * (bound_r-bound_l)/2
+	if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache[1]).*(bound_r-bound_l)./2))<tol
+		recursive_axpy!(1,affect!.gk_step_cache.*(bound_r-bound_l)./2, affect!.accumulation_cache)
+		#affect!.accumulation_cache += affect!.gk_step_cache * (bound_r-bound_l)/2
 	else
-		integrate_gk!(affect!, integrator, bound_l, (bound_l+bound_r)/2)
-		integrate_gk!(affect!, integrator, (bound_l+bound_r)/2, bound_r)
+		integrate_gk!(affect!, integrator, bound_l, (bound_l+bound_r)/2, order=order, tol=tol)
+		integrate_gk!(affect!, integrator, (bound_l+bound_r)/2, bound_r, order=order, tol=tol)
 	end
 end
 
 
 function (affect!::SavingIntegrandGKAffect)(integrator)
-	n = 3 # alg order
+	n = 7 # alg order
         accumulation_cache = recursive_zero!(affect!.accumulation_cache)
-	integrate_gk!(affect!, integrator, integrator.tprev, integrator.t) 	      # Calculates integral values for (t_prev,t) into acc_cache
+	integrate_gk!(affect!, integrator, integrator.tprev, integrator.t, order=n)   # Calculates integral values for (t_prev,t) into acc_cache
 	push!(affect!.integrand_values.ts, integrator.t)        		      # publishes t_steps
 	push!(affect!.integrand_values.integrand, recursive_copy(affect!.accumulation_cache))
 	u_modified!(integrator, false)						      # ???
