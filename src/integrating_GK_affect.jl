@@ -47,19 +47,26 @@ mutable struct SavingIntegrandGKAffect{
 	integrand_cache::IntegrandCacheType
 	accumulation_cache::IntegrandCacheType
 	gk_step_cache::IntegrandCacheType
+	gk_err_cache::IntegrandCacheType
 end
 
 
 # Calculates integral value over (bound_l,bound_r)
 function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bound_r; order=3, tol=1e-10)
-	# add a single for-loop to solve the bs below
-	t_steps = (gk_points[order].+1).*((bound_r-bound_l)/2) .+ bound_l
-	affect!.gk_step_cache = sum(gk_weights[order].*affect!.integrand_func.(integrator.(t_steps),t_steps,integrator)) * (bound_r-bound_l)/2
-	err_steps = (gk_points[order][2:2:end].+1).*((bound_r-bound_l)/2).+bound_l
-	error = abs( affect!.gk_error_cache - sum(g_weights[order].*affect!.integrand_func.(integrator.(err_steps),err_steps,integrator)*(bound_r-bound_l)/2) )
-	# till here
-	if error<tol
-		affect!.accumulation_cache += affect!.gk_step_cache
+	affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)		 # clears caches
+	affect!.gk_err_cache  = recursive_zero!(affect!.gk_err_cache)
+	for i in 1:(2*order+1)							 # iterates over gk points of 1 interval
+		t_temp = (gk_points[order][i]+1)*((bound_r-bound_l)/2) + bound_l # gets the t_point currently looked at
+		recursive_axpy!(gk_weights[order][i],
+				affect!.integrand_func(integrator(t_temp), t_temp, integrator),affect!.gk_step_cache)		
+		if i%2==0							 
+			recursive_axpy!(g_weights[order][div(i,2)],
+				affect!.integrand_func(integrator(t_temp), t_temp, integrator),affect!.gk_err_cache)
+		end		
+		print("\ngk_step_cache is: ", affect!.gk_step_cache, "\n")
+	end
+	if abs((affect!.gk_step_cache[1] - affect!.gk_err_cache[1])*(bound_r-bound_l)/2)<tol
+		affect!.accumulation_cache += affect!.gk_step_cache * (bound_r-bound_l)/2
 	else
 		integrate_gk!(affect!, integrator, bound_l, (bound_l+bound_r)/2)
 		integrate_gk!(affect!, integrator, (bound_l+bound_r)/2, bound_r)
@@ -70,8 +77,8 @@ end
 function (affect!::SavingIntegrandGKAffect)(integrator)
 	n = 3 # alg order
         accumulation_cache = recursive_zero!(affect!.accumulation_cache)
-	integrate_gk!(affect!, integrator, integrator.tprev, integrator.t) # Calculates integral values for (t_prev,t) into acc_cache
-	push!(affect!.integrand_values.ts, integrator.t)        # publishes t_steps
+	integrate_gk!(affect!, integrator, integrator.tprev, integrator.t) 	      # Calculates integral values for (t_prev,t) into acc_cache
+	push!(affect!.integrand_values.ts, integrator.t)        		      # publishes t_steps
 	push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache)) # publishes integral cache
 	u_modified!(integrator, false)						      # ???
 end
@@ -83,7 +90,7 @@ end
 function IntegratingGKCallback(
 	integrand_func, integrand_values::IntegrandValues, integrand_prototype)
     affect! = SavingIntegrandGKAffect(integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype))
+        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype))
     condition = true_condition
     DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
