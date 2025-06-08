@@ -1,5 +1,9 @@
-# Integrating affect with Gauss-Kronrod [used QuadGK]
+"""
+    gk_points::Vector{Vector{Float64}}
 
+Precomputed Gaussian-Kronrod nodes up to degree 3*10-1 = 29.
+Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[1] for i in 1:10]`
+"""
 gk_points = [[-0.7745966692414833, 0.0, 0.7745966692414834],
  [-0.9258200997725514, -0.5773502691896257, 0.0, 0.5773502691896257, 0.9258200997725514],
  [-0.9604912687080203, -0.7745966692414834, -0.43424374934680254, 0.0, 0.43424374934680254, 0.7745966692414834, 0.9604912687080203],
@@ -11,6 +15,12 @@ gk_points = [[-0.7745966692414833, 0.0, 0.7745966692414834],
  [-0.9946781606773403, -0.9681602395076261, -0.9149635072496779, -0.8360311073266358, -0.7344867651839337, -0.6133714327005905, -0.47546247911245987, -0.324253423403809, -0.1642235636149867, 0.0, 0.1642235636149867, 0.324253423403809, 0.47546247911245976, 0.6133714327005904, 0.7344867651839337, 0.8360311073266358, 0.914963507249678, 0.9681602395076261, 0.9946781606773403],
  [-0.9956571630258081, -0.9739065285171717, -0.9301574913557082, -0.8650633666889844, -0.7808177265864169, -0.6794095682990243, -0.5627571346686047, -0.4333953941292472, -0.29439286270146026, -0.14887433898163116, 0.0,  0.14887433898163116, 0.29439286270146026, 0.4333953941292472, 0.5627571346686047, 0.6794095682990244, 0.7808177265864169, 0.8650633666889844, 0.9301574913557082, 0.9739065285171717, 0.995657163025808]]
 
+"""
+    gk_weights::Vector{Vector{Float64}}
+
+Precomputed Gaussian-Kronrod node weights up to degree 3*10-1 = 29.
+Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[2] for i in 1:10]`
+"""
 gk_weights = [[0.5555555555555556, 0.8888888888888888, 0.5555555555555556],
  [0.19797979797979798, 0.4909090909090911, 0.6222222222222223, 0.4909090909090911, 0.19797979797979798],
  [0.10465622602646725, 0.26848808986833345, 0.4013974147759622, 0.45091653865847414, 0.4013974147759622, 0.26848808986833345, 0.10465622602646725],
@@ -21,7 +31,12 @@ gk_weights = [[0.5555555555555556, 0.8888888888888888, 0.5555555555555556],
  [0.017822383320710525, 0.049439395002139175, 0.08248229893135833, 0.11164637082683965, 0.13626310925517227, 0.15665260616818855, 0.17207060855521134, 0.18140002506803451, 0.1844464057446918, 0.18140002506803451, 0.17207060855521134, 0.15665260616818855, 0.13626310925517227, 0.11164637082683965, 0.08248229893135833, 0.049439395002139175, 0.017822383320710525],
  [0.014304775643838873, 0.03963189516026116, 0.06651815594027412, 0.09079068168872645, 0.11178913468441828, 0.13000140685534115, 0.1452395883843662, 0.1564135277884838, 0.16286282744011493, 0.16489601282834956, 0.16286282744011493, 0.1564135277884838, 0.1452395883843662, 0.13000140685534115, 0.11178913468441828, 0.09079068168872645, 0.06651815594027412, 0.03963189516026116, 0.014304775643838873],
  [0.011694638867371846, 0.03255816230796465, 0.05475589657435192, 0.07503967481091997, 0.09312545458369768, 0.10938715880229767, 0.12349197626206591, 0.1347092173114734, 0.14277593857706, 0.1477391049013384, 0.0,  0.1477391049013384, 0.14277593857706, 0.1347092173114734, 0.12349197626206591, 0.10938715880229767, 0.09312545458369768, 0.07503967481091997, 0.05475589657435192, 0.03255816230796465, 0.011694638867371846]]
+"""
+    g_weights::Vector{Vector{Float64}}
 
+Precomputed respective Gaussian node weights up to degree 2*10-1 = 19.
+Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[3] for i in 1:10]`
+"""
 g_weights = [[2.0],
  [1.0000000000000002, 1.0000000000000002],
  [0.5555555555555556, 0.8888888888888885, 0.5555555555555556],
@@ -33,8 +48,6 @@ g_weights = [[2.0],
  [0.08127438836157448, 0.1806481606948575, 0.26061069640293544, 0.31234707704000275, 0.3302393550012595, 0.31234707704000275, 0.26061069640293544, 0.1806481606948575, 0.08127438836157448],
  [0.06667134430868811, 0.14945134915058084, 0.2190863625159821, 0.26926671930999635, 0.29552422471475276, 0.29552422471475276, 0.26926671930999635, 0.2190863625159821, 0.14945134915058084, 0.06667134430868811]]
 
-
-## Structures 
 
 mutable struct SavingIntegrandGKAffect{
 	IntegrandFunc,
@@ -51,7 +64,6 @@ mutable struct SavingIntegrandGKAffect{
 end
 
 
-# Calculates integral value over (bound_l,bound_r)
 function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bound_r; order=7, tol=1e-10)
 	affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)		 # clears caches
 	affect!.gk_err_cache  = recursive_zero!(affect!.gk_err_cache)
@@ -89,24 +101,60 @@ function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bo
 		recursive_axpy!(1,affect!.gk_step_cache.*(bound_r-bound_l)./2, affect!.accumulation_cache)
 		#affect!.accumulation_cache += affect!.gk_step_cache * (bound_r-bound_l)/2
 	else
-		integrate_gk!(affect!, integrator, bound_l, (bound_l+bound_r)/2, order=order, tol=tol)
-		integrate_gk!(affect!, integrator, (bound_l+bound_r)/2, bound_r, order=order, tol=tol)
+		integrate_gk!(affect!, integrator, bound_l, (bound_l+bound_r)/2, order=order, tol=tol/2)
+		integrate_gk!(affect!, integrator, (bound_l+bound_r)/2, bound_r, order=order, tol=tol/2)
 	end
 end
 
 
 function (affect!::SavingIntegrandGKAffect)(integrator)
-	n = 7 # alg order
-        accumulation_cache = recursive_zero!(affect!.accumulation_cache)
-	integrate_gk!(affect!, integrator, integrator.tprev, integrator.t, order=n)   # Calculates integral values for (t_prev,t) into acc_cache
-	push!(affect!.integrand_values.ts, integrator.t)        		      # publishes t_steps
-	push!(affect!.integrand_values.integrand, recursive_copy(affect!.accumulation_cache))
-	u_modified!(integrator, false)						      # ???
+    n = 0
+    if integrator.sol.prob isa Union{SDEProblem, RODEProblem}
+        n = 10
+    else
+        n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
+    end
+    accumulation_cache = recursive_zero!(affect!.accumulation_cache)
+    integrate_gk!(affect!, integrator, integrator.tprev, integrator.t, order=n)
+    push!(affect!.integrand_values.ts, integrator.t)
+    push!(affect!.integrand_values.integrand, recursive_copy(affect!.accumulation_cache))
+    u_modified!(integrator, false)						      # ???
 end
 
 
-## Exports and inclusion
 
+"""
+```julia
+IntegratingGKCallback(integrand_func,
+    integrand_values::IntegrandValues, integrand_prototype)
+```
+
+Let one define a function `integrand_func(u, t, integrator)::typeof(integrand_prototype)` which
+returns Integral(integrand_func(u(t),t)dt) over the problem tspan.
+
+## Arguments
+
+  - `integrand_func(out, u, t, integrator)` for in-place problems and `out = integrand_func(u, t, integrator)` for
+    out-of-place problems. Returns the quantity in the integral for computing dG/dp.
+    Note that for out-of-place problems, this should allocate the output (not as a view to `u`).
+  - `integrand_values::IntegrandValues` is the types that `integrand_func` will return, i.e.
+    `integrand_func(t, u, integrator)::integrandType`. It's specified via
+    `IntegrandValues(integrandType)`, i.e. give the type
+    that `integrand_func` will output (or higher compatible type).
+  - `integrand_prototype` is a prototype of the output from the integrand.
+
+The outputted values are saved into `integrand_values`. The values are found
+via `integrand_values.integrand`.
+
+!!! note
+
+    Method has automatic error control (h-adaptive quadrature).
+
+    This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
+    solvers are required.
+
+    If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
+"""
 
 function IntegratingGKCallback(
 	integrand_func, integrand_values::IntegrandValues, integrand_prototype)
