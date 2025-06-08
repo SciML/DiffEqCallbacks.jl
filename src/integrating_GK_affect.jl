@@ -63,7 +63,9 @@ function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bo
 			recursive_axpy!(g_weights[order][div(i,2)],
 				affect!.integrand_func(integrator(t_temp), t_temp, integrator),affect!.gk_err_cache)
 		end		
-		print("\ngk_step_cache is: ", affect!.gk_step_cache, "\n")
+#		print("\ngk_step_cache is: ", affect!.gk_step_cache, " | ")
+#		print("gk_err_cache  is: ", affect!.gk_err_cache,  " | ")
+#		print("bounds are: ($bound_l, $bound_r)")
 	end
 	if abs((affect!.gk_step_cache[1] - affect!.gk_err_cache[1])*(bound_r-bound_l)/2)<tol
 		affect!.accumulation_cache += affect!.gk_step_cache * (bound_r-bound_l)/2
@@ -78,8 +80,11 @@ function (affect!::SavingIntegrandGKAffect)(integrator)
 	n = 3 # alg order
         accumulation_cache = recursive_zero!(affect!.accumulation_cache)
 	integrate_gk!(affect!, integrator, integrator.tprev, integrator.t) 	      # Calculates integral values for (t_prev,t) into acc_cache
+		print("\naccumulation cache is: ", affect!.accumulation_cache)
 	push!(affect!.integrand_values.ts, integrator.t)        		      # publishes t_steps
-	push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache)) # publishes integral cache
+	push!(affect!.integrand_values.integrand, recursive_copy(affect!.accumulation_cache))
+	print("\nadded value is: ", affect!.integrand_values.integrand[end])
+#	push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache)) # publishes integral cache
 	u_modified!(integrator, false)						      # ???
 end
 
