@@ -57,15 +57,33 @@ function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bo
 	affect!.gk_err_cache  = recursive_zero!(affect!.gk_err_cache)
 	for i in 1:(2*order+1)							 # iterates over gk points of 1 interval
 		t_temp = (gk_points[order][i]+1)*((bound_r-bound_l)/2) + bound_l # gets the t_point currently looked at
-		recursive_axpy!(gk_weights[order][i],
-				affect!.integrand_func(integrator(t_temp), t_temp, integrator),affect!.gk_step_cache)		
-		if i%2==0							 
-			recursive_axpy!(g_weights[order][div(i,2)],
-				affect!.integrand_func(integrator(t_temp), t_temp, integrator),affect!.gk_err_cache)
-		end		
-#		print("\ngk_step_cache is: ", affect!.gk_step_cache, " | ")
-#		print("gk_err_cache  is: ", affect!.gk_err_cache,  " | ")
-#		print("bounds are: ($bound_l, $bound_r)")
+		if DiffEqBase.isinplace(integrator.sol.prob)
+			curu = first(get_tmp_cache(integrator))
+			integrator(curu,t_temp)
+			if affect!.integrand_cache == nothing 
+				recursive_axpy!(gk_weights[order][i],
+						affect!.integrand_func(curu, t_temp, integrator),affect!.gk_step_cache)
+				if i%2==0
+					recursive_axpy!(g_weights[order][div(i,2)],
+						affect!.integrand_func(curu, t_temp, integrator),affect!.gk_err_cache)
+				end
+			else
+				affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
+				recursive_axpy!(gk_weights[order][i],
+						affect!.integrand_cache, affect!.gk_step_cache)
+				if i%2==0
+					recursive_axpy!(g_weights[order][div(i,2)],
+						affect!.integrand_cache, affect!.gk_err_cache)
+				end
+			end
+		else
+			recursive_axpy!(gk_weights[order][i],
+					affect!.integrand_func(integrator(t_temp), t_temp, integrator),affect!.gk_step_cache)		
+			if i%2==0							 
+				recursive_axpy!(g_weights[order][div(i,2)],
+					affect!.integrand_func(integrator(t_temp), t_temp, integrator),affect!.gk_err_cache)
+			end		
+		end
 	end
 	if abs((affect!.gk_step_cache[1] - affect!.gk_err_cache[1])*(bound_r-bound_l)/2)<tol
 		affect!.accumulation_cache += affect!.gk_step_cache * (bound_r-bound_l)/2
@@ -80,11 +98,8 @@ function (affect!::SavingIntegrandGKAffect)(integrator)
 	n = 3 # alg order
         accumulation_cache = recursive_zero!(affect!.accumulation_cache)
 	integrate_gk!(affect!, integrator, integrator.tprev, integrator.t) 	      # Calculates integral values for (t_prev,t) into acc_cache
-		print("\naccumulation cache is: ", affect!.accumulation_cache)
 	push!(affect!.integrand_values.ts, integrator.t)        		      # publishes t_steps
 	push!(affect!.integrand_values.integrand, recursive_copy(affect!.accumulation_cache))
-	print("\nadded value is: ", affect!.integrand_values.integrand[end])
-#	push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache)) # publishes integral cache
 	u_modified!(integrator, false)						      # ???
 end
 
