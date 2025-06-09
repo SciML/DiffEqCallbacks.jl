@@ -23,6 +23,17 @@ sol = solve(prob, Euler(),
 print("Done test 2")
 
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
+function compute_dGdp(integrand)
+    temp = zeros(length(integrand.integrand), length(integrand.integrand[1]))
+    for i in 1:length(integrand.integrand)
+        for j in 1:length(integrand.integrand[1])
+            temp[i, j] = integrand.integrand[i][j]
+        end
+    end
+    return sum(temp, dims = 1)[:]
+end
+
+
 
 function simple_linear_system(u, p, t)
     a, b = p
@@ -134,7 +145,9 @@ prob_adjoint_inplace = ODEProblem(
     p,
     callback = cb_inplace)
 sol_adjoint = solve(prob_adjoint, Tsit5(), abstol = 1e-14, reltol = 1e-14)
+# out-of-place is done
 sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, reltol = 1e-14)
+# in-place is done
 
 dGdp_new = compute_dGdp(integrand_values)
 dGdp_new_inplace = compute_dGdp(integrand_values_inplace)
