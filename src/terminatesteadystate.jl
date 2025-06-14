@@ -7,19 +7,30 @@ function allDerivPass(integrator, abstol, reltol, min_t)
         return false
     end
 
-    if DiffEqBase.isinplace(integrator.sol.prob)
-        testval = first(get_tmp_cache(integrator))
-        DiffEqBase.get_du!(testval, integrator)
-        if integrator.sol.prob isa DiffEqBase.DiscreteProblem
-            @. testval = testval - integrator.u
+    testval = if integrator.sol.prob isa DiscreteProblem
+        if DiffEqBase.isinplace(integrator.sol.prob)
+            testval = first(get_tmp_cache(integrator))
+            @. testval = integrator.u - integrator.uprev
+        else
+            testval = integrator.u .- integrator.uprev
         end
     else
-        testval = get_du(integrator)
-        if integrator.sol.prob isa DiffEqBase.DiscreteProblem
-            testval = testval - integrator.u
+        if DiffEqBase.isinplace(integrator.sol.prob)
+            testval = first(get_tmp_cache(integrator))
+            DiffEqBase.get_du!(testval, integrator)
+            if integrator.sol.prob isa DiffEqBase.DiscreteProblem
+                @. testval = testval - integrator.u
+            end
+            testval
+        else
+            testval = get_du(integrator)
+            if integrator.sol.prob isa DiffEqBase.DiscreteProblem
+                testval = testval - integrator.u
+            end
+            testval
         end
     end
-
+    
     if integrator.u isa Array
         return all(abs(d) <= max(abstol, reltol * abs(u))
         for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
