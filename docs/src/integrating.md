@@ -28,11 +28,14 @@ that introduces discontinuities, like other callbacks, in a way that is more acc
 The `IntegratingSumCallback` is the same, but instead of returning the timeseries of the interval results of the integration,
 it simply returns the final integral value.
 
+The `IntegratingGKCallback` uses Gauss-Kronrod quadrature method in order to allow for error control.
+
 ```@docs
 IntegratingCallback
 IntegrandValues
 IntegratingSumCallback
 IntegrandValuesSum
+IntegratingGKCallback
 ```
 
 ## Example
@@ -67,4 +70,11 @@ sol = solve(prob, Euler(),
         (u, t, integrator) -> [u[1]], integrated, Float64[0.0]),
     dt = 0.1)
 @test integrated.integrand[1] == 0.5
+
+integrated = IntegrandValues(Float64, Vector{Float64})
+sol = solve(prob, Euler(),
+    callback = IntegratingGKCallback(
+        (u, t, integrator) -> [cos.(1000*u[1])], integrated, Float64[0.0], 1e-7),
+    dt = 0.1)
+@test sum(integrated.integrand)[1] .≈ sin(1000)/1000
 ```
