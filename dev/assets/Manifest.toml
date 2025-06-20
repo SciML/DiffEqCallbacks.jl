@@ -373,7 +373,7 @@ version = "6.176.0"
 deps = ["ConcreteStructs", "DataStructures", "DiffEqBase", "DifferentiationInterface", "Functors", "LinearAlgebra", "Markdown", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArraysCore"]
 path = "/home/runner/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
-version = "4.6.0"
+version = "4.7.0"
 
 [[deps.DiffResults]]
 deps = ["StaticArraysCore"]
