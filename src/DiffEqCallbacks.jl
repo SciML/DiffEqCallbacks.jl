@@ -33,5 +33,6 @@ include("iterative_and_periodic.jl")
 include("terminatesteadystate.jl")
 include("preset_time.jl")
 include("probints.jl")
+include("integrating_GK_affect.jl")
 
 end # module
