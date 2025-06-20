@@ -155,7 +155,6 @@ via `integrand_values.integrand`.
 
     If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
 """
-
 function IntegratingGKCallback(
 	integrand_func, integrand_values::IntegrandValues, integrand_prototype, tol=1e-7)
     affect! = SavingIntegrandGKAffect(integrand_func, integrand_values, integrand_prototype,
