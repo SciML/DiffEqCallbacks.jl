@@ -64,11 +64,11 @@ mutable struct SavingIntegrandGKAffect{
 end
 
 
-function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bound_r; order=7, tol=1e-10)
-	affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)		 # clears caches
+function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bound_r; order=7, tol=1e-7)
+	affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)
 	affect!.gk_err_cache  = recursive_zero!(affect!.gk_err_cache)
-	for i in 1:(2*order+1)							 # iterates over gk points of 1 interval
-		t_temp = (gk_points[order][i]+1)*((bound_r-bound_l)/2) + bound_l # gets the t_point currently looked at
+	for i in 1:(2*order+1)					
+		t_temp = (gk_points[order][i]+1)*((bound_r-bound_l)/2) + bound_l 
 		if DiffEqBase.isinplace(integrator.sol.prob)
 			curu = first(get_tmp_cache(integrator))
 			integrator(curu,t_temp)
@@ -99,7 +99,6 @@ function integrate_gk!(affect!::SavingIntegrandGKAffect, integrator, bound_l, bo
 	end
 	if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache).*(bound_r-bound_l)./2))<tol
 		recursive_axpy!(1,affect!.gk_step_cache.*(bound_r-bound_l)./2, affect!.accumulation_cache)
-		#affect!.accumulation_cache += affect!.gk_step_cache * (bound_r-bound_l)/2
 	else
 		integrate_gk!(affect!, integrator, bound_l, (bound_l+bound_r)/2, order=order, tol=tol/2)
 		integrate_gk!(affect!, integrator, (bound_l+bound_r)/2, bound_r, order=order, tol=tol/2)
@@ -118,7 +117,7 @@ function (affect!::SavingIntegrandGKAffect)(integrator)
     integrate_gk!(affect!, integrator, integrator.tprev, integrator.t, order=n)
     push!(affect!.integrand_values.ts, integrator.t)
     push!(affect!.integrand_values.integrand, recursive_copy(affect!.accumulation_cache))
-    u_modified!(integrator, false)						      # ???
+    u_modified!(integrator, false)						      
 end
 
 
@@ -165,7 +164,3 @@ function IntegratingGKCallback(
 end
 
 export IntegratingGKCallback
-
-
-
-

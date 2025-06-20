@@ -11,7 +11,7 @@ sol = solve(prob, Euler(),
         (u, t, integrator) -> [1.0], integrated, Float64[0.0]),
     dt = 0.1)
 @test all(integrated.integrand .≈ [[0.1] for i in 1:10])
-print("Done test 1")
+print("Done test 1\n")
 
 # enters reccursion
 integrated = IntegrandValues(Float64, Vector{Float64})
@@ -20,9 +20,8 @@ sol = solve(prob, Euler(),
         (u, t, integrator) -> [cos.(1000*u[1])], integrated, Float64[0.0]),
     dt = 0.1)
 @test sum(integrated.integrand)[1] .≈ sin(1000)/1000
-print("Done test 2")
+print("Done test 2\n")
 
-#### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 function compute_dGdp(integrand)
     temp = zeros(length(integrand.integrand), length(integrand.integrand[1]))
     for i in 1:length(integrand.integrand)
@@ -33,7 +32,17 @@ function compute_dGdp(integrand)
     return sum(temp, dims = 1)[:]
 end
 
+function compute_dGdp_nt(integrand)
+    temp = zeros(length(integrand.integrand), 4)
+    for i in 1:length(integrand.integrand)
+        temp[i, 1:2] .= integrand.integrand[i].x.αβ
+        temp[i, 3:4] .= integrand.integrand[i].δγ
+    end
+    return sum(temp, dims = 1)[:]
+end
 
+
+#### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 
 function simple_linear_system(u, p, t)
     a, b = p
@@ -155,4 +164,4 @@ dGdp_analytical = analytical_derivative(p, tspan[end])
 
 @test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
 @test isapprox(dGdp_analytical, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
-print("Done test 3")
+print("\n\nDone Linear test \n\n")
