@@ -110,7 +110,7 @@ end
 function (affect!::SavingIntegrandGKAffect)(integrator)
     n = 0
     if integrator.sol.prob isa Union{SDEProblem, RODEProblem}
-        n = 10
+        throw("Gauss-Kronrod algorithm is not necessarily convergent for this problem type")
     else
         n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
     end
