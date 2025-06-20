@@ -61,6 +61,7 @@ mutable struct SavingIntegrandGKAffect{
 	accumulation_cache::IntegrandCacheType
 	gk_step_cache::IntegrandCacheType
 	gk_err_cache::IntegrandCacheType
+	tol::Float64
 end
 
 
@@ -114,7 +115,7 @@ function (affect!::SavingIntegrandGKAffect)(integrator)
         n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
     end
     accumulation_cache = recursive_zero!(affect!.accumulation_cache)
-    integrate_gk!(affect!, integrator, integrator.tprev, integrator.t, order=n)
+    integrate_gk!(affect!, integrator, integrator.tprev, integrator.t, order=n, tol=affect!.tol)
     push!(affect!.integrand_values.ts, integrator.t)
     push!(affect!.integrand_values.integrand, recursive_copy(affect!.accumulation_cache))
     u_modified!(integrator, false)						      
@@ -156,9 +157,9 @@ via `integrand_values.integrand`.
 """
 
 function IntegratingGKCallback(
-	integrand_func, integrand_values::IntegrandValues, integrand_prototype)
+	integrand_func, integrand_values::IntegrandValues, integrand_prototype, tol=1e-7)
     affect! = SavingIntegrandGKAffect(integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype))
+        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), tol)
     condition = true_condition
     DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
