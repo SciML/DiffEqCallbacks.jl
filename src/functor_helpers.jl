@@ -31,6 +31,7 @@ recursive_zero!(x) = fmap(internal_zero!, x; exclude = isleaf)
 
 internal_zero!(x::AbstractArray) = fill!(x, false)
 internal_zero!(x) = nothing
+
 """
     recursive_sub!(y, x)
 
@@ -40,15 +41,7 @@ recursive_sub!(y, x) = fmap(internal_sub!, y, x; exclude = isleaf)
 
 internal_sub!(y::AbstractArray, x::AbstractArray) = y .-= x
 internal_sub!(y, x) = nothing
-"""
-    recursive_sub(y, x)
 
-`y .- x` for generic `x` and `y`. This is used to handle non-array parameters!
-"""
-recursive_sub(y, x) = fmap(internal_sub, y, x; exclude = isleaf)
-
-internal_sub(y::AbstractArray, x::AbstractArray) = y .- x
-internal_sub(y, x) = nothing
 """
     recursive_add!(y, x)
 
@@ -58,33 +51,7 @@ recursive_add!(y, x) = fmap(internal_add!, y, x; exclude = isleaf)
 
 internal_add!(y::AbstractArray, x::AbstractArray) = y .+= x
 internal_add!(y, x) = nothing
-"""
-    recursive_sum(x)
 
-`sum(x)` for generic `x`. This is used to handle non-array parameters!
-"""
-recursive_sum(x) = fmap(internal_sum, x; exclude=isleaf)
-
-internal_sum(x::AbstractArray) = sum(x)
-internal_sum(x) = nothing
-"""
-    recursive_mul(x,y)
-
-`y .* x` for generic `x` and `y`. This is used to handle non-array parameters!
-"""
-recursive_mul(x,y) = fmap(internal_mul, y, x; exclude = isleaf)
-
-internal_mul(x::AbstractArray, y::AbstractArray) = x.*y
-internal_mul(x,y) = nothing
-"""
-    recursive_abs(x)
-
-`abs.(x)` for generic `x`. This is used to handle non-array parameters!
-"""
-recursive_abs(x) = fmap(internal_abs, x; exclude=isleaf)
-
-internal_abs(x::AbstractArray) = abs.(x)
-internal_abs(x) = nothing
 """
     allocate_vjp(λ, x)
     allocate_vjp(x)
