@@ -11,16 +11,14 @@ sol = solve(prob, Euler(),
         (u, t, integrator) -> [1.0], integrated, Float64[0.0]),
     dt = 0.1)
 @test all(integrated.integrand .≈ [[0.1] for i in 1:10])
-print("Done test 1\n")
 
-# enters reccursion
+# test to enter reccursion
 integrated = IntegrandValues(Float64, Vector{Float64})
 sol = solve(prob, Euler(),
     callback = IntegratingGKCallback(
         (u, t, integrator) -> [cos.(1000*u[1])], integrated, Float64[0.0]),
     dt = 0.1)
 @test sum(integrated.integrand)[1] .≈ sin(1000)/1000
-print("Done test 2\n")
 
 function compute_dGdp(integrand)
     temp = zeros(length(integrand.integrand), length(integrand.integrand[1]))
@@ -164,4 +162,4 @@ dGdp_analytical = analytical_derivative(p, tspan[end])
 
 @test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
 @test isapprox(dGdp_analytical, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
-print("\n\nDone Linear test \n\n")
+

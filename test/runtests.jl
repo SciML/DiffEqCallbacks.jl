@@ -11,9 +11,6 @@ const GROUP = get(ENV, "GROUP", "All")
     end
 
     if GROUP == "All" || GROUP == "Core"
-	@time @testset "Integrating_GK_tests" begin
-	    include("integrating_GK_tests.jl")
-	end
         @time @testset "AutoAbstol" begin
             include("autoabstol_tests.jl")
         end
@@ -53,6 +50,9 @@ const GROUP = get(ENV, "GROUP", "All")
         @time @testset "Integrating sum tests" begin
             include("integrating_sum_tests.jl")
         end
+	@time @testset "Integrating_GK_tests" begin
+	    include("integrating_GK_tests.jl")
+	end
         @time @testset "Saving tests" begin
             include("saving_tests.jl")
         end
