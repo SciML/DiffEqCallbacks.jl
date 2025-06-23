@@ -30,12 +30,16 @@ it simply returns the final integral value.
 
 The `IntegratingGKCallback` uses Gauss-Kronrod quadrature method in order to allow for error control.
 
+The `IntegratingGKSumCallback` is the same, but instead of returning the timeseries of the interval results of the integration,
+it simply returns the final integral value.
+
 ```@docs
 IntegratingCallback
 IntegrandValues
 IntegratingSumCallback
 IntegrandValuesSum
 IntegratingGKCallback
+IntegratingGKSumCallback
 ```
 
 ## Example
@@ -77,4 +81,11 @@ sol = solve(prob, Euler(),
         (u, t, integrator) -> [cos.(1000*u[1])], integrated, Float64[0.0], 1e-7),
     dt = 0.1)
 @test sum(integrated.integrand)[1] .≈ sin(1000)/1000
+
+integrated = IntegrandValuesSum(zeros(1))
+sol = solve(prob, Euler(),
+    callback = IntegratingGKSumCallback(
+        (u, t, integrator) -> [cos.(1000*u[1])], integrated, Float64[0.0], 1e-7),
+    dt = 0.1)
+@test integrated.integrand[1] ≈ sin(1000)/1000
 ```

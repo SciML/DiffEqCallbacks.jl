@@ -50,9 +50,12 @@ const GROUP = get(ENV, "GROUP", "All")
         @time @testset "Integrating sum tests" begin
             include("integrating_sum_tests.jl")
         end
-	@time @testset "Integrating_GK_tests" begin
+	@time @testset "Integrating GK tests" begin
 	    include("integrating_GK_tests.jl")
 	end
+	@time @testset "Integrating GK Sum tests" begin
+	    include("integrating_GK_sum_tests.jl")
+        end
         @time @testset "Saving tests" begin
             include("saving_tests.jl")
         end
