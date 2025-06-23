@@ -1,7 +1,7 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "4.7.0"
+version = "4.8.0"
 
 [deps]
 ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
