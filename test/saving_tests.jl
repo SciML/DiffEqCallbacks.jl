@@ -167,8 +167,7 @@ import DiffEqCallbacks: as_array, finish!
 as_array(T::Type{<:AbstractArray}) = T
 as_array(T::Type{<:Number}) = Vector{T}
 
-if VERSION >= v"1.9" # stack
-    function test_linearization(prob,
+function test_linearization(prob,
             solver;
             max_deriv = 0,
             abstol = 1e-6,
@@ -243,4 +242,3 @@ if VERSION >= v"1.9" # stack
 
     # We do not support 2d states yet.
     #test_linearization(prob_ode_2Dlinear, Tsit5())
-end
