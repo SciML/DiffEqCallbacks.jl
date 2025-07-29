@@ -228,13 +228,15 @@ function init_manifold_projection_nonlinear_problem(
         λ = manifold(ũ, p)
     end
 
-    J, di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
+    J,
+    di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
         gu, ũ, p)
     z = vcat(vec(λ), vec(ũ))
 
     nlfunc = if iip
         let λlen = length(λ), λsz = size(λ), zsz = size(ũ)
-            @views (resid, u, ps) -> begin
+            @views (resid, u,
+                ps) -> begin
                 ũ2, J2, p2 = ps
                 λ2, z2 = u[1:λlen], u[(λlen + 1):end]
                 manifold(reshape(resid[1:λlen], λsz), reshape(z2, zsz), p2)
@@ -322,7 +324,8 @@ function init_manifold_projection(IIP::Val{iip}, manifold, autodiff, manifold_ja
         λ = manifold(ũ, p)
     end
 
-    J, di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
+    J,
+    di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
         gu, ũ, p)
     JJᵀ = J * J'
     JJᵀfact = safe_factorize!(JJᵀ)

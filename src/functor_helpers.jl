@@ -58,8 +58,10 @@ internal_add!(y, x) = nothing
 
 `similar(λ, size(x))` for generic `x`. This is used to handle non-array parameters!
 """
-allocate_vjp(λ::AbstractArray, x) = fmap(
-    Base.Fix1(allocate_vjp_internal, λ), x; exclude = isleaf)
+function allocate_vjp(λ::AbstractArray, x)
+    fmap(
+        Base.Fix1(allocate_vjp_internal, λ), x; exclude = isleaf)
+end
 allocate_vjp(x) = fmap(similar, x)
 
 allocate_vjp_internal(λ::AbstractArray, x) = similar(λ, size(x))
