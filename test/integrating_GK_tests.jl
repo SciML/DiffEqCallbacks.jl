@@ -39,7 +39,6 @@ function compute_dGdp_nt(integrand)
     return sum(temp, dims = 1)[:]
 end
 
-
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 
 function simple_linear_system(u, p, t)
@@ -122,7 +121,7 @@ function analytical_derivative(p, t)
     return [d1, d2]
 end
 
-integrand_values 	 = IntegrandValues(Float64, Vector{Float64})
+integrand_values = IntegrandValues(Float64, Vector{Float64})
 integrand_values_inplace = IntegrandValues(Float64, Vector{Float64})
 function callback_saving_linear(u, t, integrator, sol)
     return -1 .* [-sol(t)[2] 0; 0 sol(t)[1]]' * u
@@ -162,4 +161,3 @@ dGdp_analytical = analytical_derivative(p, tspan[end])
 
 @test isapprox(dGdp_analytical, dGdp_new, atol = 1e-11, rtol = 1e-11)
 @test isapprox(dGdp_analytical, dGdp_new_inplace, atol = 1e-11, rtol = 1e-11)
-

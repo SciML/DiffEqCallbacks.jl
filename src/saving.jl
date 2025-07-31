@@ -410,7 +410,10 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
             u_modified!(integ, false)
         end,
         # In our `initialize`, we create some caches so we allocate less
-        initialize = (c, u, t, integ) -> begin
+        initialize = (c,
+            u,
+            t,
+            integ) -> begin
             u = as_array(u)
             num_us = length(ilsc.u_chunks)
 

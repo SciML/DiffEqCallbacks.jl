@@ -28,7 +28,8 @@ sim = solve(prob, Tsit5(), callback = TerminateSteadyState())
 @test sim.t[end] < tspan[2]
 
 # Don't wrap function
-test_func = (u, t, integrator) -> DiffEqCallbacks.allDerivPass(integrator, 1e-6, 1e-6,
+test_func = (
+    u, t, integrator) -> DiffEqCallbacks.allDerivPass(integrator, 1e-6, 1e-6,
     nothing)
 
 @test_throws MethodError solve(
