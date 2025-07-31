@@ -137,7 +137,10 @@ setup(::AbstractDomainAffect, integrator, ::Val{iip}) where {iip} = ()
 Return whether `u` is an acceptable state vector at the next time point given absolute
 tolerance `abstol`, callback `f`, and other optional arguments.
 """
-isaccepted(u, p, t, tolerance, ::AbstractDomainAffect, ::Val{iip}, args...) where {iip} = true
+function isaccepted(
+        u, p, t, tolerance, ::AbstractDomainAffect, ::Val{iip}, args...) where {iip}
+    true
+end
 
 # specific method definitions for positive domain callback
 

@@ -30,7 +30,7 @@ function allDerivPass(integrator, abstol, reltol, min_t)
             testval
         end
     end
-    
+
     if integrator.u isa Array
         return all(abs(d) <= max(abstol, reltol * abs(u))
         for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
