@@ -6,8 +6,7 @@ mutable struct StepsizeLimiterAffect{F, T, T2, T3}
 end
 # Now make `affect!` for this:
 function (p::StepsizeLimiterAffect)(integrator)
-    integrator.opts.dtmax = p.safety_factor *
-                            p.dtFE(integrator.u, integrator.p, integrator.t)
+    integrator.opts.dtmax = p.safety_factor * p.dtFE(integrator.u, integrator.p, integrator.t)
     if !integrator.opts.adaptive
         if integrator.opts.dtmax < integrator.dtcache
             integrator.dtcache = integrator.opts.dtmax
