@@ -1,5 +1,5 @@
 using OrdinaryDiffEqTsit5, Test, DiffEqBase, DiffEqCallbacks
-import ODEProblemLibrary: prob_ode_linear
+include("test_problems.jl")
 
 prob = prob_ode_linear
 

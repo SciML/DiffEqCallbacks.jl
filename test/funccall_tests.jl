@@ -1,5 +1,5 @@
 using OrdinaryDiffEqTsit5, DiffEqCallbacks, Test
-import ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear
+include("test_problems.jl")
 
 prob = prob_ode_linear
 ts = Vector{Float64}()

@@ -3,9 +3,7 @@ using Test, OrdinaryDiffEqBDF, OrdinaryDiffEqTsit5, OrdinaryDiffEqRosenbrock,
       SciMLSensitivity, Tracker
 using OrdinaryDiffEqNonlinearSolve
 import LinearAlgebra: norm
-import ODEProblemLibrary: prob_ode_2Dlinear,
-                          prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
-                          prob_ode_nonlinchem, prob_ode_lorenz
+include("test_problems.jl")
 using DiffEqCallbacks: sample, store!
 using NonlinearSolve
 
