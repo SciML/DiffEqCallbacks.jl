@@ -26,7 +26,7 @@ function (f::PresetTimeFunction)(c, u, t, integrator)
     for tstop in _tstops
         add_tstop!(integrator, tstop)
     end
-    if t ∈ tstops
+    if insorted(t, tstops)
         f.user_affect!(integrator)
     end
 end
