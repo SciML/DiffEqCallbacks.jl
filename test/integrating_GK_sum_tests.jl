@@ -1,5 +1,4 @@
-using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, SciMLSensitivity, DiffEqCallbacks,
-      Zygote
+using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, DiffEqCallbacks
 using ForwardDiff
 using QuadGK
 using Test
