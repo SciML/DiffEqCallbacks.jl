@@ -29,6 +29,7 @@ jobs:
         group:
           - "Core"
           - "QA"
+          - "NoPre"
         os:
           - "ubuntu-latest"
           - "macos-latest"
