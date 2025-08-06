@@ -38,17 +38,17 @@ cb = ProbIntsUncertainty(0.2, 1)
 ```
 
 This is akin to having an error of approximately 0.2 at each step. We now build
-and solve a [EnsembleProblem](https://docs.sciml.ai/DiffEqDocs/stable/features/ensemble/) for 100 trajectories:
+and solve a [EnsembleProblem](https://docs.sciml.ai/DiffEqDocs/stable/features/ensemble/) for 20 trajectories (reduced from 100 to keep documentation size manageable):
 
 ```@example probnum
 ensemble_prob = EnsembleProblem(prob)
-sim = solve(ensemble_prob, Euler(), trajectories = 100, callback = cb, dt = 1 / 10)
+sim = solve(ensemble_prob, Euler(), trajectories = 20, callback = cb, dt = 1 / 10)
 ```
 
 Now we can plot the resulting Monte Carlo solution:
 
 ```@example probnum
-plot(sim, idxs = (0, 1), linealpha = 0.4)
+plot(sim, idxs = (0, 1), linealpha = 0.8)
 ```
 
 If we increase the amount of error, we see that some parts of the
@@ -57,8 +57,8 @@ equation have less uncertainty than others. For example, at `σ=0.5`:
 ```@example probnum
 cb = ProbIntsUncertainty(0.5, 1)
 ensemble_prob = EnsembleProblem(prob)
-sim = solve(ensemble_prob, Euler(), trajectories = 100, callback = cb, dt = 1 / 10)
-plot(sim, idxs = (0, 1), linealpha = 0.4)
+sim = solve(ensemble_prob, Euler(), trajectories = 20, callback = cb, dt = 1 / 10)
+plot(sim, idxs = (0, 1), linealpha = 0.8)
 ```
 
 But at this amount of noise, we can see how we contract to the true solution by
@@ -67,8 +67,8 @@ decreasing `dt`:
 ```@example probnum
 cb = ProbIntsUncertainty(0.5, 1)
 ensemble_prob = EnsembleProblem(prob)
-sim = solve(ensemble_prob, Euler(), trajectories = 100, callback = cb, dt = 1 / 100)
-plot(sim, idxs = (0, 1), linealpha = 0.4)
+sim = solve(ensemble_prob, Euler(), trajectories = 20, callback = cb, dt = 1 / 100)
+plot(sim, idxs = (0, 1), linealpha = 0.8)
 ```
 
 ## Example 2: Adaptive ProbInts on FitzHugh-Nagumo
@@ -87,8 +87,8 @@ Let's try this with the order 5 `Tsit5()` method on the same problem as before:
 cb = AdaptiveProbIntsUncertainty(5)
 sol = solve(prob, Tsit5())
 ensemble_prob = EnsembleProblem(prob)
-sim = solve(ensemble_prob, Tsit5(), trajectories = 100, callback = cb)
-plot(sim, idxs = (0, 1), linealpha = 0.4)
+sim = solve(ensemble_prob, Tsit5(), trajectories = 20, callback = cb)
+plot(sim, idxs = (0, 1), linealpha = 0.8)
 ```
 
 In this case, we see that the default tolerances give us a very good solution. However, if we increase the tolerance a lot:
@@ -97,9 +97,9 @@ In this case, we see that the default tolerances give us a very good solution. H
 cb = AdaptiveProbIntsUncertainty(5)
 sol = solve(prob, Tsit5())
 ensemble_prob = EnsembleProblem(prob)
-sim = solve(ensemble_prob, Tsit5(), trajectories = 100, callback = cb, abstol = 1e-3,
+sim = solve(ensemble_prob, Tsit5(), trajectories = 20, callback = cb, abstol = 1e-3,
     reltol = 1e-1)
-plot(sim, idxs = (0, 1), linealpha = 0.4)
+plot(sim, idxs = (0, 1), linealpha = 0.8)
 ```
 
 we can see that the moments just after the rise can be uncertain.
@@ -136,8 +136,12 @@ Then we solve the `MonteCarloProblem`
 ```@example probnum
 ensemble_prob = EnsembleProblem(prob)
 sim = solve(ensemble_prob, Tsit5(), trajectories = 100, callback = cb)
-plot(sim, idxs = (0, 1), linealpha = 0.4)
+# Note: Plot generation disabled to reduce documentation size
+# The plot would show trajectories diverging around t=22
+# plot(sim, idxs = (0, 1), linealpha = 0.4)
 ```
+
+![Lorenz Attractor with Uncertainty Quantification](assets/lorenz_uq_tsit5.png)
 
 Here we see that by `t` about 22 we start to receive strong deviations from the "true" solution.
 We can increase
@@ -150,8 +154,12 @@ prob = ODEProblem(g, u0, tspan, p)
 cb = AdaptiveProbIntsUncertainty(7)
 ensemble_prob = EnsembleProblem(prob)
 sim = solve(ensemble_prob, Vern7(), trajectories = 100, callback = cb, reltol = 1e-6)
-plot(sim, idxs = (0, 1), linealpha = 0.4)
+# Note: Plot generation disabled to reduce documentation size
+# The plot would show extended trajectories before divergence
+# plot(sim, idxs = (0, 1), linealpha = 0.4)
 ```
+
+![Extended Lorenz Attractor with Higher Order Method](assets/lorenz_uq_vern7.png)
 
 we see that we can extend the amount of time until we deviate strongly from the "true" solution.
 Of course, for a chaotic system like the Lorenz one presented here, it is impossible to follow the true solution
