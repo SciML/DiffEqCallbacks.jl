@@ -1,5 +1,4 @@
 using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, DiffEqCallbacks
-using ForwardDiff
 using QuadGK
 using Test
 
