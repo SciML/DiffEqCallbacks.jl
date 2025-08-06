@@ -60,4 +60,20 @@ const GROUP = get(ENV, "GROUP", "All")
             include("saving_tests.jl")
         end
     end
+
+    if GROUP == "All" || GROUP == "NoPre"
+        import Pkg
+        Pkg.activate("nopre")
+        Pkg.develop(Pkg.PackageSpec(path = dirname(@__DIR__)))
+        Pkg.instantiate()
+        @time @testset "Integrating Sensitivity tests" begin
+            include("nopre/integrating_sensitivity_tests.jl")
+        end
+        @time @testset "Integrating Sum Sensitivity tests" begin
+            include("nopre/integrating_sum_sensitivity_tests.jl")
+        end
+        @time @testset "Saving Tracker tests" begin
+            include("nopre/saving_tracker_tests.jl")
+        end
+    end
 end
