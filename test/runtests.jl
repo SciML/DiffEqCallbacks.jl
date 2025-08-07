@@ -61,7 +61,7 @@ const GROUP = get(ENV, "GROUP", "All")
         end
     end
 
-    if GROUP == "All" || GROUP == "NoPre"
+    if GROUP == "All" || GROUP == "NoPre" && isempty(VERSION.prerelease)
         import Pkg
         Pkg.activate("nopre")
         Pkg.develop(Pkg.PackageSpec(path = dirname(@__DIR__)))
