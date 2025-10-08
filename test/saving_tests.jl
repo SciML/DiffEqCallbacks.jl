@@ -7,6 +7,7 @@ import ODEProblemLibrary: prob_ode_2Dlinear,
                           prob_ode_nonlinchem, prob_ode_lorenz
 using DiffEqCallbacks: sample, store!
 using NonlinearSolve
+using DiffEqBase: BrownFullBasicInit
 
 # save_everystep, scalar problem
 prob = prob_ode_linear
