@@ -1,4 +1,5 @@
 using DiffEqCallbacks
+import Functors
 using Test
 const GROUP = get(ENV, "GROUP", "All")
 
