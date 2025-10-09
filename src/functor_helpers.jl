@@ -118,3 +118,6 @@ recursive_axpy!(α, x::AbstractArray, y::AbstractArray) = internal_axpy!(α, x, 
 
 internal_axpy!(α, x::AbstractArray, y::AbstractArray) = axpy!(α, x, y)
 internal_axpy!(α, x, y) = nothing
+
+## BigFloat and such are not bitstype
+isleaf(::AbstractArray{T}) where {T} = isbitstype(T) || T <: Number
