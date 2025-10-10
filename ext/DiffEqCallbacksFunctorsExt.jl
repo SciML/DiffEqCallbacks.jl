@@ -22,7 +22,7 @@ recursive_sub!(y, x) = fmap(internal_sub!, y, x; exclude = isleaf)
 
 recursive_add!(y, x) = fmap(internal_add!, y, x; exclude = isleaf)
 
-function allocate_vjp(λ::AbstractArray, x)
+function allocate_vjp(λ, x)
     fmap(
         Base.Fix1(allocate_vjp_internal, λ), x; exclude = isleaf)
 end
