@@ -1,4 +1,4 @@
-using OrdinaryDiffEqTsit5, DiffEqCallbacks
+using OrdinaryDiffEqTsit5, DiffEqCallbacks, DiffEqBase
 using SciMLSensitivity, Tracker
 using Test
 
