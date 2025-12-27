@@ -1,5 +1,5 @@
 using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, SciMLSensitivity, DiffEqCallbacks,
-      Zygote
+      Zygote, Functors
 using ForwardDiff
 using QuadGK
 using Test
@@ -93,7 +93,7 @@ sol_adjoint_inplace = solve(prob_adjoint_inplace, Tsit5(), abstol = 1e-14, relto
 function callback_saving_inplace_nt(du, u, t, integrator, sol)
     temp = sol(t)
     res = vjp((x) -> lotka_volterra(temp, x, t), integrator.p, u)[1]
-    DiffEqCallbacks.fmap((y, x) -> copyto!(y, x), du, res)
+    fmap((y, x) -> copyto!(y, x), du, res)
     DiffEqCallbacks.recursive_neg!(du)
     return du
 end
