@@ -6,6 +6,7 @@ using DiffEqBase: DiffEqBase, get_tstops, get_tstops_array, get_tstops_max
 using DifferentiationInterface: DifferentiationInterface, Constant
 using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!, mul!, ldiv!
 using Markdown: @doc_str
+using PrecompileTools: PrecompileTools
 using RecipesBase: @recipe
 using RecursiveArrayTools: RecursiveArrayTools, DiffEqArray, copyat_or_push!
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, NonlinearFunction,
@@ -34,5 +35,6 @@ include("preset_time.jl")
 include("probints.jl")
 include("integrating_GK_affect.jl")
 include("integrating_GK_sum.jl")
+include("precompilation.jl")
 
 end # module
