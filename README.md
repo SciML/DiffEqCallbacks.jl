@@ -64,3 +64,4 @@ sol = solve(prob, Vern7(), save_everystep = false, callback = cb)
 ```
 
 ![manifold_projection](https://user-images.githubusercontent.com/1814174/184501895-38f081b6-3d7a-434c-adca-63b6b36a315c.png)
+
