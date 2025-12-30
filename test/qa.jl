@@ -6,7 +6,16 @@ using DiffEqCallbacks, Aqua
     Aqua.test_piracies(DiffEqCallbacks,
         treat_as_own = [])
     Aqua.test_project_extras(DiffEqCallbacks)
-    Aqua.test_stale_deps(DiffEqCallbacks)
+    Aqua.test_stale_deps(DiffEqCallbacks; ignore = [:JET])
     Aqua.test_unbound_args(DiffEqCallbacks)
     Aqua.test_undefined_exports(DiffEqCallbacks)
+end
+
+using JET
+@testset "JET" begin
+    # Basic package analysis - only check for critical issues in DiffEqCallbacks itself
+    # Note: Many JET warnings come from dependencies, so we use target_modules filter
+    @test_opt target_modules = (DiffEqCallbacks,) DiffEqCallbacks.SavedValues(Float64, Float64)
+    @test_opt target_modules = (DiffEqCallbacks,) DiffEqCallbacks.IntegrandValues(Float64, Float64)
+    @test_opt target_modules = (DiffEqCallbacks,) DiffEqCallbacks.IntegrandValuesSum(Float64)
 end
