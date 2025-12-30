@@ -4,7 +4,7 @@ using ConcreteStructs: @concrete
 using DataStructures: DataStructures, BinaryMaxHeap, BinaryMinHeap
 using DiffEqBase: DiffEqBase, get_tstops, get_tstops_array, get_tstops_max
 using DifferentiationInterface: DifferentiationInterface, Constant
-using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!, mul!, ldiv!
+using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!, diagind, mul!, ldiv!
 using Markdown: @doc_str
 using PrecompileTools: PrecompileTools
 using RecipesBase: @recipe

@@ -419,6 +419,8 @@ function compute_manifold_jacobian!(J, ::Nothing, autodiff, ::Val{iip}, manifold
     return J
 end
 
+issquare(A::AbstractMatrix) = size(A, 1) == size(A, 2)
+
 function safe_factorize!(A::AbstractMatrix)
     if issquare(A)
         fact = LinearAlgebra.cholesky(A; check = false)
