@@ -173,24 +173,27 @@ function (affect!::SavingIntegrandAffect)(integrator)
     end
     accumulation_cache = recursive_zero!(affect!.accumulation_cache)
     for i in 1:n
-        t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] + (integrator.t + integrator.tprev) / 2
+        t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] +
+                 (integrator.t + integrator.tprev) / 2
         if DiffEqBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing
-                recursive_axpy!(gauss_weights[n][i],
+                accumulation_cache = recursive_axpy!(gauss_weights[n][i],
                     affect!.integrand_func(curu, t_temp, integrator), accumulation_cache)
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-                recursive_axpy!(
+                accumulation_cache = recursive_axpy!(
                     gauss_weights[n][i], affect!.integrand_cache, accumulation_cache)
             end
         else
-            recursive_axpy!(gauss_weights[n][i],
-                affect!.integrand_func(integrator(t_temp), t_temp, integrator), accumulation_cache)
+            accumulation_cache = recursive_axpy!(gauss_weights[n][i],
+                affect!.integrand_func(integrator(t_temp), t_temp, integrator),
+                accumulation_cache)
         end
     end
-    recursive_scalar_mul!(accumulation_cache, (integrator.t - integrator.tprev) / 2)
+    accumulation_cache = recursive_scalar_mul!(accumulation_cache,
+        (integrator.t - integrator.tprev) / 2)
     push!(affect!.integrand_values.ts, integrator.t)
     push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache))
     u_modified!(integrator, false)
