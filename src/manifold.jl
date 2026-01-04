@@ -79,20 +79,26 @@ end
 
 function ManifoldProjection(
         manifold; nlsolve = missing, save = true, autonomous = nothing,
-        manifold_jacobian = nothing, autodiff = nothing, kwargs...)
+        manifold_jacobian = nothing, autodiff = nothing, kwargs...
+    )
     affect! = ManifoldProjection(
-        manifold, autodiff, manifold_jacobian, nlsolve, kwargs, autonomous)
+        manifold, autodiff, manifold_jacobian, nlsolve, kwargs, autonomous
+    )
     return DiscreteCallback(
         Returns(true), affect!; initialize = initialize_manifold_projection,
-        save_positions = (false, save))
+        save_positions = (false, save)
+    )
 end
 
 function ManifoldProjection(
-        manifold, autodiff, manifold_jacobian, nlsolve, kwargs, autonomous)
+        manifold, autodiff, manifold_jacobian, nlsolve, kwargs, autonomous
+    )
     wrapped_manifold = wrap_autonomous_function(autonomous, manifold)
     wrapped_manifold_jacobian = wrap_autonomous_function(autonomous, manifold_jacobian)
-    return ManifoldProjection(wrapped_manifold, wrapped_manifold_jacobian,
-        autodiff, nothing, nlsolve, kwargs, autonomous)
+    return ManifoldProjection(
+        wrapped_manifold, wrapped_manifold_jacobian,
+        autodiff, nothing, nlsolve, kwargs, autonomous
+    )
 end
 
 function (proj::ManifoldProjection)(integrator)
@@ -108,7 +114,7 @@ function (proj::ManifoldProjection)(integrator)
         return
     end
 
-    SciMLBase.copyto!(integrator.u, u)
+    return SciMLBase.copyto!(integrator.u, u)
 end
 
 function initialize_manifold_projection(cb, u, t, integrator)
@@ -117,7 +123,7 @@ end
 function initialize_manifold_projection(affect!::ManifoldProjection, u, t, integrator)
     if affect!.autonomous === nothing
         autonomous = maximum(SciMLBase.numargs(affect!.manifold.f)) ==
-                     2 + SciMLBase.isinplace(integrator.f)
+            2 + SciMLBase.isinplace(integrator.f)
         affect!.manifold.autonomous = autonomous
         affect!.manifold_jacobian !== nothing &&
             (affect!.manifold_jacobian.autonomous = autonomous)
@@ -129,14 +135,16 @@ function initialize_manifold_projection(affect!::ManifoldProjection, u, t, integ
     if affect!.nlsolve === missing
         cache = init_manifold_projection(
             Val(SciMLBase.isinplace(integrator.f)), affect!.manifold, affect!.autodiff,
-            affect!.manifold_jacobian, u, integrator.p; affect!.kwargs...)
+            affect!.manifold_jacobian, u, integrator.p; affect!.kwargs...
+        )
     else
         cache = init_manifold_projection_nonlinear_problem(
             Val(SciMLBase.isinplace(integrator.f)), affect!.manifold, affect!.autodiff,
-            affect!.manifold_jacobian, u, integrator.p, affect!.nlsolve; affect!.kwargs...)
+            affect!.manifold_jacobian, u, integrator.p, affect!.nlsolve; affect!.kwargs...
+        )
     end
     affect!.nlcache = cache
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 export ManifoldProjection
@@ -155,7 +163,7 @@ end
 abstract type AbstractNonAutonomousFunction end
 
 @concrete mutable struct TypedNonAutonomousFunction{autonomous} <:
-                         AbstractNonAutonomousFunction
+    AbstractNonAutonomousFunction
     f
     t::Any
 end
@@ -196,10 +204,13 @@ end
 end
 
 function SciMLBase.reinit!(
-        cache::NonlinearSolveManifoldProjectionCache{iip}, u; p = cache.p) where {iip}
+        cache::NonlinearSolveManifoldProjectionCache{iip}, u; p = cache.p
+    ) where {iip}
     if !cache.first_call || (cache.ũ !== u || cache.p !== p)
-        compute_manifold_jacobian!(cache.J, cache.manifold_jacobian, cache.autodiff,
-            Val(iip), cache.manifold, cache.gu_cache, u, p, cache.di_extras)
+        compute_manifold_jacobian!(
+            cache.J, cache.manifold_jacobian, cache.autodiff,
+            Val(iip), cache.manifold, cache.gu_cache, u, p, cache.di_extras
+        )
     end
     cache.first_call = false
     cache.ũ = u
@@ -207,19 +218,20 @@ function SciMLBase.reinit!(
 
     cache.z[1:length(cache.λ)] .= false
     cache.z[(length(cache.λ) + 1):end] .= vec(u)
-    SciMLBase.reinit!(cache.nlcache, cache.z; p = (u, cache.J, p))
+    return SciMLBase.reinit!(cache.nlcache, cache.z; p = (u, cache.J, p))
 end
 
 function init_manifold_projection_nonlinear_problem(
         IIP::Val{iip}, manifold, autodiff, manifold_jacobian, ũ, p, alg;
-        resid_prototype = nothing, kwargs...) where {iip}
+        resid_prototype = nothing, kwargs...
+    ) where {iip}
     if iip
         if resid_prototype !== nothing
             gu = similar(resid_prototype)
             λ = similar(resid_prototype)
         else
             @warn "`resid_prototype` not provided for in-place problem. Assuming size of \
-                   output is the same as input. This might be incorrect." maxlog=1
+                   output is the same as input. This might be incorrect." maxlog = 1
             gu = similar(ũ)
             λ = similar(ũ)
         end
@@ -229,14 +241,18 @@ function init_manifold_projection_nonlinear_problem(
     end
 
     J,
-    di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
-        gu, ũ, p)
+        di_extras = setup_manifold_jacobian(
+        manifold_jacobian, autodiff, IIP, manifold,
+        gu, ũ, p
+    )
     z = vcat(vec(λ), vec(ũ))
 
     nlfunc = if iip
         let λlen = length(λ), λsz = size(λ), zsz = size(ũ)
-            @views (resid, u,
-                ps) -> begin
+            @views (
+                resid, u,
+                ps,
+            ) -> begin
                 ũ2, J2, p2 = ps
                 λ2, z2 = u[1:λlen], u[(λlen + 1):end]
                 manifold(reshape(resid[1:λlen], λsz), reshape(z2, zsz), p2)
@@ -259,7 +275,8 @@ function init_manifold_projection_nonlinear_problem(
     nlcache = SciMLBase.init(nlprob, alg; kwargs...)
 
     return NonlinearSolveManifoldProjectionCache{iip}(
-        manifold, p, λ, z, ũ, gu, nlcache, true, J, manifold_jacobian, autodiff, di_extras)
+        manifold, p, λ, z, ũ, gu, nlcache, true, J, manifold_jacobian, autodiff, di_extras
+    )
 end
 
 @views function SciMLBase.solve!(cache::NonlinearSolveManifoldProjectionCache{iip}) where {iip}
@@ -292,30 +309,35 @@ end
 end
 
 function SciMLBase.reinit!(
-        cache::SingleFactorizeManifoldProjectionCache{iip}, u; p = cache.p) where {iip}
+        cache::SingleFactorizeManifoldProjectionCache{iip}, u; p = cache.p
+    ) where {iip}
     if !cache.first_call || (cache.ũ !== u || cache.p !== p)
-        compute_manifold_jacobian!(cache.J, cache.manifold_jacobian, cache.autodiff,
-            Val(iip), cache.manifold, cache.gu_cache, u, p, cache.di_extras)
+        compute_manifold_jacobian!(
+            cache.J, cache.manifold_jacobian, cache.autodiff,
+            Val(iip), cache.manifold, cache.gu_cache, u, p, cache.di_extras
+        )
         mul!(cache.JJᵀ, cache.J, cache.J')
         cache.JJᵀfact = safe_factorize!(cache.JJᵀ)
     end
     cache.first_call = false
     cache.ũ = u
-    cache.p = p
+    return cache.p = p
 end
 
 default_abstol(::Type{T}) where {T} = real(oneunit(T)) * (eps(real(one(T))))^(4 // 5)
 
-function init_manifold_projection(IIP::Val{iip}, manifold, autodiff, manifold_jacobian, ũ,
+function init_manifold_projection(
+        IIP::Val{iip}, manifold, autodiff, manifold_jacobian, ũ,
         p; abstol = default_abstol(eltype(ũ)), maxiters = 1000,
-        resid_prototype = nothing, kwargs...) where {iip}
+        resid_prototype = nothing, kwargs...
+    ) where {iip}
     if iip
         if resid_prototype !== nothing
             gu = similar(resid_prototype)
             λ = similar(resid_prototype)
         else
             @warn "`resid_prototype` not provided for in-place problem. Assuming size of \
-                   output is the same as input. This might be incorrect." maxlog=1
+                   output is the same as input. This might be incorrect." maxlog = 1
             gu = similar(ũ)
             λ = similar(ũ)
         end
@@ -325,14 +347,17 @@ function init_manifold_projection(IIP::Val{iip}, manifold, autodiff, manifold_ja
     end
 
     J,
-    di_extras = setup_manifold_jacobian(manifold_jacobian, autodiff, IIP, manifold,
-        gu, ũ, p)
+        di_extras = setup_manifold_jacobian(
+        manifold_jacobian, autodiff, IIP, manifold,
+        gu, ũ, p
+    )
     JJᵀ = J * J'
     JJᵀfact = safe_factorize!(JJᵀ)
 
     return SingleFactorizeManifoldProjectionCache{iip}(
         manifold, p, abstol, maxiters, ũ, JJᵀfact, similar(ũ), λ, gu,
-        true, J, JJᵀ, manifold_jacobian, autodiff, di_extras)
+        true, J, JJᵀ, manifold_jacobian, autodiff, di_extras
+    )
 end
 
 function SciMLBase.solve!(cache::SingleFactorizeManifoldProjectionCache{iip}) where {iip}
@@ -367,12 +392,15 @@ function SciMLBase.solve!(cache::SingleFactorizeManifoldProjectionCache{iip}) wh
         end
     end
 
-    return (cache.λ_cache, cache.u_cache,
-        ifelse(internal_solve_failed, ReturnCode.ConvergenceFailure, ReturnCode.Success))
+    return (
+        cache.λ_cache, cache.u_cache,
+        ifelse(internal_solve_failed, ReturnCode.ConvergenceFailure, ReturnCode.Success),
+    )
 end
 
 function setup_manifold_jacobian(
-        manifold_jacobian::M, autodiff, ::Val{iip}, manifold, gu, ũ, p) where {M, iip}
+        manifold_jacobian::M, autodiff, ::Val{iip}, manifold, gu, ũ, p
+    ) where {M, iip}
     if iip
         J = similar(ũ, promote_type(eltype(gu), eltype(ũ)), (length(gu), length(ũ)))
         manifold_jacobian(J, ũ, p)
@@ -383,7 +411,8 @@ function setup_manifold_jacobian(
 end
 
 function setup_manifold_jacobian(
-        ::Nothing, autodiff, ::Val{iip}, manifold, gu, ũ, p) where {iip}
+        ::Nothing, autodiff, ::Val{iip}, manifold, gu, ũ, p
+    ) where {iip}
     if iip
         di_extras = DI.prepare_jacobian(manifold, gu, autodiff, ũ, Constant(p))
         J = DI.jacobian(manifold, gu, di_extras, autodiff, ũ, Constant(p))
@@ -395,12 +424,15 @@ function setup_manifold_jacobian(
 end
 
 function setup_manifold_jacobian(
-        ::Nothing, ::Nothing, ::Val{iip}, manifold, gu, ũ, p) where {iip}
+        ::Nothing, ::Nothing, ::Val{iip}, manifold, gu, ũ, p
+    ) where {iip}
     error("`autodiff` is set to `nothing` and analytic manifold jacobian is not provided.")
 end
 
-function compute_manifold_jacobian!(J, manifold_jacobian, autodiff, ::Val{iip},
-        manifold, gu, ũ, p, di_extras) where {iip}
+function compute_manifold_jacobian!(
+        J, manifold_jacobian, autodiff, ::Val{iip},
+        manifold, gu, ũ, p, di_extras
+    ) where {iip}
     if iip
         manifold_jacobian(J, ũ, p)
     else
@@ -409,8 +441,10 @@ function compute_manifold_jacobian!(J, manifold_jacobian, autodiff, ::Val{iip},
     return J
 end
 
-function compute_manifold_jacobian!(J, ::Nothing, autodiff, ::Val{iip}, manifold, gu,
-        ũ, p, di_extras) where {iip}
+function compute_manifold_jacobian!(
+        J, ::Nothing, autodiff, ::Val{iip}, manifold, gu,
+        ũ, p, di_extras
+    ) where {iip}
     if iip
         DI.jacobian!(manifold, gu, J, di_extras, autodiff, ũ, Constant(p))
     else

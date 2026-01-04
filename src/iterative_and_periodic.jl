@@ -17,15 +17,19 @@ effect at `t₁`, you can define `t₂` to apply the next effect.
 
   - `initial_affect` is whether to apply the affect at `t=0` which defaults to `false`
 """
-function IterativeCallback(time_choice, user_affect!, tType = Float64;
+function IterativeCallback(
+        time_choice, user_affect!, tType = Float64;
         initial_affect = false,
-        initialize = (cb, u, t, integrator) -> u_modified!(integrator,
-            initial_affect),
-        kwargs...)
+        initialize = (cb, u, t, integrator) -> u_modified!(
+            integrator,
+            initial_affect
+        ),
+        kwargs...
+    )
     # Value of `t` at which `f` should be called next:
     tnext = Ref{Union{Nothing, eltype(tType)}}(typemax(tType))
     condition = function (u, t, integrator)
-        t == tnext[]
+        return t == tnext[]
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
@@ -54,13 +58,13 @@ function IterativeCallback(time_choice, user_affect!, tType = Float64;
                 tnext[] = tnew
             end
         end
-        nothing
+        return nothing
     end
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_iterative = function (c, u, t, integrator)
         initialize(c, u, t, integrator)
-        if initial_affect
+        return if initial_affect
             tnext[] = t
             affect!(integrator)
         else
@@ -70,7 +74,7 @@ function IterativeCallback(time_choice, user_affect!, tType = Float64;
             end
         end
     end
-    DiscreteCallback(condition, affect!; initialize = initialize_iterative, kwargs...)
+    return DiscreteCallback(condition, affect!; initialize = initialize_iterative, kwargs...)
 end
 
 export IterativeCallback
@@ -85,7 +89,7 @@ end
 function (S::PeriodicCallbackAffect)(integrator)
     add_next_tstop!(integrator, S)
 
-    S.affect!(integrator)
+    return S.affect!(integrator)
 end
 
 function add_next_tstop!(integrator, S)
@@ -101,7 +105,7 @@ function add_next_tstop!(integrator, S)
     =#
     tdir_tnew = integrator.tdir * tnew
     index[] += 1
-    if tdir_tnew < get_tstops_max(integrator)
+    return if tdir_tnew < get_tstops_max(integrator)
         add_tstop!(integrator, tnew)
     end
 end
@@ -137,13 +141,17 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
   - `final_affect` is whether to apply the affect at the final time, which defaults to `false`
   - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
 """
-function PeriodicCallback(f, Δt::Number;
+function PeriodicCallback(
+        f, Δt::Number;
         phase = 0,
         initial_affect = false,
         final_affect = false,
-        initialize = (cb, u, t, integrator) -> u_modified!(integrator,
-            initial_affect),
-        kwargs...)
+        initialize = (cb, u, t, integrator) -> u_modified!(
+            integrator,
+            initial_affect
+        ),
+        kwargs...
+    )
     phase < 0 && throw(ArgumentError("phase offset must be non-negative"))
     # Value of `t` at which `f` should be called next:
     t0 = Ref(typemax(Δt))
@@ -151,7 +159,7 @@ function PeriodicCallback(f, Δt::Number;
 
     condition = function (u, t, integrator)
         fin = isfinished(integrator)
-        (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
+        return (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
@@ -163,22 +171,24 @@ function PeriodicCallback(f, Δt::Number;
         initialize(c, u, t, integrator)
         t0[] = t + phase
         index[] = iszero(phase) ? 0 : -1
-        if initial_affect
+        return if initial_affect
             affect!(integrator)
         else
             add_next_tstop!(integrator, affect!)
         end
     end
 
-    DiscreteCallback(condition, affect!; initialize = initialize_periodic, kwargs...)
+    return DiscreteCallback(condition, affect!; initialize = initialize_periodic, kwargs...)
 end
 
 @inline function isfinished(integrator)
     # Checking for floating point equality is OK here as `DifferentialEquations.jl`
     # sets the time exactly to the final time in the last iteration
     return integrator.t == last(integrator.sol.prob.tspan) ||
-           (hasfield(typeof(integrator), :iter) &&
-            (integrator.iter == integrator.opts.maxiters))
+        (
+        hasfield(typeof(integrator), :iter) &&
+            (integrator.iter == integrator.opts.maxiters)
+    )
 end
 
 export PeriodicCallback

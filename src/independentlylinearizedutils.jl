@@ -20,8 +20,10 @@ mutable struct IndependentlyLinearizedSolutionChunks{T, S}
 
     function IndependentlyLinearizedSolutionChunks{T, S}(
             num_us::Int, num_derivatives::Int = 0,
-            chunk_size::Int = 100) where {T, S}
-        return new([Vector{T}(undef, chunk_size)],
+            chunk_size::Int = 100
+        ) where {T, S}
+        return new(
+            [Vector{T}(undef, chunk_size)],
             [[Matrix{S}(undef, num_derivatives + 1, chunk_size)] for _ in 1:num_us],
             [BitMatrix(undef, num_us, chunk_size)],
             [1 for _ in 1:num_us],
@@ -79,7 +81,7 @@ function get_chunks(ilsc::IndependentlyLinearizedSolutionChunks{T, S}) where {T,
     return (
         ilsc.t_chunks[end],
         ilsc.time_masks[end],
-        [u_chunks[end] for u_chunks in ilsc.u_chunks]
+        [u_chunks[end] for u_chunks in ilsc.u_chunks],
     )
 end
 
@@ -99,7 +101,8 @@ function get_prev_t(ilsc::IndependentlyLinearizedSolutionChunks)
 end
 
 function get_prev_u(
-        ilsc::IndependentlyLinearizedSolutionChunks{T, S}, u_out::Vector{S}) where {T, S}
+        ilsc::IndependentlyLinearizedSolutionChunks{T, S}, u_out::Vector{S}
+    ) where {T, S}
     for u_idx in 1:length(ilsc.u_offsets)
         if ilsc.u_offsets[u_idx] == 1
             if length(ilsc.u_chunks[u_idx]) == 1
@@ -123,10 +126,12 @@ Store a new `us` matrix (one row per derivative level) into our `ilsc`,
 but only the values identified by the given `u_mask`.  The `us` matrix
 should be of the size `(num_us(ilsc), num_derivatives(ilsc))`.
 """
-function store!(ilsc::IndependentlyLinearizedSolutionChunks{T, S},
+function store!(
+        ilsc::IndependentlyLinearizedSolutionChunks{T, S},
         t::T,
         u::AbstractMatrix{S},
-        u_mask::BitVector) where {T, S}
+        u_mask::BitVector
+    ) where {T, S}
     # If `t` has been stored before, drop it.
     # We don't store duplicate timepoints, even though the solver sometimes does.
     if get_prev_t(ilsc) == t
@@ -147,7 +152,7 @@ function store!(ilsc::IndependentlyLinearizedSolutionChunks{T, S},
     end
     ts[ilsc.t_offset] = t
     time_mask[:, ilsc.t_offset] .= u_mask
-    ilsc.t_offset += 1
+    return ilsc.t_offset += 1
 end
 
 """
@@ -176,8 +181,11 @@ mutable struct IndependentlyLinearizedSolution{T, S}
     ilsc::Union{Nothing, IndependentlyLinearizedSolutionChunks{T, S}}
 end
 # Helper function to create an ILS wrapped around an in-progress ILSC
-function IndependentlyLinearizedSolution(ilsc::IndependentlyLinearizedSolutionChunks{
-        T, S}) where {T, S}
+function IndependentlyLinearizedSolution(
+        ilsc::IndependentlyLinearizedSolutionChunks{
+            T, S,
+        }
+    ) where {T, S}
     ils = IndependentlyLinearizedSolution(
         T[],
         Matrix{S}[],
@@ -188,7 +196,8 @@ function IndependentlyLinearizedSolution(ilsc::IndependentlyLinearizedSolutionCh
 end
 # Automatically create an ILS wrapped around an ILSC from a `prob`
 function IndependentlyLinearizedSolution(
-        prob::SciMLBase.AbstractDEProblem, num_derivatives = 0)
+        prob::SciMLBase.AbstractDEProblem, num_derivatives = 0
+    )
     T = eltype(prob.tspan)
     U = isnothing(prob.u0) ? Float64 : eltype(prob.u0)
     N = isnothing(prob.u0) ? 0 : length(prob.u0)
@@ -197,7 +206,7 @@ function IndependentlyLinearizedSolution(
 end
 
 function num_derivatives(ils::IndependentlyLinearizedSolution)
-    !isempty(ils.us) ? size(first(ils.us), 1) : 0
+    return !isempty(ils.us) ? size(first(ils.us), 1) : 0
 end
 num_us(ils::IndependentlyLinearizedSolution) = length(ils.us)
 Base.size(ils::IndependentlyLinearizedSolution) = size(ils.time_mask)
@@ -228,8 +237,10 @@ function finish!(ils::IndependentlyLinearizedSolution{T, S}, return_code) where 
     else
         ts = vcat(trim_chunk(ilsc.t_chunks, ilsc.t_offset)...)
         time_mask = hcat(trim_chunk(ilsc.time_masks, ilsc.t_offset)...)
-        us = [hcat(trim_chunk(ilsc.u_chunks[u_idx], ilsc.u_offsets[u_idx])...)
-              for u_idx in 1:length(ilsc.u_chunks)]
+        us = [
+            hcat(trim_chunk(ilsc.u_chunks[u_idx], ilsc.u_offsets[u_idx])...)
+                for u_idx in 1:length(ilsc.u_chunks)
+        ]
     end
 
     # Sanity-check lengths
@@ -271,16 +282,20 @@ struct ILSStateCursor
 end
 # Helper to construct a state cursor off of an ILS, at a particular time index
 function ILSStateCursor(ils::IndependentlyLinearizedSolution, u_idx::Int, t_idx::Int = 1)
-    cursor = ILSStateCursor(u_idx,
+    cursor = ILSStateCursor(
+        u_idx,
         1,
         1,
-        findfirst(@view ils.time_mask[u_idx, 2:end]) + 1)
+        findfirst(@view ils.time_mask[u_idx, 2:end]) + 1
+    )
     return seek_forward(ils, cursor, ils.ts[t_idx])
 end
-function interpolate(ils::IndependentlyLinearizedSolution{T},
+function interpolate(
+        ils::IndependentlyLinearizedSolution{T},
         cursor::ILSStateCursor,
         t::T,
-        deriv_idx::Int) where {T}
+        deriv_idx::Int
+    ) where {T}
     u₀ = ils.us[cursor.u_idx][deriv_idx + 1, cursor.idx_u₀]
     u₁ = ils.us[cursor.u_idx][deriv_idx + 1, cursor.idx_u₀ + 1]
     t₀ = ils.ts[cursor.idx_t₀]
@@ -294,23 +309,29 @@ end
 Seek the given `cursor` forward until it contains `t_target`.  Does not seek backward, use `seek()`
 for the more general formulation, this form is optimized for the inner loop of `iterate()`.
 """
-function seek_forward(ils::IndependentlyLinearizedSolution{T},
+function seek_forward(
+        ils::IndependentlyLinearizedSolution{T},
         cursor::ILSStateCursor,
-        t_target::T) where {T}
+        t_target::T
+    ) where {T}
     # We do not test `t_start` because we don't support seeking backward here
     while ils.ts[cursor.idx_t₁] < t_target
         next_t = findfirst(@view ils.time_mask[cursor.u_idx, (cursor.idx_t₁ + 1):end])
-        cursor = ILSStateCursor(cursor.u_idx,
+        cursor = ILSStateCursor(
+            cursor.u_idx,
             cursor.idx_u₀ + 1,
             cursor.idx_t₁,
-            next_t + cursor.idx_t₁)
+            next_t + cursor.idx_t₁
+        )
     end
     return cursor
 end
 
-function Base.seek(ils::IndependentlyLinearizedSolution{T},
+function Base.seek(
+        ils::IndependentlyLinearizedSolution{T},
         cursor::ILSStateCursor,
-        t_target::T) where {T}
+        t_target::T
+    ) where {T}
     # If we need to rewind, just start from the beginning
     if t_target < ils.ts[cursor.idx_t₀]
         cursor = ILSStateCursor(ils, cursor.u_idx)
@@ -327,8 +348,10 @@ function iteration_state(ils::IndependentlyLinearizedSolution{T, S}, t_idx = 1) 
     cursors = seek(ils, t_idx)
     return (t_idx, u, cursors)
 end
-function Base.iterate(ils::IndependentlyLinearizedSolution{T, S},
-        (t_idx, u, cursors) = iteration_state(ils)) where {T, S}
+function Base.iterate(
+        ils::IndependentlyLinearizedSolution{T, S},
+        (t_idx, u, cursors) = iteration_state(ils)
+    ) where {T, S}
     if t_idx > length(ils.ts)
         return nothing
     end
@@ -350,10 +373,12 @@ end
 
 Batch-sample `ils` at the given timepoints for the given derivative level, storing into `out`.
 """
-function sample!(out::Matrix{S},
+function sample!(
+        out::Matrix{S},
         ils::IndependentlyLinearizedSolution{T, S},
         ts::AbstractVector{T},
-        deriv_idx::Int = 0) where {T, S}
+        deriv_idx::Int = 0
+    ) where {T, S}
     sampled_size = (length(ts), length(ils.us))
     if size(out) != sampled_size
         throw(ArgumentError("Output size ($(size(out))) != sampled size ($(sampled_size))"))
@@ -369,9 +394,11 @@ function sample!(out::Matrix{S},
     end
     return out
 end
-function sample(ils::IndependentlyLinearizedSolution{T, S},
+function sample(
+        ils::IndependentlyLinearizedSolution{T, S},
         ts::AbstractVector{T},
-        deriv_idx::Int = 0) where {T, S}
+        deriv_idx::Int = 0
+    ) where {T, S}
     out = Matrix{S}(undef, length(ts), length(ils.us))
     return sample!(out, ils, ts, deriv_idx)
 end

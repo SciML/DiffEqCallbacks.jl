@@ -40,10 +40,12 @@ cb = PresetTimeCallback([1.2], integrator -> notcalled = false)
 sol = solve(prob, Tsit5(), callback = cb)
 @test notcalled
 
-cb = PresetTimeCallback([1.2], integrator -> begin
+cb = PresetTimeCallback(
+    [1.2], integrator -> begin
         global notcalled
         notcalled = false
-    end, filter_tstops = false)
+    end, filter_tstops = false
+)
 sol = solve(prob, Tsit5(), callback = cb)
 @test !notcalled
 
@@ -53,10 +55,12 @@ cb = PresetTimeCallback([-0.2], integrator -> notcalled = false)
 sol = solve(prob, Tsit5(), callback = cb)
 @test notcalled
 
-cb = PresetTimeCallback([-0.2], integrator -> begin
+cb = PresetTimeCallback(
+    [-0.2], integrator -> begin
         global notcalled
         notcalled = false
-    end, filter_tstops = false)
+    end, filter_tstops = false
+)
 sol = solve(prob, Tsit5(), callback = cb)
 @test !notcalled
 
@@ -64,7 +68,7 @@ sol = solve(prob, Tsit5(), callback = cb)
 # https://github.com/SciML/DifferentialEquations.jl/issues/1022
 
 function mod(du, u, p, t)
-    du[1] = -p[1] * u[1]
+    return du[1] = -p[1] * u[1]
 end
 
 p = [1.0]
@@ -92,4 +96,5 @@ sol2 = solve(prob2, Tsit5(), callback = cb1)
 
 _some_test_func(integrator) = u_modified!(integrator, false)
 @inferred PresetTimeCallback(
-    collect(range(0, 10, 100)), _some_test_func, save_positions = (false, false))
+    collect(range(0, 10, 100)), _some_test_func, save_positions = (false, false)
+)

@@ -18,12 +18,12 @@ function (p::StepsizeLimiterAffect)(integrator)
         set_proposed_dt!(integrator, integrator.opts.dtmax)
         integrator.dtcache = integrator.opts.dtmax
     end
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 function StepsizeLimiter_initialize(cb, u, t, integrator)
     cb.affect!.cached_dtcache = integrator.dtcache
-    cb.affect!(integrator)
+    return cb.affect!(integrator)
 end
 
 @doc doc"""
@@ -52,13 +52,17 @@ constraints.
 - `cached_dtcache` should be set to match the type for time when not using
   Float64 values.
 """
-function StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
-        cached_dtcache = 0.0)
+function StepsizeLimiter(
+        dtFE; safety_factor = 9 // 10, max_step = false,
+        cached_dtcache = 0.0
+    )
     affect! = StepsizeLimiterAffect(dtFE, cached_dtcache, safety_factor, max_step)
     condition = true_condition
-    DiscreteCallback(condition, affect!;
+    return DiscreteCallback(
+        condition, affect!;
         initialize = StepsizeLimiter_initialize,
-        save_positions = (false, false))
+        save_positions = (false, false)
+    )
 end
 
 export StepsizeLimiter

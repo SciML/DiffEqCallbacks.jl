@@ -9,13 +9,15 @@ using DiffEqCallbacks: sample, store!, IndependentlyLinearizedSolutionChunks, fi
         [
             [0.0 0.5 1.0;],
             [0.0 0.75 1.0;],
-            [0.0 1.0;]
+            [0.0 1.0;],
         ],
         # time_masks
         BitMatrix(
-            [1 1 0 1
-             1 0 1 1
-             1 0 0 1]
+            [
+                1 1 0 1
+                1 0 1 1
+                1 0 0 1
+            ]
         ),
         # ilsc
         nothing
@@ -60,7 +62,8 @@ display(@benchmark sample(ils, many_ts))
     chunk_size = 10
     num_timepoints = 105
     ilsc = IndependentlyLinearizedSolutionChunks{Float64, Float64}(
-        num_us, num_derivatives, chunk_size)
+        num_us, num_derivatives, chunk_size
+    )
     for t in 1:num_timepoints
         # Storing at `1` and `num_timepoints` is to satisfy that we must sample all points at the start and end
         # We also store a fake derivative that is just equal to 2*u
@@ -68,15 +71,19 @@ display(@benchmark sample(ils, many_ts))
             repeat([1 * Float64(t)], 10),
             repeat([2 * Float64(t)], 10)
         )'
-        time_mask = BitVector([(t % u == 0) || (t == 1 || t == num_timepoints)
-                               for u in 1:num_us])
+        time_mask = BitVector(
+            [
+                (t % u == 0) || (t == 1 || t == num_timepoints)
+                    for u in 1:num_us
+            ]
+        )
         store!(ilsc, Float64(t), us, time_mask)
     end
     # Test that `u_chunks` looks right
     @test length(ilsc.u_chunks) == num_us
     @test length.(ilsc.u_chunks) == [11, 6, 4, 3, 3, 2, 2, 2, 2, 2]
     @test ilsc.u_chunks[1][1] ==
-          hcat(
+        hcat(
         1 .* Float64.(1:chunk_size),
         2 .* Float64.(1:chunk_size)
     )'
@@ -95,7 +102,7 @@ display(@benchmark sample(ils, many_ts))
     # Test that `time_masks` looks right
     @test sum(ilsc.time_masks[1], dims = 2)[:] == [10, 6, 4, 3, 3, 2, 2, 2, 2, 2]
     @test sum(sum.(ilsc.time_masks[1:10], dims = 2))[:] ==
-          [div(100, idx) + ((idx > 1) ? 1 : 0) for idx in 1:10]
+        [div(100, idx) + ((idx > 1) ? 1 : 0) for idx in 1:10]
 
     ils = IndependentlyLinearizedSolution(ilsc)
 

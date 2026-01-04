@@ -8,5 +8,5 @@ pages = [
     "steady_state.md",
     "step_control.md",
     "projection.md",
-    "uncertainty_quantification.md"
+    "uncertainty_quantification.md",
 ]

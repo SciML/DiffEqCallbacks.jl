@@ -13,13 +13,15 @@ end
 Return `IntegrandValuesSum{integrandType}` with empty storage vectors.
 """
 function IntegrandValuesSum(::Type{integrandType}) where {integrandType}
-    IntegrandValuesSum{integrandType}(integrandType)
+    return IntegrandValuesSum{integrandType}(integrandType)
 end
 
 function Base.show(io::IO, integrand_values::IntegrandValuesSum)
     integrandType = eltype(integrand_values.integrand)
-    print(io, "IntegrandValuesSum{integrandType=", integrandType, "}",
-        "\nintegrand:\n", integrand_values.integrand)
+    return print(
+        io, "IntegrandValuesSum{integrandType=", integrandType, "}",
+        "\nintegrand:\n", integrand_values.integrand
+    )
 end
 
 mutable struct SavingIntegrandSumAffect{IntegrandFunc, integrandType, IntegrandCacheType}
@@ -43,21 +45,26 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache === nothing
-                recursive_axpy!(gauss_weights[n][i],
-                    affect!.integrand_func(curu, t_temp, integrator), accumulation_cache)
+                recursive_axpy!(
+                    gauss_weights[n][i],
+                    affect!.integrand_func(curu, t_temp, integrator), accumulation_cache
+                )
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
                 recursive_axpy!(
-                    gauss_weights[n][i], affect!.integrand_cache, accumulation_cache)
+                    gauss_weights[n][i], affect!.integrand_cache, accumulation_cache
+                )
             end
         else
-            recursive_axpy!(gauss_weights[n][i],
-                affect!.integrand_func(integrator(t_temp), t_temp, integrator), accumulation_cache)
+            recursive_axpy!(
+                gauss_weights[n][i],
+                affect!.integrand_func(integrator(t_temp), t_temp, integrator), accumulation_cache
+            )
         end
     end
     recursive_scalar_mul!(accumulation_cache, (integrator.t - integrator.tprev) / 2)
     recursive_add!(affect!.integrand_values.integrand, accumulation_cache)
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 """
@@ -90,12 +97,14 @@ via `integrand_values.integrand`.
     solvers are required.
 """
 function IntegratingSumCallback(
-        integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype)
+        integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype
+    )
     affect! = SavingIntegrandSumAffect(
         integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype))
+        allocate_zeros(integrand_prototype)
+    )
     condition = true_condition
-    DiscreteCallback(condition, affect!, save_positions = (false, false))
+    return DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
 
 export IntegratingSumCallback, IntegrandValuesSum

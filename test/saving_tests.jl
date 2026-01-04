@@ -1,10 +1,10 @@
 using Test, OrdinaryDiffEqBDF, OrdinaryDiffEqTsit5, OrdinaryDiffEqRosenbrock,
-      DiffEqCallbacks, LinearAlgebra
+    DiffEqCallbacks, LinearAlgebra
 using OrdinaryDiffEqNonlinearSolve
 import LinearAlgebra: norm
 import ODEProblemLibrary: prob_ode_2Dlinear,
-                          prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
-                          prob_ode_nonlinchem, prob_ode_lorenz
+    prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
+    prob_ode_nonlinchem, prob_ode_lorenz
 using DiffEqCallbacks: sample, store!
 using NonlinearSolve
 using DiffEqBase: BrownFullBasicInit
@@ -38,8 +38,10 @@ saveat = range(prob.tspan[1], stop = prob.tspan[2], length = 50)
 cb = SavingCallback((u, t, integrator) -> u, saved_values, saveat = saveat)
 sol = solve(prob, Tsit5(), callback = cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
-    eachindex(saved_values.t))
+@test all(
+    idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.0e-15,
+    eachindex(saved_values.t)
+)
 
 # scalar saveat, scalar problem
 saved_values = SavedValues(Float64, Float64)
@@ -47,16 +49,20 @@ saveat = range(prob.tspan[1], stop = prob.tspan[2], length = 50)
 cb = SavingCallback((u, t, integrator) -> u, saved_values, saveat = step(saveat))
 sol = solve(prob, Tsit5(), callback = cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
-    eachindex(saved_values.t))
+@test all(
+    idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.0e-15,
+    eachindex(saved_values.t)
+)
 
 # scalar saveat without start and end
 saved_values = SavedValues(Float64, Float64)
-cb = SavingCallback((u, t, integrator) -> u,
+cb = SavingCallback(
+    (u, t, integrator) -> u,
     saved_values;
     saveat = 0.2,
     save_start = false,
-    save_end = false)
+    save_end = false
+)
 preset = PresetTimeCallback(Float64[], identity)
 sol = solve(prob, Tsit5(); dt = 0.2, adaptive = false, callback = CallbackSet(cb, preset))
 @test sol.t ≈ 0.0:0.2:1.0
@@ -68,16 +74,20 @@ saveat = range(prob2D.tspan[1], stop = prob.tspan[2], length = 50)
 cb = SavingCallback((u, t, integrator) -> copy(u), saved_values, saveat = saveat)
 sol = solve(prob2D, Tsit5(), callback = cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> norm(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
-    eachindex(saved_values.t))
+@test all(
+    idx -> norm(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.0e-15,
+    eachindex(saved_values.t)
+)
 
 saved_values = SavedValues(eltype(prob2D.tspan), eltype(prob2D.u0))
 saveat = range(prob2D.tspan[1], stop = prob.tspan[2], length = 50)
 cb = SavingCallback((u, t, integrator) -> u[1], saved_values, saveat = saveat)
 sol = solve(prob2D, Tsit5(), callback = cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> abs(sol(saveat[idx])[1] - saved_values.saveval[idx]) < 8.e-15,
-    eachindex(saved_values.t))
+@test all(
+    idx -> abs(sol(saveat[idx])[1] - saved_values.saveval[idx]) < 8.0e-15,
+    eachindex(saved_values.t)
+)
 
 # saveat, tdir<0, scalar problem
 prob_inverse = ODEProblem(prob.f, prob.u0, (prob.tspan[end], prob.tspan[1]), 1.01)
@@ -86,8 +96,10 @@ saveat = range(prob_inverse.tspan[1], stop = prob.tspan[2], length = 50)
 cb = SavingCallback((u, t, integrator) -> u, saved_values, saveat = saveat, tdir = -1)
 sol = solve(prob_inverse, Tsit5(), callback = cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
-    eachindex(saved_values.t))
+@test all(
+    idx -> abs(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.0e-15,
+    eachindex(saved_values.t)
+)
 
 # saveat, tdir<0, inplace problem
 prob2D_inverse = ODEProblem(prob2D.f, prob2D.u0, (prob2D.tspan[end], prob2D.tspan[1]), 1.01)
@@ -96,29 +108,37 @@ saveat = range(prob2D_inverse.tspan[1], stop = prob2D_inverse.tspan[2], length =
 cb = SavingCallback((u, t, integrator) -> copy(u), saved_values, saveat = saveat, tdir = -1)
 sol = solve(prob2D_inverse, Tsit5(), callback = cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> norm(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.e-15,
-    eachindex(saved_values.t))
+@test all(
+    idx -> norm(sol(saveat[idx]) - saved_values.saveval[idx]) < 8.0e-15,
+    eachindex(saved_values.t)
+)
 
 saved_values = SavedValues(eltype(prob2D_inverse.tspan), eltype(prob2D_inverse.u0))
 saveat = range(prob2D_inverse.tspan[1], stop = prob2D_inverse.tspan[2], length = 50)
 cb = SavingCallback((u, t, integrator) -> u[1], saved_values, saveat = saveat, tdir = -1)
 sol = solve(prob2D_inverse, Tsit5(), callback = cb)
 @test all(idx -> saveat[idx] == saved_values.t[idx], eachindex(saved_values.t))
-@test all(idx -> abs(sol(saveat[idx])[1] - saved_values.saveval[idx]) < 8.e-15,
-    eachindex(saved_values.t))
+@test all(
+    idx -> abs(sol(saveat[idx])[1] - saved_values.saveval[idx]) < 8.0e-15,
+    eachindex(saved_values.t)
+)
 
 # Make sure it doesn't error with mutable in oop
 prob = ODEProblem((u, p, t) -> u, rand(4, 4), (0.0, 1.0))
 saved_values = SavedValues(Float64, Tuple{Float64, Float64})
-cb = SavingCallback((u, t, integrator) -> (tr(u), norm(u)), saved_values,
-    saveat = 0.0:0.1:1.0)
+cb = SavingCallback(
+    (u, t, integrator) -> (tr(u), norm(u)), saved_values,
+    saveat = 0.0:0.1:1.0
+)
 sol = solve(prob, Tsit5(), callback = cb)
 
 # Save only end
 prob = ODEProblem((du, u, p, t) -> du .= u, rand(4, 4), (0.0, 1.0))
 saved_values = SavedValues(Float64, Tuple{Float64, Float64})
-cb = SavingCallback((u, t, integrator) -> (tr(u), norm(u)), saved_values,
-    save_everystep = false, save_start = false)
+cb = SavingCallback(
+    (u, t, integrator) -> (tr(u), norm(u)), saved_values,
+    save_everystep = false, save_start = false
+)
 sol = solve(prob, Tsit5(), callback = cb)
 @test length(saved_values.t) == 1
 @test saved_values.t[1] == 1.0
@@ -131,44 +151,60 @@ import DiffEqCallbacks: as_array, finish!
 as_array(T::Type{<:AbstractArray}) = T
 as_array(T::Type{<:Number}) = Vector{T}
 
-function test_linearization(prob,
+function test_linearization(
+        prob,
         solver;
         max_deriv = 0,
-        abstol = 1e-6,
-        reltol = 1e-3)
+        abstol = 1.0e-6,
+        reltol = 1.0e-3
+    )
 
     # Solve the given problem once, saving the primal and some number of derivatives
     ils = IndependentlyLinearizedSolution(prob, max_deriv)
     lsc = LinearizingSavingCallback(ils)
-    sol = solve(prob,
+    sol = solve(
+        prob,
         solver;
         callback = lsc,
         abstol,
-        reltol)
+        reltol
+    )
     @test sol.retcode == ReturnCode.Success
     @test ils.ilsc === nothing
 
     N = length(ils)
-    t_upsampled = LinearInterpolation(ils.ts, Float64.(1:N))(range(1,
-        N;
-        length = 10 * N))
+    t_upsampled = LinearInterpolation(ils.ts, Float64.(1:N))(
+        range(
+            1,
+            N;
+            length = 10 * N
+        )
+    )
     for deriv_idx in 0:max_deriv
         u_linear_upsampled = sample(ils, t_upsampled, deriv_idx)
-        u_interp_upsampled = stack(as_array.(sol(
-            t_upsampled, Val{deriv_idx}; continuity = :left).u))'
+        u_interp_upsampled = stack(
+            as_array.(
+                sol(
+                    t_upsampled, Val{deriv_idx}; continuity = :left
+                ).u
+            )
+        )'
 
-        check = isapprox(u_linear_upsampled,
+        check = isapprox(
+            u_linear_upsampled,
             u_interp_upsampled;
             # We loosen the comparison bounds here as higher derivative orders
             # have worse accuracy guarantees, approximately `sqrt()` for each order.
             atol = abstol^(2.0^(-deriv_idx)),
-            rtol = reltol^(2.0^(-deriv_idx)))
+            rtol = reltol^(2.0^(-deriv_idx))
+        )
         if !check
             @error("Check failed", solver, deriv_idx)
             display(abs.(u_linear_upsampled .- u_interp_upsampled))
         end
         @test check
     end
+    return
 end
 
 max_deriv_map = Dict(
@@ -181,7 +217,8 @@ for solver in [Tsit5, Rodas5P, Rosenbrock23]
     @testset "$(solver)" begin
         test_linearization(prob_ode_linear, solver(); max_deriv)
         test_linearization(
-            prob_ode_linear, solver(); abstol = 1e-9, reltol = 1e-9, max_deriv)
+            prob_ode_linear, solver(); abstol = 1.0e-9, reltol = 1.0e-9, max_deriv
+        )
         test_linearization(prob_ode_vanderpol, solver(); max_deriv)
         test_linearization(prob_ode_rigidbody, solver(); max_deriv)
         test_linearization(prob_ode_nonlinchem, solver(); max_deriv)
@@ -196,8 +233,10 @@ end
     prob = DAEProblem(f_error2, u0, du0, (0.0, 1.0); differential_vars = [true])
     ils = IndependentlyLinearizedSolution(prob, 0)
     lsc = LinearizingSavingCallback(ils)
-    sol = solve(prob, DFBDF(autodiff = false); callback = lsc,
-        initializealg = BrownFullBasicInit(nlsolve = NewtonRaphson()))  # this would if we were not failing with grace
+    sol = solve(
+        prob, DFBDF(autodiff = false); callback = lsc,
+        initializealg = BrownFullBasicInit(nlsolve = NewtonRaphson())
+    )  # this would if we were not failing with grace
     @test sol.retcode == ReturnCode.InitialFailure
     @test isempty(ils.ts)
     @test isempty(ils.us)

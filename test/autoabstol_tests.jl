@@ -17,8 +17,8 @@ solve(prob, BS3(), callback = cb)
 
 prob2D = prob_ode_2Dlinear
 cb2D = AutoAbstol(init_curmax = zeros(4, 2))
-integrator2D_1 = init(prob2D, BS3(), callback = cb, abstol = 1e-6)
-integrator2D_2 = init(prob2D, BS3(), callback = cb, abstol = fill(1e-6, 4, 2))
+integrator2D_1 = init(prob2D, BS3(), callback = cb, abstol = 1.0e-6)
+integrator2D_2 = init(prob2D, BS3(), callback = cb, abstol = fill(1.0e-6, 4, 2))
 @test all(integrator2D_2.opts.abstol .== integrator2D_1.opts.abstol)
 step!(integrator2D_1)
 step!(integrator2D_2)
@@ -27,8 +27,10 @@ step!(integrator2D_1)
 step!(integrator2D_2)
 @test all(integrator2D_2.opts.abstol .== integrator2D_1.opts.abstol)
 
-sol1 = solve(prob2D, BS3(), callback = cb2D, abstol = fill(1e-6, 4, 2))
-sol2 = solve(prob2D, BS3(), callback = cb2D, abstol = fill(1e-6, 4, 2),
-    reltol = fill(1e-3, 4, 2))
+sol1 = solve(prob2D, BS3(), callback = cb2D, abstol = fill(1.0e-6, 4, 2))
+sol2 = solve(
+    prob2D, BS3(), callback = cb2D, abstol = fill(1.0e-6, 4, 2),
+    reltol = fill(1.0e-3, 4, 2)
+)
 @test sol1.t == sol2.t && sol1.u == sol2.u
-@test_throws MethodError solve(prob, BS3(), callback = cb2D, abstol = 1e-6)
+@test_throws MethodError solve(prob, BS3(), callback = cb2D, abstol = 1.0e-6)

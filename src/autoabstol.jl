@@ -15,14 +15,14 @@ function (p::AutoAbstolAffect)(integrator)
         integrator.opts.abstol = p.curmax .* integrator.opts.reltol
     end
 
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 function AutoAbstol_initialize(cb, u, t, integrator)
     if cb.affect!.curmax == zero(integrator.opts.abstol)
         cb.affect!.curmax = integrator.opts.abstol
     end
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 """
@@ -47,9 +47,11 @@ function AutoAbstol(save = true; init_curmax = 0.0)
     affect! = AutoAbstolAffect(abs.(init_curmax))
     condition = true_condition
     save_positions = (save, false)
-    DiscreteCallback(condition, affect!;
+    return DiscreteCallback(
+        condition, affect!;
         initialize = AutoAbstol_initialize,
-        save_positions = save_positions)
+        save_positions = save_positions
+    )
 end
 
 export AutoAbstol
