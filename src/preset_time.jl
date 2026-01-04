@@ -5,7 +5,7 @@ struct PresetTimeFunction{T, T2, T3}
     user_affect!::T3
 end
 function (f::PresetTimeFunction)(u, t, integrator)
-    if hasproperty(integrator, :dt)
+    return if hasproperty(integrator, :dt)
         insorted(t, f.tstops) && (integrator.t - integrator.dt) != integrator.t
     else
         insorted(t, f.tstops)
@@ -26,7 +26,7 @@ function (f::PresetTimeFunction)(c, u, t, integrator)
     for tstop in _tstops
         add_tstop!(integrator, tstop)
     end
-    if insorted(t, tstops)
+    return if insorted(t, tstops)
         f.user_affect!(integrator)
     end
 end
@@ -53,17 +53,19 @@ automatic.
   - `filter_tstops`: Whether to filter out tstops beyond the end of the integration timespan.
     Defaults to true. If false, then tstops can extend the interval of integration.
 """
-function PresetTimeCallback(tstops, user_affect!;
+function PresetTimeCallback(
+        tstops, user_affect!;
         initialize = SciMLBase.INITIALIZE_DEFAULT,
         filter_tstops = true,
-        sort_inplace = false, kwargs...)
+        sort_inplace = false, kwargs...
+    )
     if !(tstops isa AbstractVector) && !(tstops isa Number)
         throw(ArgumentError("tstops must either be a number or a Vector. Was $tstops"))
     end
 
     tstops = tstops isa Number ? [tstops] : (sort_inplace ? sort!(tstops) : sort(tstops))
     ptf = PresetTimeFunction(tstops, filter_tstops, initialize, user_affect!)
-    DiscreteCallback(ptf, user_affect!; initialize = ptf, kwargs...)
+    return DiscreteCallback(ptf, user_affect!; initialize = ptf, kwargs...)
 end
 
 export PresetTimeCallback

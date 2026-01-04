@@ -1,8 +1,8 @@
 mutable struct SavingIntegrandGKSumAffect{
-    IntegrandFunc,
-    integrandType,
-    IntegrandCacheType
-}
+        IntegrandFunc,
+        integrandType,
+        IntegrandCacheType,
+    }
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValuesSum{integrandType}
     integrand_cache::IntegrandCacheType
@@ -12,47 +12,63 @@ mutable struct SavingIntegrandGKSumAffect{
     tol::Float64
 end
 
-function integrate_gk!(affect!::SavingIntegrandGKSumAffect, integrator,
-        bound_l, bound_r; order = 7, tol = 1e-7)
+function integrate_gk!(
+        affect!::SavingIntegrandGKSumAffect, integrator,
+        bound_l, bound_r; order = 7, tol = 1.0e-7
+    )
     affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)
     affect!.gk_err_cache = recursive_zero!(affect!.gk_err_cache)
     for i in 1:(2 * order + 1)
-        t_temp = (gk_points[order][i]+1)*((bound_r-bound_l)/2) + bound_l
+        t_temp = (gk_points[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
         if DiffEqBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing
-                recursive_axpy!(gk_weights[order][i],
-                    affect!.integrand_func(curu, t_temp, integrator), affect!.gk_step_cache)
-                if i%2==0
-                    recursive_axpy!(g_weights[order][div(i, 2)],
-                        affect!.integrand_func(curu, t_temp, integrator), affect!.gk_err_cache)
+                recursive_axpy!(
+                    gk_weights[order][i],
+                    affect!.integrand_func(curu, t_temp, integrator), affect!.gk_step_cache
+                )
+                if i % 2 == 0
+                    recursive_axpy!(
+                        g_weights[order][div(i, 2)],
+                        affect!.integrand_func(curu, t_temp, integrator), affect!.gk_err_cache
+                    )
                 end
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-                recursive_axpy!(gk_weights[order][i],
-                    affect!.integrand_cache, affect!.gk_step_cache)
-                if i%2==0
-                    recursive_axpy!(g_weights[order][div(i, 2)],
-                        affect!.integrand_cache, affect!.gk_err_cache)
+                recursive_axpy!(
+                    gk_weights[order][i],
+                    affect!.integrand_cache, affect!.gk_step_cache
+                )
+                if i % 2 == 0
+                    recursive_axpy!(
+                        g_weights[order][div(i, 2)],
+                        affect!.integrand_cache, affect!.gk_err_cache
+                    )
                 end
             end
         else
-            recursive_axpy!(gk_weights[order][i],
-                affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_step_cache)
-            if i%2==0
-                recursive_axpy!(g_weights[order][div(i, 2)],
-                    affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_err_cache)
+            recursive_axpy!(
+                gk_weights[order][i],
+                affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_step_cache
+            )
+            if i % 2 == 0
+                recursive_axpy!(
+                    g_weights[order][div(i, 2)],
+                    affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_err_cache
+                )
             end
         end
     end
-    if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r-bound_l) ./ 2))<tol
-        recursive_axpy!(1, affect!.gk_step_cache .* (bound_r-bound_l) ./ 2, affect!.accumulation_cache)
+    return if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)) < tol
+        recursive_axpy!(1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache)
     else
         integrate_gk!(
-            affect!, integrator, bound_l, (bound_l+bound_r)/2, order = order, tol = tol/2)
+            affect!, integrator, bound_l, (bound_l + bound_r) / 2, order = order, tol = tol / 2
+        )
         integrate_gk!(
-            affect!, integrator, (bound_l+bound_r)/2, bound_r, order = order, tol = tol/2)
+            affect!, integrator, (bound_l + bound_r) / 2, bound_r, order = order, tol = tol / 2
+        )
     end
 end
 
@@ -65,9 +81,10 @@ function (affect!::SavingIntegrandGKSumAffect)(integrator)
     end
     accumulation_cache = recursive_zero!(affect!.accumulation_cache)
     integrate_gk!(
-        affect!, integrator, integrator.tprev, integrator.t, order = n, tol = affect!.tol)
+        affect!, integrator, integrator.tprev, integrator.t, order = n, tol = affect!.tol
+    )
     recursive_add!(affect!.integrand_values.integrand, accumulation_cache)
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 """
@@ -102,12 +119,14 @@ via `integrand_values.integrand`.
     solvers are required.
 """
 function IntegratingGKSumCallback(
-        integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype, tol = 1e-7)
+        integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype, tol = 1.0e-7
+    )
     affect! = SavingIntegrandGKSumAffect(
         integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), tol)
+        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), tol
+    )
     condition = true_condition
-    DiscreteCallback(condition, affect!, save_positions = (false, false))
+    return DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
 
 export IntegratingGKSumCallback

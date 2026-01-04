@@ -15,14 +15,16 @@ end
 Return `SavedValues{tType, savevalType}` with empty storage vectors.
 """
 function SavedValues(::Type{tType}, ::Type{savevalType}) where {tType, savevalType}
-    SavedValues{tType, savevalType}(Vector{tType}(), Vector{savevalType}())
+    return SavedValues{tType, savevalType}(Vector{tType}(), Vector{savevalType}())
 end
 
 function Base.show(io::IO, saved_values::SavedValues)
     tType = eltype(saved_values.t)
     savevalType = eltype(saved_values.saveval)
-    print(io, "SavedValues{tType=", tType, ", savevalType=", savevalType, "}",
-        "\nt:\n", saved_values.t, "\nsaveval:\n", saved_values.saveval)
+    return print(
+        io, "SavedValues{tType=", tType, ", savevalType=", savevalType, "}",
+        "\nt:\n", saved_values.t, "\nsaveval:\n", saved_values.saveval
+    )
 end
 
 @recipe function plot(saved_values::SavedValues)
@@ -44,7 +46,7 @@ function (affect!::SavingAffect)(integrator, force_save = false)
     just_saved = false
     # see OrdinaryDiffEq.jl -> integrator_utils.jl, function savevalues!
     while !isempty(affect!.saveat) &&
-        integrator.tdir * first(affect!.saveat) <= integrator.tdir * integrator.t # Perform saveat
+            integrator.tdir * first(affect!.saveat) <= integrator.tdir * integrator.t # Perform saveat
         affect!.saveiter += 1
         curt = pop!(affect!.saveat) # current time
         if curt != integrator.t # If <t, interpolate
@@ -59,26 +61,32 @@ function (affect!::SavingAffect)(integrator, force_save = false)
                 integrator(curu, curt) # inplace since save_func allocates
             end
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, curt)
-            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter,
-                affect!.save_func(curu, curt, integrator), Val{false})
+            copyat_or_push!(
+                affect!.saved_values.saveval, affect!.saveiter,
+                affect!.save_func(curu, curt, integrator), Val{false}
+            )
         else # ==t, just save
             just_saved = true
             copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
-            copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter,
+            copyat_or_push!(
+                affect!.saved_values.saveval, affect!.saveiter,
                 affect!.save_func(integrator.u, integrator.t, integrator),
-                Val{false})
+                Val{false}
+            )
         end
     end
     if !just_saved &&
-       affect!.save_everystep || force_save ||
-       (affect!.save_end && integrator.t == integrator.sol.prob.tspan[end])
+            affect!.save_everystep || force_save ||
+            (affect!.save_end && integrator.t == integrator.sol.prob.tspan[end])
         affect!.saveiter += 1
         copyat_or_push!(affect!.saved_values.t, affect!.saveiter, integrator.t)
-        copyat_or_push!(affect!.saved_values.saveval, affect!.saveiter,
+        copyat_or_push!(
+            affect!.saved_values.saveval, affect!.saveiter,
             affect!.save_func(integrator.u, integrator.t, integrator),
-            Val{false})
+            Val{false}
+        )
     end
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 function saving_initialize(cb, u, t, integrator)
@@ -111,7 +119,7 @@ function saving_initialize(cb, u, t, integrator)
         cb.affect!.saveiter = 0
     end
     cb.affect!.save_start && cb.affect!(integrator)
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 """
@@ -147,12 +155,14 @@ returns quantities of interest that shall be saved.
 The outputted values are saved into `saved_values`. Time points are found via
 `saved_values.t` and the values are `saved_values.saveval`.
 """
-function SavingCallback(save_func, saved_values::SavedValues;
+function SavingCallback(
+        save_func, saved_values::SavedValues;
         saveat = Vector{eltype(saved_values.t)}(),
         save_everystep = isempty(saveat),
         save_start = save_everystep || isempty(saveat) || saveat isa Number,
         save_end = save_everystep || isempty(saveat) || saveat isa Number,
-        tdir = 1)
+        tdir = 1
+    )
     # saveat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     if saveat isa Number
         # expand to range using tspan in saving_initialize
@@ -167,12 +177,16 @@ function SavingCallback(save_func, saved_values::SavedValues;
     else
         saveat_internal = BinaryMaxHeap(saveat_heap)
     end
-    affect! = SavingAffect(save_func, saved_values, saveat_internal, saveat_cache,
-        save_everystep, save_start, save_end, 0)
+    affect! = SavingAffect(
+        save_func, saved_values, saveat_internal, saveat_cache,
+        save_everystep, save_start, save_end, 0
+    )
     condition = true_condition
-    DiscreteCallback(condition, affect!;
+    return DiscreteCallback(
+        condition, affect!;
         initialize = saving_initialize,
-        save_positions = (false, false))
+        save_positions = (false, false)
+    )
 end
 
 # Sometimes, `integ(t)` yields a scalar instead of a vector :(
@@ -207,10 +221,12 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abs
     for u_idx in 1:length(u₀)
         is_linear[u_idx] = true
         for t_idx in 1:3
-            is_linear[u_idx] &= isapprox(y_linear[u_idx, t_idx],
+            is_linear[u_idx] &= isapprox(
+                y_linear[u_idx, t_idx],
                 y_interp[u_idx, t_idx];
                 atol = abstol,
-                rtol = reltol)
+                rtol = reltol
+            )
         end
     end
     # Find worst time index so that we split our period there
@@ -228,29 +244,35 @@ function is_linear_enough!(caches, is_linear, t₀, t₁, u₀, u₁, integ, abs
     return t_quartile(t_max_idx)
 end
 
-function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
-        dtmin, interpolate_mask, abstol, reltol)
+function linearize_period(
+        t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
+        dtmin, interpolate_mask, abstol, reltol
+    )
     # Sanity check that we don't accidentally infinitely recurse
     if t₁ - t₀ < dtmin
-        @debug("Linearization failure",
-            t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin)
+        @debug(
+            "Linearization failure",
+            t₁, t₀, string(u₀), string(u₁), string(u_mask), dtmin
+        )
         throw(ArgumentError("Linearization failed, fell below linearization subdivision threshold"))
     end
 
-    with_cache(caches.u_masks) do is_linear
-        tᵦ = is_linear_enough!(caches,
+    return with_cache(caches.u_masks) do is_linear
+        tᵦ = is_linear_enough!(
+            caches,
             is_linear,
             t₀, t₁,
             u₀, u₁,
             integ,
-            abstol, reltol)
+            abstol, reltol
+        )
 
         # Rename `is_linear` to `is_nonlinear`, invert the meaning
         # and mask by `u_mask` (but re-use the memory)
         is_nonlinear = is_linear
         for u_idx in 1:length(is_linear)
             is_nonlinear[u_idx] = !is_linear[u_idx] & u_mask[u_idx] &
-                                  interpolate_mask[u_idx]
+                interpolate_mask[u_idx]
         end
 
         if any(is_nonlinear)
@@ -267,7 +289,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
                     dtmin,
                     interpolate_mask,
                     abstol,
-                    reltol)
+                    reltol
+                )
 
                 # Recurse into the second half of the period as well, as we're not guaranteed that
                 # the second half is linear yet.   Also, use the full `u_mask` as we need to store
@@ -282,7 +305,8 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
                     dtmin,
                     interpolate_mask,
                     abstol,
-                    reltol)
+                    reltol
+                )
             end
         else
             # If everyone is linear, store this period, according to our `u_mask`!
@@ -292,7 +316,7 @@ function linearize_period(t₀, t₁, u₀, u₁, integ, ilsc, caches, u_mask,
 end
 
 function store_u_block!(ilsc, integ, caches, t₁, u₁, u_mask)
-    with_cache(caches.us) do u
+    return with_cache(caches.us) do u
         caches.u_block[1, :] .= u₁
         for deriv_idx in 1:num_derivatives(ilsc)
             integ(u, t₁, Val{deriv_idx})
@@ -325,7 +349,7 @@ function with_cache(f::Function, cache::CachePool{T}) where {T}
     if length(cache.pool) < cache.write_idx
         push!(cache.pool, cache.alloc())
     end
-    try
+    return try
         f(cache.pool[cache.write_idx])
     finally
         cache.write_idx -= 1
@@ -365,11 +389,12 @@ solve(prob, solver; callback=LinearizingSavingCallback(ils))
   based on the `sol.t` points instead (no subdivision).  This is useful for when
   a solution needs to ignore certain indices due to badly-behaved interpolation.
 """
-function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
+function LinearizingSavingCallback(
+        ils::IndependentlyLinearizedSolution{T, S};
         interpolate_mask = BitVector(true for _ in 1:length(ils.ilsc.u_chunks)),
         abstol::Union{S, Nothing} = nothing,
         reltol::Union{S, Nothing} = nothing
-) where {T, S}
+    ) where {T, S}
     ilsc = ils.ilsc
     full_mask = BitVector(true for _ in 1:length(ilsc.u_chunks))
     # caches will be allocated in `initialize()`
@@ -410,10 +435,12 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
             u_modified!(integ, false)
         end,
         # In our `initialize`, we create some caches so we allocate less
-        initialize = (c,
+        initialize = (
+            c,
             u,
             t,
-            integ) -> begin
+            integ,
+        ) -> begin
             u = as_array(u)
             num_us = length(ilsc.u_chunks)
 
@@ -433,7 +460,7 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
                 slopes = Vector{S}(undef, num_us),
                 us = us,
                 u_block = Matrix{S}(undef, (num_derivatives(ilsc) + 1, num_us)),
-                u_masks = CachePool(BitVector, () -> BitVector(undef, num_us))
+                u_masks = CachePool(BitVector, () -> BitVector(undef, num_us)),
             )
             u_modified!(integ, false)
         end,
@@ -443,7 +470,8 @@ function LinearizingSavingCallback(ils::IndependentlyLinearizedSolution{T, S};
             caches = nothing
         end,
         # Don't add tstops to the left and right.
-        save_positions = (false, false))
+        save_positions = (false, false)
+    )
 end
 
 export SavingCallback, SavedValues, LinearizingSavingCallback

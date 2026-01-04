@@ -1,5 +1,7 @@
-mutable struct FunctionCallingAffect{funcFunc, funcatType <: AbstractVector,
-    funcatCacheType <: Union{AbstractVector, Number}}
+mutable struct FunctionCallingAffect{
+        funcFunc, funcatType <: AbstractVector,
+        funcatCacheType <: Union{AbstractVector, Number},
+    }
     func::funcFunc
     funcat::funcatType
     funcat_cache::funcatCacheType
@@ -11,7 +13,7 @@ end
 function (affect!::FunctionCallingAffect)(integrator, force_func = false)
     # see OrdinaryDiffEq.jl -> integrator_utils.jl, function funcvalues!
     while affect!.funciter <= length(affect!.funcat) &&
-        integrator.tdir * affect!.funcat[affect!.funciter] <= integrator.tdir * integrator.t # Perform funcat
+            integrator.tdir * affect!.funcat[affect!.funciter] <= integrator.tdir * integrator.t # Perform funcat
         curt = affect!.funcat[affect!.funciter] # current time
         affect!.funciter += 1
         if curt != integrator.t # If <t, interpolate
@@ -33,7 +35,7 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
     if affect!.func_everystep || force_func
         affect!.func(integrator.u, integrator.t, integrator)
     end
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 function functioncalling_initialize(cb, u, t, integrator)
@@ -54,7 +56,7 @@ function functioncalling_initialize(cb, u, t, integrator)
         cb.affect!.funciter = 1
     end
     cb.affect!.func_start && cb.affect!(integrator)
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 """
@@ -76,11 +78,13 @@ which gets called at the time points of interest. The constructor is:
   - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
     be adapted if `tspan[1] > tspan[end]`.
 """
-function FunctionCallingCallback(func;
+function FunctionCallingCallback(
+        func;
         funcat = Vector{Float64}(),
         func_everystep = isempty(funcat),
         func_start = true,
-        tdir = 1)
+        tdir = 1
+    )
     # funcat conversions, see OrdinaryDiffEq.jl -> integrators/type.jl
     if funcat isa Number
         # expand to range using tspan in functioncalling_initialize
@@ -91,12 +95,16 @@ function FunctionCallingCallback(func;
         funcat_cache = funcat_internal
     end
 
-    affect! = FunctionCallingAffect(func, funcat_internal,
-        funcat_cache, func_everystep, func_start, 1)
+    affect! = FunctionCallingAffect(
+        func, funcat_internal,
+        funcat_cache, func_everystep, func_start, 1
+    )
     condition = true_condition
-    DiscreteCallback(condition, affect!;
+    return DiscreteCallback(
+        condition, affect!;
         initialize = functioncalling_initialize,
-        save_positions = (false, false))
+        save_positions = (false, false)
+    )
 end
 
 export FunctionCallingCallback

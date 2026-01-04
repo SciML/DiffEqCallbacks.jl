@@ -35,8 +35,10 @@ for tmax_problem in [tmax; Inf]
     terminator = DiscreteCallback((u, t, integrator) -> t == tmax, terminate!)
 
     # Solve.
-    sol = solve(prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2),
-        tstops = [tmax])
+    sol = solve(
+        prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2),
+        tstops = [tmax]
+    )
 
     # Ensure that initialize1 has been called
     @test periodic1_initialized[]
@@ -53,18 +55,18 @@ for tmax_problem in [tmax; Inf]
 
     # Make sure that the final state matches manual integration of the piecewise linear function
     foreach(Δts, sol.u[end], du) do Δt, u_i, du_i
-        @test u_i≈Δt * sum(1:(du_i - 1)) + rem(tmax - tmin, Δt) * du_i atol=1e-5
+        @test u_i ≈ Δt * sum(1:(du_i - 1)) + rem(tmax - tmin, Δt) * du_i atol = 1.0e-5
     end
 end
 
 function fff(du, u, p, t)
     du[1] = -u[1]
-    du[2] = 0
+    return du[2] = 0
 end
 
 u0 = [2.0, 0.0]
 function periodic(integrator)
-    integrator.u[2] = integrator.u[1]
+    return integrator.u[2] = integrator.u[1]
 end
 cb = PeriodicCallback(periodic, 0.1, initial_affect = true, save_positions = (true, true))
 tspan = (0.0, 10.0)
@@ -76,8 +78,10 @@ sol = solve(prob, Tsit5(), callback = cb)
 @test sol.u[end][1] != sol.u[end][2] # `final_affect = false` by default
 
 # Test that the callback is applied again when the simulation finished.
-cb = PeriodicCallback(periodic, 3.0, initial_affect = true, final_affect = true,
-    save_positions = (true, true))
+cb = PeriodicCallback(
+    periodic, 3.0, initial_affect = true, final_affect = true,
+    save_positions = (true, true)
+)
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.u[end][1] == sol.u[end][2]
 
@@ -85,8 +89,10 @@ sol = solve(prob, Tsit5(), callback = cb)
 periodic_terminate2 = integrator -> if integrator.t >= tmax
     terminate!(integrator)
 end
-cb = PeriodicCallback(periodic_terminate2, 0.1, initial_affect = true, final_affect = true,
-    save_positions = (true, true))
+cb = PeriodicCallback(
+    periodic_terminate2, 0.1, initial_affect = true, final_affect = true,
+    save_positions = (true, true)
+)
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.retcode == ReturnCode.Terminated
 @test sol.t[end] == tmax
@@ -102,11 +108,11 @@ sol = solve(prob, Tsit5(), callback = cb)
 # https://github.com/SciML/ModelingToolkit.jl/issues/2528
 
 function lineardecay(du, u, p, t)
-    du[1] = -u[1]
+    return du[1] = -u[1]
 end
 
 function bumpaffect!(integ)
-    integ.u[1] += 10
+    return integ.u[1] += 10
 end
 
 cb = PeriodicCallback(bumpaffect!, 24.0)
@@ -132,11 +138,11 @@ approxin(needle, haystack) = any(isapprox(needle), haystack)
 
 function integ(du, u, p, t)
     du[1] = 1
-    du[2] = 0
+    return du[2] = 0
 end
 
 function nullaffect!(integ)
-    integ.u[2] += 1
+    return integ.u[2] += 1
 end
 
 cb = PeriodicCallback(nullaffect!, 1.0; phase = 0.1)

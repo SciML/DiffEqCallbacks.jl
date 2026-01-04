@@ -4,7 +4,8 @@
 Precomputed Gaussian nodes up to degree 2*10-1 = 19.
 Computed using FastGaussQuadrature.jl with the command `[gausslegendre(i)[1] for i in 1:10]`
 """
-gauss_points = [[0.0],
+gauss_points = [
+    [0.0],
     [-0.5773502691896258, 0.5773502691896258],
     [-0.7745966692414834, 0.0, 0.7745966692414834],
     [-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526],
@@ -15,7 +16,7 @@ gauss_points = [[0.0],
         -0.2386191860831969,
         0.2386191860831969,
         0.6612093864662645,
-        0.932469514203152
+        0.932469514203152,
     ],
     [
         -0.9491079123427586,
@@ -24,7 +25,7 @@ gauss_points = [[0.0],
         0.0,
         0.4058451513773972,
         0.7415311855993945,
-        0.9491079123427586
+        0.9491079123427586,
     ],
     [
         -0.9602898564975363,
@@ -34,7 +35,7 @@ gauss_points = [[0.0],
         0.1834346424956498,
         0.525532409916329,
         0.7966664774136267,
-        0.9602898564975363
+        0.9602898564975363,
     ],
     [
         -0.9681602395076261,
@@ -45,7 +46,7 @@ gauss_points = [[0.0],
         0.3242534234038089,
         0.6133714327005904,
         0.8360311073266358,
-        0.9681602395076261
+        0.9681602395076261,
     ],
     [
         -0.9739065285171717,
@@ -57,15 +58,17 @@ gauss_points = [[0.0],
         0.4333953941292472,
         0.6794095682990244,
         0.8650633666889845,
-        0.9739065285171717
-    ]]
+        0.9739065285171717,
+    ],
+]
 """
     gauss_weights::Vector{Vector{Float64}}
 
 Precomputed Gaussian node weights up to degree 2*10-1 = 19.
 Computed using FastGaussQuadrature.jl with the command `[gausslegendre(i)[2] for i in 1:10]`
 """
-gauss_weights = [[2.0],
+gauss_weights = [
+    [2.0],
     [1.0, 1.0],
     [0.5555555555555556, 0.8888888888888888, 0.5555555555555556],
     [0.34785484513745385, 0.6521451548625462, 0.6521451548625462, 0.34785484513745385],
@@ -74,7 +77,7 @@ gauss_weights = [[2.0],
         0.47862867049936647,
         0.5688888888888889,
         0.47862867049936647,
-        0.23692688505618908
+        0.23692688505618908,
     ],
     [
         0.17132449237917025,
@@ -82,7 +85,7 @@ gauss_weights = [[2.0],
         0.46791393457269126,
         0.46791393457269126,
         0.3607615730481385,
-        0.17132449237917025
+        0.17132449237917025,
     ],
     [
         0.1294849661688702,
@@ -91,7 +94,7 @@ gauss_weights = [[2.0],
         0.4179591836734694,
         0.3818300505051189,
         0.2797053914892766,
-        0.1294849661688702
+        0.1294849661688702,
     ],
     [
         0.10122853629037676,
@@ -101,7 +104,7 @@ gauss_weights = [[2.0],
         0.36268378337836193,
         0.31370664587788744,
         0.22238103445337445,
-        0.10122853629037676
+        0.10122853629037676,
     ],
     [
         0.08127438836157437,
@@ -112,7 +115,7 @@ gauss_weights = [[2.0],
         0.31234707704000275,
         0.2606106964029354,
         0.18064816069485742,
-        0.08127438836157437
+        0.08127438836157437,
     ],
     [
         0.06667134430868821,
@@ -124,8 +127,9 @@ gauss_weights = [[2.0],
         0.2692667193099965,
         0.21908636251598207,
         0.14945134915058056,
-        0.06667134430868821
-    ]]
+        0.06667134430868821,
+    ],
+]
 
 """
     IntegrandValues{integrandType}
@@ -143,21 +147,23 @@ end
 Return `IntegrandValues{integrandType}` with empty storage vectors.
 """
 function IntegrandValues(::Type{tType}, ::Type{integrandType}) where {tType, integrandType}
-    IntegrandValues{tType, integrandType}(Vector{tType}(), Vector{integrandType}())
+    return IntegrandValues{tType, integrandType}(Vector{tType}(), Vector{integrandType}())
 end
 
 function Base.show(io::IO, integrand_values::IntegrandValues)
     integrandType = eltype(integrand_values.integrand)
-    print(io, "IntegrandValues{integrandType=", integrandType, "}",
-        "\nintegrand:\n", integrand_values.integrand)
+    return print(
+        io, "IntegrandValues{integrandType=", integrandType, "}",
+        "\nintegrand:\n", integrand_values.integrand
+    )
 end
 
 mutable struct SavingIntegrandAffect{
-    IntegrandFunc,
-    tType,
-    IntegrandType,
-    IntegrandCacheType
-}
+        IntegrandFunc,
+        tType,
+        IntegrandType,
+        IntegrandCacheType,
+    }
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValues{tType, IntegrandType}
     integrand_cache::IntegrandCacheType
@@ -174,29 +180,36 @@ function (affect!::SavingIntegrandAffect)(integrator)
     accumulation_cache = recursive_zero!(affect!.accumulation_cache)
     for i in 1:n
         t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] +
-                 (integrator.t + integrator.tprev) / 2
+            (integrator.t + integrator.tprev) / 2
         if DiffEqBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing
-                accumulation_cache = recursive_axpy!(gauss_weights[n][i],
-                    affect!.integrand_func(curu, t_temp, integrator), accumulation_cache)
+                accumulation_cache = recursive_axpy!(
+                    gauss_weights[n][i],
+                    affect!.integrand_func(curu, t_temp, integrator), accumulation_cache
+                )
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
                 accumulation_cache = recursive_axpy!(
-                    gauss_weights[n][i], affect!.integrand_cache, accumulation_cache)
+                    gauss_weights[n][i], affect!.integrand_cache, accumulation_cache
+                )
             end
         else
-            accumulation_cache = recursive_axpy!(gauss_weights[n][i],
+            accumulation_cache = recursive_axpy!(
+                gauss_weights[n][i],
                 affect!.integrand_func(integrator(t_temp), t_temp, integrator),
-                accumulation_cache)
+                accumulation_cache
+            )
         end
     end
-    accumulation_cache = recursive_scalar_mul!(accumulation_cache,
-        (integrator.t - integrator.tprev) / 2)
+    accumulation_cache = recursive_scalar_mul!(
+        accumulation_cache,
+        (integrator.t - integrator.tprev) / 2
+    )
     push!(affect!.integrand_values.ts, integrator.t)
     push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache))
-    u_modified!(integrator, false)
+    return u_modified!(integrator, false)
 end
 
 """
@@ -230,11 +243,14 @@ via `integrand_values.integrand`.
     If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
 """
 function IntegratingCallback(
-        integrand_func, integrand_values::IntegrandValues, integrand_prototype)
-    affect! = SavingIntegrandAffect(integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype))
+        integrand_func, integrand_values::IntegrandValues, integrand_prototype
+    )
+    affect! = SavingIntegrandAffect(
+        integrand_func, integrand_values, integrand_prototype,
+        allocate_zeros(integrand_prototype)
+    )
     condition = true_condition
-    DiscreteCallback(condition, affect!, save_positions = (false, false))
+    return DiscreteCallback(condition, affect!, save_positions = (false, false))
 end
 
 export IntegratingCallback, IntegrandValues

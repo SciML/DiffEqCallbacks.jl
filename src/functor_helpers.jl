@@ -8,7 +8,7 @@ function recursive_copyto! end
 recursive_copyto!(y::AbstractArray, x::AbstractArray) = internal_copyto!(y, x)
 
 function internal_copyto!(y, x)
-    hasmethod(copyto!, Tuple{typeof(y), typeof(x)}) ? copyto!(y, x) : nothing
+    return hasmethod(copyto!, Tuple{typeof(y), typeof(x)}) ? copyto!(y, x) : nothing
 end
 
 """

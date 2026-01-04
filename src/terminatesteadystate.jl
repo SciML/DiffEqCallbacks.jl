@@ -32,9 +32,13 @@ function allDerivPass(integrator, abstol, reltol, min_t)
     end
 
     if integrator.u isa Array
-        return all(abs(d) <= max(abstol, reltol * abs(u))
-        for (d, abstol, reltol, u) in zip(testval, Iterators.cycle(abstol),
-            Iterators.cycle(reltol), integrator.u))
+        return all(
+            abs(d) <= max(abstol, reltol * abs(u))
+                for (d, abstol, reltol, u) in zip(
+                    testval, Iterators.cycle(abstol),
+                    Iterators.cycle(reltol), integrator.u
+                )
+        )
     else
         return all(abs.(testval) .<= max.(abstol, reltol .* abs.(integrator.u)))
     end
@@ -78,14 +82,16 @@ the [Steady State Solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/stead
   - `min_t` specifies an optional minimum `t` before the steady state calculations are allowed
     to terminate.
 """
-function TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test::T = allDerivPass;
-        min_t = nothing, wrap_test::Val{WT} = Val(true)) where {T, WT}
+function TerminateSteadyState(
+        abstol = 1.0e-8, reltol = 1.0e-6, test::T = allDerivPass;
+        min_t = nothing, wrap_test::Val{WT} = Val(true)
+    ) where {T, WT}
     condition = if WT
         WrappedTest(test, abstol, reltol, min_t)
     else
         test
     end
-    DiscreteCallback(condition, terminate!; save_positions = (true, false))
+    return DiscreteCallback(condition, terminate!; save_positions = (true, false))
 end
 
 export TerminateSteadyState

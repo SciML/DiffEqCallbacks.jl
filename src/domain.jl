@@ -11,7 +11,7 @@ struct PositiveDomainAffect{T, S, uType} <: AbstractDomainAffect{T, S, uType}
 end
 
 struct GeneralDomainAffect{F <: AbstractNonAutonomousFunction, T, S, uType, A} <:
-       AbstractDomainAffect{T, S, uType}
+    AbstractDomainAffect{T, S, uType}
     g::F
     abstol::T
     scalefactor::S
@@ -24,9 +24,9 @@ function initialize_general_domain_affect(cb, u, t, integrator)
     return initialize_general_domain_affect(cb.affect!, u, t, integrator)
 end
 function initialize_general_domain_affect(affect!::GeneralDomainAffect, u, t, integrator)
-    if affect!.autonomous === nothing
+    return if affect!.autonomous === nothing
         autonomous = maximum(SciMLBase.numargs(affect!.g.f)) ==
-                     2 + SciMLBase.isinplace(integrator.f)
+            2 + SciMLBase.isinplace(integrator.f)
         affect!.g.autonomous = autonomous
     end
 end
@@ -97,8 +97,10 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
         # of displaying this warning
         if dtcache == dt
             if integrator.opts.verbose
-                @warn("Could not restrict values to domain. Iteration was canceled since ",
-                    "proposed time step dt = ", dt, " could not be reduced.")
+                @warn(
+                    "Could not restrict values to domain. Iteration was canceled since ",
+                    "proposed time step dt = ", dt, " could not be reduced."
+                )
             end
             break
         end
@@ -138,15 +140,16 @@ Return whether `u` is an acceptable state vector at the next time point given ab
 tolerance `abstol`, callback `f`, and other optional arguments.
 """
 function isaccepted(
-        u, p, t, tolerance, ::AbstractDomainAffect, ::Val{iip}, args...) where {iip}
-    true
+        u, p, t, tolerance, ::AbstractDomainAffect, ::Val{iip}, args...
+    ) where {iip}
+    return true
 end
 
 # specific method definitions for positive domain callback
 
 function modify_u!(integrator, f::PositiveDomainAffect)
     # set all negative values to zero
-    _set_neg_zero!(integrator, integrator.u) # Returns true if modified
+    return _set_neg_zero!(integrator, integrator.u) # Returns true if modified
 end
 
 function _set_neg_zero!(integrator, u::AbstractArray)
@@ -157,7 +160,7 @@ function _set_neg_zero!(integrator, u::AbstractArray)
             modified = true
         end
     end
-    modified
+    return modified
 end
 
 function _set_neg_zero!(integrator, u::Number)
@@ -166,7 +169,7 @@ function _set_neg_zero!(integrator, u::Number)
         integrator.u = 0
         modified = true
     end
-    modified
+    return modified
 end
 
 function _set_neg_zero!(integrator, u::StaticArraysCore.SArray)
@@ -178,7 +181,7 @@ function _set_neg_zero!(integrator, u::StaticArraysCore.SArray)
         end
     end
     modified && (integrator.u = u)
-    modified
+    return modified
 end
 
 # state vector is accepted if its entries are greater than -abstol
@@ -209,7 +212,7 @@ function isaccepted(u, p, t, abstol, f::GeneralDomainAffect, ::Val{iip}, resid) 
     end
 
     # accept time step if residuals are smaller than the tolerance
-    if abstol isa Number
+    return if abstol isa Number
         all(x -> x < abstol, resid)
     else
         # element-wise comparison
@@ -281,25 +284,29 @@ Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 function GeneralDomain(
         g, u = nothing; save = true, abstol = nothing, scalefactor = nothing,
         autonomous = nothing, domain_jacobian = nothing, manifold_jacobian = missing,
-        nlsolve_kwargs = (; abstol = 10 * eps()), kwargs...)
+        nlsolve_kwargs = (; abstol = 10 * eps()), kwargs...
+    )
     if manifold_jacobian !== missing
         throw(ArgumentError("`manifold_jacobian` is not supported for `GeneralDomain`. \
                              Use `domain_jacobian` instead."))
     end
     manifold_projection = ManifoldProjection(
         g; save = false, autonomous, manifold_jacobian = domain_jacobian,
-        kwargs..., nlsolve_kwargs...)
+        kwargs..., nlsolve_kwargs...
+    )
     domain = wrap_autonomous_function(autonomous, g)
     domain_jacobian = wrap_autonomous_function(autonomous, domain_jacobian)
     affect! = if u === nothing
         GeneralDomainAffect(domain, abstol, scalefactor, nothing, nothing, autonomous)
     else
         GeneralDomainAffect(
-            domain, abstol, scalefactor, deepcopy(u), deepcopy(u), autonomous)
+            domain, abstol, scalefactor, deepcopy(u), deepcopy(u), autonomous
+        )
     end
     domain_cb = DiscreteCallback(
         Returns(true), affect!; initialize = initialize_general_domain_affect,
-        save_positions = (false, save))
+        save_positions = (false, save)
+    )
     return CallbackSet(manifold_projection, domain_cb)
 end
 
@@ -371,7 +378,7 @@ function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor 
         affect! = PositiveDomainAffect(abstol, scalefactor, deepcopy(u))
     end
     condition = true_condition
-    DiscreteCallback(condition, affect!; save_positions = (false, save))
+    return DiscreteCallback(condition, affect!; save_positions = (false, save))
 end
 
 export GeneralDomain, PositiveDomain
