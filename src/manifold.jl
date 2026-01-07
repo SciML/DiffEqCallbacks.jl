@@ -453,10 +453,10 @@ function compute_manifold_jacobian!(
     return J
 end
 
-issquare(A::AbstractMatrix) = size(A, 1) == size(A, 2)
+_issquare_matrix(A::AbstractMatrix) = size(A, 1) == size(A, 2)
 
 function safe_factorize!(A::AbstractMatrix)
-    if issquare(A)
+    if _issquare_matrix(A)
         fact = LinearAlgebra.cholesky(A; check = false)
         fact_successful(fact) && return fact
     elseif size(A, 1) > size(A, 2)
