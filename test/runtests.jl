@@ -67,6 +67,9 @@ const GROUP = get(ENV, "GROUP", "All")
         Pkg.activate("nopre")
         Pkg.develop(Pkg.PackageSpec(path = dirname(@__DIR__)))
         Pkg.instantiate()
+        @time @testset "JET tests" begin
+            include("nopre/jet_tests.jl")
+        end
         @time @testset "Integrating Sensitivity tests" begin
             include("nopre/integrating_sensitivity_tests.jl")
         end
