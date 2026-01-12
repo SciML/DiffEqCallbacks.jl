@@ -38,8 +38,8 @@ This method is kept for backwards compatibility but will be removed in a future 
 function IntegrandValuesSum(::Type{integrandType}) where {integrandType}
     Base.depwarn(
         "IntegrandValuesSum(Type) is deprecated. " *
-        "Pass a value instead: IntegrandValuesSum(zero(T)) for scalars " *
-        "or IntegrandValuesSum(zeros(n)) for arrays.",
+            "Pass a value instead: IntegrandValuesSum(zero(T)) for scalars " *
+            "or IntegrandValuesSum(zeros(n)) for arrays.",
         :IntegrandValuesSum
     )
     # For scalar types, we can create a proper zero value
@@ -47,10 +47,12 @@ function IntegrandValuesSum(::Type{integrandType}) where {integrandType}
         return IntegrandValuesSum{integrandType}(zero(integrandType))
     else
         # For array types and others, we cannot create a proper zero without knowing the size
-        throw(ArgumentError(
-            "Cannot create IntegrandValuesSum from type $integrandType. " *
-            "Pass a value instead, e.g., IntegrandValuesSum(zeros(n)) for arrays."
-        ))
+        throw(
+            ArgumentError(
+                "Cannot create IntegrandValuesSum from type $integrandType. " *
+                    "Pass a value instead, e.g., IntegrandValuesSum(zeros(n)) for arrays."
+            )
+        )
     end
 end
 
