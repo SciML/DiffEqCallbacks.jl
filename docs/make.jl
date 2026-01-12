@@ -16,6 +16,8 @@ makedocs(
     clean = true, doctest = false, linkcheck = true,
     linkcheck_ignore = [
         "https://www.sciencedirect.com/science/article/pii/S0096300304009683",
+        "http://mathworld.wolfram.com/ShadowingTheorem.html",
+        "https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html",
     ],
     warnonly = [:missing_docs],
     format = Documenter.HTML(
