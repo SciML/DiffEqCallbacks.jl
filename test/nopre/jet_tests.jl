@@ -13,8 +13,13 @@ using DiffEqCallbacks, Test, JET
             @test_opt target_modules = (DiffEqCallbacks,) DiffEqCallbacks.IntegrandValues(
                 Float64, Float64
             )
+            # IntegrandValuesSum should be constructed with a value, not a type
+            # This tests the recommended API: pass an initial value
             @test_opt target_modules = (DiffEqCallbacks,) DiffEqCallbacks.IntegrandValuesSum(
-                Float64
+                0.0
+            )
+            @test_opt target_modules = (DiffEqCallbacks,) DiffEqCallbacks.IntegrandValuesSum(
+                zeros(3)
             )
         end
 
