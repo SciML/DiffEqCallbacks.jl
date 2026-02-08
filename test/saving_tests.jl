@@ -1,6 +1,7 @@
 using Test, OrdinaryDiffEqBDF, OrdinaryDiffEqTsit5, OrdinaryDiffEqRosenbrock,
     DiffEqCallbacks, LinearAlgebra
 using OrdinaryDiffEqNonlinearSolve
+using ADTypes
 import LinearAlgebra: norm
 import ODEProblemLibrary: prob_ode_2Dlinear,
     prob_ode_linear, prob_ode_vanderpol, prob_ode_rigidbody,
@@ -234,7 +235,7 @@ end
     ils = IndependentlyLinearizedSolution(prob, 0)
     lsc = LinearizingSavingCallback(ils)
     sol = solve(
-        prob, DFBDF(autodiff = false); callback = lsc,
+        prob, DFBDF(; autodiff = AutoFiniteDiff()); callback = lsc,
         initializealg = BrownFullBasicInit(nlsolve = NewtonRaphson())
     )  # this would if we were not failing with grace
     @test sol.retcode == ReturnCode.InitialFailure
