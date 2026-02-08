@@ -77,9 +77,9 @@ tspan = (0.0, 72.0)
 
 times1 = 0.0:24.0:tspan[2]
 times2 = 24.0:24.0:tspan[2]
-affect!(integrator) = integrator.u[1] += 10.0
-cb1 = PresetTimeCallback(times1, affect!)
-cb2 = PresetTimeCallback(times2, affect!)
+preset_affect!(integrator) = integrator.u[1] += 10.0
+cb1 = PresetTimeCallback(times1, preset_affect!)
+cb2 = PresetTimeCallback(times2, preset_affect!)
 
 prob1 = ODEProblem(mod, u0, tspan, p, callback = cb1)
 prob2 = ODEProblem(mod, u0, tspan, p)

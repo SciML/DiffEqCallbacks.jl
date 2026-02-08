@@ -15,10 +15,10 @@ for tmax_problem in [tmax; Inf]
     # tmax and thus integrate for too long (or even indefinitely).
 
     # Dynamics: two independent single integrators:
-    du = [0; 0]
-    u0 = [0.0; 0.0]
+    local du = [0; 0]
+    local u0 = [0.0; 0.0]
     dynamics = (u, p, t) -> eltype(u).(du)
-    prob = ODEProblem(dynamics, u0, (tmin, tmax_problem))
+    local prob = ODEProblem(dynamics, u0, (tmin, tmax_problem))
 
     # Callbacks periodically increase the input to the integrators:
     Δt1 = 0.5
@@ -35,7 +35,7 @@ for tmax_problem in [tmax; Inf]
     terminator = DiscreteCallback((u, t, integrator) -> t == tmax, terminate!)
 
     # Solve.
-    sol = solve(
+    local sol = solve(
         prob, Tsit5(); callback = CallbackSet(terminator, periodic1, periodic2),
         tstops = [tmax]
     )
