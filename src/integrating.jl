@@ -4,7 +4,7 @@
 Precomputed Gaussian nodes up to degree 2*10-1 = 19.
 Computed using FastGaussQuadrature.jl with the command `[gausslegendre(i)[1] for i in 1:10]`
 """
-gauss_points = [
+const gauss_points = [
     [0.0],
     [-0.5773502691896258, 0.5773502691896258],
     [-0.7745966692414834, 0.0, 0.7745966692414834],
@@ -67,7 +67,7 @@ gauss_points = [
 Precomputed Gaussian node weights up to degree 2*10-1 = 19.
 Computed using FastGaussQuadrature.jl with the command `[gausslegendre(i)[2] for i in 1:10]`
 """
-gauss_weights = [
+const gauss_weights = [
     [2.0],
     [1.0, 1.0],
     [0.5555555555555556, 0.8888888888888888, 0.5555555555555556],
