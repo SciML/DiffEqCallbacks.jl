@@ -1,6 +1,6 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
-version = "4.12.0"
+version = "4.13.0"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 
 [deps]
@@ -46,7 +46,7 @@ Pkg = "1.10.0"
 PrecompileTools = "1.2"
 QuadGK = "2.9"
 RecipesBase = "1.3.4"
-RecursiveArrayTools = "3.27"
+RecursiveArrayTools = "3.27, 4"
 SciMLBase = "2.54"
 StaticArrays = "1.9.7"
 StaticArraysCore = "1.4"
