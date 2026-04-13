@@ -48,7 +48,7 @@ save after the projection is applied.
 
 ```@example manifold
 sol = solve(prob, Vern7(), save_everystep = false, callback = cb)
-@show sol[end][1]^2 + sol[end][2]^2 ≈ 2
+@show sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
 ```
 
 ```@example manifold
