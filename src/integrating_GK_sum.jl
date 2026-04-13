@@ -84,7 +84,7 @@ function (affect!::SavingIntegrandGKSumAffect)(integrator)
         affect!, integrator, integrator.tprev, integrator.t, order = n, tol = affect!.tol
     )
     recursive_add!(affect!.integrand_values.integrand, accumulation_cache)
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 """

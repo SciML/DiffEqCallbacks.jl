@@ -112,7 +112,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
     end
 
     # modify u
-    u_modified!(integrator, modify_u!(integrator, f))
+    derivative_discontinuity!(integrator, modify_u!(integrator, f))
 
     return
 end

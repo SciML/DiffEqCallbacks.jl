@@ -144,7 +144,7 @@ function initialize_manifold_projection(affect!::ManifoldProjection, u, t, integ
         )
     end
     affect!.nlcache = cache
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 export ManifoldProjection

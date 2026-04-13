@@ -18,7 +18,7 @@ function (p::StepsizeLimiterAffect)(integrator)
         set_proposed_dt!(integrator, integrator.opts.dtmax)
         integrator.dtcache = integrator.opts.dtmax
     end
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 function StepsizeLimiter_initialize(cb, u, t, integrator)

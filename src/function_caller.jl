@@ -35,7 +35,7 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
     if affect!.func_everystep || force_func
         affect!.func(integrator.u, integrator.t, integrator)
     end
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 function functioncalling_initialize(cb, u, t, integrator)
@@ -56,7 +56,7 @@ function functioncalling_initialize(cb, u, t, integrator)
         cb.affect!.funciter = 1
     end
     cb.affect!.func_start && cb.affect!(integrator)
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 """

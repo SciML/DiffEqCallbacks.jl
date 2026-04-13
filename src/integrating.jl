@@ -209,7 +209,7 @@ function (affect!::SavingIntegrandAffect)(integrator)
     )
     push!(affect!.integrand_values.ts, integrator.t)
     push!(affect!.integrand_values.integrand, recursive_copy(accumulation_cache))
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 """
