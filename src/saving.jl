@@ -86,7 +86,7 @@ function (affect!::SavingAffect)(integrator, force_save = false)
             Val{false}
         )
     end
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 function saving_initialize(cb, u, t, integrator)
@@ -119,7 +119,7 @@ function saving_initialize(cb, u, t, integrator)
         cb.affect!.saveiter = 0
     end
     cb.affect!.save_start && cb.affect!(integrator)
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 """
@@ -432,7 +432,7 @@ function LinearizingSavingCallback(
                     )
                 end
             end
-            u_modified!(integ, false)
+            derivative_discontinuity!(integ, false)
         end,
         # In our `initialize`, we create some caches so we allocate less
         initialize = (
@@ -462,7 +462,7 @@ function LinearizingSavingCallback(
                 u_block = Matrix{S}(undef, (num_derivatives(ilsc) + 1, num_us)),
                 u_masks = CachePool(BitVector, () -> BitVector(undef, num_us)),
             )
-            u_modified!(integ, false)
+            derivative_discontinuity!(integ, false)
         end,
         # We need to finalize the ils and free our caches
         finalize = (c, u, t, integ) -> begin

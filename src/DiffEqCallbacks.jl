@@ -13,7 +13,7 @@ using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, NonlinearFunction,
     NonlinearLeastSquaresProblem, NonlinearProblem, RODEProblem,
     ReturnCode, SDEProblem, add_tstop!, check_error, get_du,
     get_proposed_dt, get_tmp_cache, init, reinit!,
-    set_proposed_dt!, solve!, terminate!, u_modified!
+    set_proposed_dt!, solve!, terminate!, derivative_discontinuity!
 using StaticArraysCore: StaticArraysCore
 
 const DI = DifferentiationInterface

@@ -15,14 +15,14 @@ function (p::AutoAbstolAffect)(integrator)
         integrator.opts.abstol = p.curmax .* integrator.opts.reltol
     end
 
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 function AutoAbstol_initialize(cb, u, t, integrator)
     if cb.affect!.curmax == zero(integrator.opts.abstol)
         cb.affect!.curmax = integrator.opts.abstol
     end
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 """

@@ -104,7 +104,7 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
     end
     recursive_scalar_mul!(accumulation_cache, (integrator.t - integrator.tprev) / 2)
     recursive_add!(affect!.integrand_values.integrand, accumulation_cache)
-    return u_modified!(integrator, false)
+    return derivative_discontinuity!(integrator, false)
 end
 
 """

@@ -20,7 +20,7 @@ effect at `t₁`, you can define `t₂` to apply the next effect.
 function IterativeCallback(
         time_choice, user_affect!, tType = Float64;
         initial_affect = false,
-        initialize = (cb, u, t, integrator) -> u_modified!(
+        initialize = (cb, u, t, integrator) -> derivative_discontinuity!(
             integrator,
             initial_affect
         ),
@@ -146,7 +146,7 @@ function PeriodicCallback(
         phase = 0,
         initial_affect = false,
         final_affect = false,
-        initialize = (cb, u, t, integrator) -> u_modified!(
+        initialize = (cb, u, t, integrator) -> derivative_discontinuity!(
             integrator,
             initial_affect
         ),
