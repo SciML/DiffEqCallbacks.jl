@@ -1,4 +1,5 @@
 using Test, OrdinaryDiffEqTsit5, DiffEqCallbacks
+using SciMLBase: EnsembleProblem, EnsembleThreads, remake
 
 tmin = 0.1
 tmax = 5.2
@@ -166,3 +167,27 @@ for t in 1.1:1:10
     @test approxin(t, sol.t) # Test that the integrator stopped at all expected points
 end
 sol.t[end] ≈ 10 # test that we did not step over end
+
+# Thread safety: the callback's internal state must not be shared across
+# concurrently-running integrators (e.g. EnsembleThreads). See
+# https://github.com/SciML/DiffEqCallbacks.jl/issues/99.
+@testset "EnsembleThreads thread safety" begin
+    thread_dynamics = (du, u, p, t) -> (du[1] = 1; nothing)
+    prob_thread = ODEProblem(thread_dynamics, [0.0], (0.0, 10.0))
+    # Many trajectories with a tight period so condition/affect fire often and
+    # increase the chance of triggering the race condition from #99.
+    cb_thread = PeriodicCallback(integ -> (integ.u[1] += 0; nothing), 0.1)
+    ensemble = EnsembleProblem(
+        prob_thread,
+        prob_func = (prob, i, repeat) -> remake(prob; u0 = [Float64(i)])
+    )
+    for _ in 1:20
+        sol_thread = solve(
+            ensemble, Tsit5(), EnsembleThreads();
+            trajectories = 16, callback = cb_thread
+        )
+        @test length(sol_thread.u) == 16
+        @test all(s -> s.retcode == ReturnCode.Success, sol_thread.u)
+        @test all(s -> s.t[end] == 10.0, sol_thread.u)
+    end
+end

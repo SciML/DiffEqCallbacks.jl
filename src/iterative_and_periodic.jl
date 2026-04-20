@@ -79,11 +79,19 @@ end
 
 export IterativeCallback
 
-struct PeriodicCallbackAffect{A, dT, Ref1, Ref2}
+struct PeriodicCallbackAffect{A, dT, K}
     affect!::A
     Δt::dT
-    t0::Ref1
-    index::Ref2
+    cache_key::K
+end
+
+# Cache is stored per-task via `task_local_storage`, so that callbacks shared
+# across ensemble threads (e.g., `EnsembleThreads`) get independent state. See
+# https://github.com/SciML/DiffEqCallbacks.jl/issues/99.
+function _get_periodic_cache(cache_key, Δt)
+    return get!(task_local_storage(), cache_key) do
+        return (t0 = Ref(typemax(Δt)), index = Ref(0))
+    end
 end
 
 function (S::PeriodicCallbackAffect)(integrator)
@@ -93,7 +101,10 @@ function (S::PeriodicCallbackAffect)(integrator)
 end
 
 function add_next_tstop!(integrator, S)
-    (; Δt, t0, index) = S
+    (; Δt, cache_key) = S
+    cache = _get_periodic_cache(cache_key, Δt)
+    t0 = cache.t0
+    index = cache.index
 
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
     tnew = t0[] + (index[] + 1) * Δt
@@ -153,24 +164,27 @@ function PeriodicCallback(
         kwargs...
     )
     phase < 0 && throw(ArgumentError("phase offset must be non-negative"))
-    # Value of `t` at which `f` should be called next:
-    t0 = Ref(typemax(Δt))
-    index = Ref(0)
+    # Per-callback-instance key used to store the cache in `task_local_storage`.
+    # This keeps state isolated between concurrent integrators (e.g. ensemble
+    # threads) even when the same callback object is shared.
+    cache_key = gensym(:PeriodicCallback_cache)
 
     condition = function (u, t, integrator)
+        cache = _get_periodic_cache(cache_key, Δt)
         fin = isfinished(integrator)
-        return (t == (t0[] + index[] * Δt) && !fin) || (final_affect && fin)
+        return (t == (cache.t0[] + cache.index[] * Δt) && !fin) || (final_affect && fin)
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
-    affect! = PeriodicCallbackAffect(f, Δt, t0, index)
+    affect! = PeriodicCallbackAffect(f, Δt, cache_key)
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_periodic = function (c, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
         initialize(c, u, t, integrator)
-        t0[] = t + phase
-        index[] = iszero(phase) ? 0 : -1
+        cache = _get_periodic_cache(cache_key, Δt)
+        cache.t0[] = t + phase
+        cache.index[] = iszero(phase) ? 0 : -1
         return if initial_affect
             affect!(integrator)
         else
