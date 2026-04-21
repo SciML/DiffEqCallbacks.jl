@@ -1,4 +1,5 @@
 using Test, OrdinaryDiffEqTsit5, DiffEqCallbacks
+using SciMLBase: EnsembleProblem, EnsembleThreads, remake, ReturnCode
 
 tmin = 0.1
 tmax = 5.2
@@ -176,4 +177,26 @@ sol.t[end] ≈ 10 # test that we did not step over end
     sol_a = solve(prob_reinit, Tsit5(), callback = cb_reinit)
     sol_b = solve(prob_reinit, Tsit5(), callback = cb_reinit)
     @test sol_a.t == sol_b.t
+end
+
+# Thread safety: because the cache lives in `task_local_storage`, a single
+# callback object shared across `EnsembleThreads` trajectories must not leak
+# state between Tasks. Regression test for #99.
+@testset "PeriodicCallback is EnsembleThreads-safe" begin
+    thread_dynamics = (du, u, p, t) -> (du[1] = 1; nothing)
+    prob_thread = ODEProblem(thread_dynamics, [0.0], (0.0, 10.0))
+    cb_thread = PeriodicCallback(integ -> nothing, 0.1)
+    ensemble = EnsembleProblem(
+        prob_thread,
+        prob_func = (prob, i, repeat) -> remake(prob; u0 = [Float64(i)])
+    )
+    for _ in 1:10
+        sol_thread = solve(
+            ensemble, Tsit5(), EnsembleThreads();
+            trajectories = 16, callback = cb_thread
+        )
+        @test length(sol_thread.u) == 16
+        @test all(s -> s.retcode == ReturnCode.Success, sol_thread.u)
+        @test all(s -> s.t[end] == 10.0, sol_thread.u)
+    end
 end

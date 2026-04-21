@@ -79,11 +79,21 @@ end
 
 export IterativeCallback
 
-mutable struct PeriodicCallbackAffect{A, dT}
+struct PeriodicCallbackAffect{A, dT, K}
     affect!::A
     Δt::dT
-    t0::dT
-    index::Int
+    cache_key::K
+end
+
+# The cache is stored per-Task in `task_local_storage`, keyed by a
+# `gensym`-unique symbol per callback instance. `initialize_periodic` is the
+# only place that creates/overwrites the entry, so concurrent integrators
+# running the same callback on separate Tasks (e.g. `EnsembleThreads`) each
+# get their own independent `t0`/`index`. See #99.
+const _PeriodicCache{T} = NamedTuple{(:t0, :index), Tuple{Base.RefValue{T}, Base.RefValue{Int}}}
+
+@inline function _periodic_cache(key::Symbol, ::Type{T}) where {T}
+    return task_local_storage(key)::_PeriodicCache{T}
 end
 
 function (S::PeriodicCallbackAffect)(integrator)
@@ -93,8 +103,9 @@ function (S::PeriodicCallbackAffect)(integrator)
 end
 
 function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
+    cache = _periodic_cache(S.cache_key, typeof(S.Δt))
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
-    tnew = S.t0 + (S.index + 1) * S.Δt
+    tnew = cache.t0[] + (cache.index[] + 1) * S.Δt
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -102,7 +113,7 @@ function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
-    S.index += 1
+    cache.index[] += 1
     return if tdir_tnew < get_tstops_max(integrator)
         add_tstop!(integrator, tnew)
     end
@@ -151,25 +162,31 @@ function PeriodicCallback(
         kwargs...
     )
     phase < 0 && throw(ArgumentError("phase offset must be non-negative"))
-    # The cache fields are (re-)initialized in `initialize_periodic` below, so
-    # reusing a `PeriodicCallback` across successive solves starts from a clean
-    # state. These placeholders are only here so the closures can capture a
-    # mutable `PeriodicCallbackAffect` to read from.
-    affect! = PeriodicCallbackAffect(f, Δt, typemax(Δt), 0)
+    # Unique per-callback key for the per-Task cache (see `_periodic_cache`).
+    cache_key = gensym(:PeriodicCallback_cache)
 
     condition = function (u, t, integrator)
+        cache = _periodic_cache(cache_key, typeof(Δt))
         fin = isfinished(integrator)
-        return (t == (affect!.t0 + affect!.index * Δt) && !fin) ||
+        return (t == (cache.t0[] + cache.index[] * Δt) && !fin) ||
             (final_affect && fin)
     end
+
+    # Call f, update tnext, and make sure we stop at the new tnext
+    affect! = PeriodicCallbackAffect(f, Δt, cache_key)
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_periodic = function (c, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
         initialize(c, u, t, integrator)
-        # Reset the cache in `init` so each integrator starts with fresh state.
-        affect!.t0 = t + phase
-        affect!.index = iszero(phase) ? 0 : -1
+        # Allocate the cache in `init` so each Task running this callback gets
+        # its own `t0`/`index` Refs, making the callback safe to share across
+        # concurrent integrators (e.g. `EnsembleThreads`).
+        cache = (
+            t0 = Ref(convert(typeof(Δt), t + phase)),
+            index = Ref(iszero(phase) ? 0 : -1),
+        )
+        task_local_storage(cache_key, cache)
         return if initial_affect
             affect!(integrator)
         else
