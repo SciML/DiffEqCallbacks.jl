@@ -79,11 +79,11 @@ end
 
 export IterativeCallback
 
-mutable struct PeriodicCallbackAffect{A, dT, Ref1, Ref2}
+mutable struct PeriodicCallbackAffect{A, dT}
     affect!::A
     Δt::dT
-    t0::Ref1
-    index::Ref2
+    t0::dT
+    index::Int
 end
 
 function (S::PeriodicCallbackAffect)(integrator)
@@ -92,11 +92,9 @@ function (S::PeriodicCallbackAffect)(integrator)
     return S.affect!(integrator)
 end
 
-function add_next_tstop!(integrator, S)
-    (; Δt, t0, index) = S
-
+function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
-    tnew = t0[] + (index[] + 1) * Δt
+    tnew = S.t0 + (S.index + 1) * S.Δt
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -104,7 +102,7 @@ function add_next_tstop!(integrator, S)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
-    index[] += 1
+    S.index += 1
     return if tdir_tnew < get_tstops_max(integrator)
         add_tstop!(integrator, tnew)
     end
@@ -153,15 +151,15 @@ function PeriodicCallback(
         kwargs...
     )
     phase < 0 && throw(ArgumentError("phase offset must be non-negative"))
-    # The cache Refs are allocated fresh in `initialize_periodic` below, so
+    # The cache fields are (re-)initialized in `initialize_periodic` below, so
     # reusing a `PeriodicCallback` across successive solves starts from a clean
     # state. These placeholders are only here so the closures can capture a
     # mutable `PeriodicCallbackAffect` to read from.
-    affect! = PeriodicCallbackAffect(f, Δt, Ref(typemax(Δt)), Ref(0))
+    affect! = PeriodicCallbackAffect(f, Δt, typemax(Δt), 0)
 
     condition = function (u, t, integrator)
         fin = isfinished(integrator)
-        return (t == (affect!.t0[] + affect!.index[] * Δt) && !fin) ||
+        return (t == (affect!.t0 + affect!.index * Δt) && !fin) ||
             (final_affect && fin)
     end
 
@@ -169,9 +167,9 @@ function PeriodicCallback(
     initialize_periodic = function (c, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
         initialize(c, u, t, integrator)
-        # Allocate the cache in `init` so each integrator starts with fresh state.
-        affect!.t0 = Ref(t + phase)
-        affect!.index = Ref(iszero(phase) ? 0 : -1)
+        # Reset the cache in `init` so each integrator starts with fresh state.
+        affect!.t0 = t + phase
+        affect!.index = iszero(phase) ? 0 : -1
         return if initial_affect
             affect!(integrator)
         else
