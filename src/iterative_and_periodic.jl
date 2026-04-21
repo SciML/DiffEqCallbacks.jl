@@ -179,14 +179,22 @@ function PeriodicCallback(
     initialize_periodic = function (c, u, t, integrator)
         @assert integrator.tdir == sign(Δt)
         initialize(c, u, t, integrator)
-        # Allocate the cache in `init` so each Task running this callback gets
-        # its own `t0`/`index` Refs, making the callback safe to share across
-        # concurrent integrators (e.g. `EnsembleThreads`).
-        cache = (
-            t0 = Ref(convert(typeof(Δt), t + phase)),
-            index = Ref(iszero(phase) ? 0 : -1),
-        )
-        task_local_storage(cache_key, cache)
+        # Look up or create this Task's cache. The cache lives in
+        # `task_local_storage` so each Task running this callback (e.g. ensemble
+        # threads) has its own `t0`/`index` Refs. Allocation only happens the
+        # first time a given Task initializes this callback; subsequent solves
+        # on the same Task reuse the Refs and just rewrite their contents.
+        storage = task_local_storage()
+        existing = get(storage, cache_key, nothing)
+        cache = if existing === nothing
+            c = (t0 = Ref{typeof(Δt)}(), index = Ref(0))
+            storage[cache_key] = c
+            c
+        else
+            existing::_PeriodicCache{typeof(Δt)}
+        end
+        cache.t0[] = convert(typeof(Δt), t + phase)
+        cache.index[] = iszero(phase) ? 0 : -1
         return if initial_affect
             affect!(integrator)
         else
