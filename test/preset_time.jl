@@ -34,6 +34,18 @@ sol = integrator.sol
 @test 0.6 ∈ sol.t
 @test p != startp
 
+struct PresetTimeRoundoffIntegrator{T}
+    t::T
+    dt::T
+end
+
+roundoff_integrator = PresetTimeRoundoffIntegrator(8.999999999999996, 0.1)
+for tstops in ([2, 9], range(2, 9; length = 2), [2.0, 9.0])
+    roundoff_cb = PresetTimeCallback(tstops, integrator -> nothing)
+    @test roundoff_cb.condition(nothing, 8.999999999999996, roundoff_integrator)
+    @test !roundoff_cb.condition(nothing, 9.0 - 1.0e-10, roundoff_integrator)
+end
+
 notcalled = true
 prob = ODEProblem(some_dynamics, u0, tspan, p)
 cb = PresetTimeCallback([1.2], integrator -> notcalled = false)

@@ -6,9 +6,9 @@ struct PresetTimeFunction{T, T2, T3}
 end
 function (f::PresetTimeFunction)(u, t, integrator)
     return if hasproperty(integrator, :dt)
-        insorted(t, f.tstops) && (integrator.t - integrator.dt) != integrator.t
+        is_preset_time(t, f.tstops) && (integrator.t - integrator.dt) != integrator.t
     else
-        insorted(t, f.tstops)
+        is_preset_time(t, f.tstops)
     end
 end
 
@@ -26,9 +26,26 @@ function (f::PresetTimeFunction)(c, u, t, integrator)
     for tstop in _tstops
         add_tstop!(integrator, tstop)
     end
-    return if insorted(t, tstops)
+    return if is_preset_time(t, tstops)
         f.user_affect!(integrator)
     end
+end
+
+function is_preset_time(t, tstops)
+    insorted(t, tstops) && return true
+    i = searchsortedfirst(tstops, t)
+    return (i <= length(tstops) && is_close_preset_time(t, tstops[i])) ||
+        (i > firstindex(tstops) && is_close_preset_time(t, tstops[i - 1]))
+end
+
+function is_close_preset_time(t, tstop)
+    _t, _tstop = promote(t, tstop)
+    if _t isa AbstractFloat && _tstop isa AbstractFloat && isfinite(_t) && isfinite(_tstop)
+        scale = max(abs(_t), abs(_tstop))
+        return abs(_t - _tstop) <= 100 * eps(scale)
+    end
+
+    return t == tstop
 end
 
 """
