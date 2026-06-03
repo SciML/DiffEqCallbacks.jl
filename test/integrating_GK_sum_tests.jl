@@ -13,7 +13,7 @@ sol = solve(
 )
 @test integrated.integrand[1] == 1
 
-# test to enter reccursion
+# test to enter recursion
 integrated = IntegrandValuesSum(zeros(1))
 sol = solve(
     prob, Euler(),
