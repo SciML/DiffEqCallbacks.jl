@@ -13,7 +13,7 @@ sol = solve(
 )
 @test all(integrated.integrand .≈ [[0.1] for i in 1:10])
 
-# test to enter reccursion
+# test to enter recursion
 integrated = IntegrandValues(Float64, Vector{Float64})
 sol = solve(
     prob, Euler(),
