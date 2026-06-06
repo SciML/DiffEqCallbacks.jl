@@ -12,12 +12,11 @@ on:
       - 'docs/**'
 jobs:
   test:
-    if: false  # Temporarily disabled, see issue #292
     name: "Downgrade"
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
       julia-version: "1.10"
       group: "Core"
       skip: "Pkg,TOML"
-      allow-reresolve: false
+      allow-reresolve: true
     secrets: "inherit"
