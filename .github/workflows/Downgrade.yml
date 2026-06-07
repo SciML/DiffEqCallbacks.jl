@@ -13,16 +13,23 @@ on:
 jobs:
   test:
     name: "Downgrade"
-    # Disabled: the current compat lower bounds cannot be resolved strictly
-    # (allow-reresolve: false) at GROUP=Core. Pinning the direct deps to their
-    # floors locks RecursiveArrayTools at 3.36.0, which caps LinearSolve at the
-    # <= 3.36 line, while the test target's OrdinaryDiffEqNonlinearSolve floor
-    # pulls in LinearSolve >= 3.46 (LinearSolve >= 3.29 itself requires
-    # RecursiveArrayTools >= 3.37.0). The intersection is empty, so the test
-    # environment is unsatisfiable with allow-reresolve: false. Re-enabling
-    # would require raising the RecursiveArrayTools floor to >= 3.37.0 (a real
-    # compat change, not a CI knob). Until then this job is disabled rather than
-    # relaxed via allow-reresolve, which would silently hide the floor conflict.
+    # Disabled: the strict (allow-reresolve: false) GROUP=Core test environment
+    # is unsatisfiable, and no compat floor change can fix it. Raising the
+    # RecursiveArrayTools floor (3.36 -> 3.37) clears the initial LinearSolve
+    # wall, and further raising DiffEqBase (-> 6.217) + SciMLBase (-> 2.154) lets
+    # the project env resolve against the modern OrdinaryDiffEq stack. But the
+    # strict test sandbox then dead-ends on a structural ForwardDiff/LogExpFunctions
+    # conflict that is independent of our floors: the project env resolves
+    # LogExpFunctions to 1.0.1 (it is transitive via DiffEqBase, which caps it at
+    # no version), so it is fixed at 1.0.1 in the sandbox; the test extra
+    # ForwardDiff (required by domain/manifold tests) hard-requires
+    # LogExpFunctions = "0.3" at EVERY version (0.10.23 through 1.x), so it can
+    # never coexist with the fixed LogExpFunctions 1.0.1. This same wall
+    # reproduces even with the latest unpinned stack, confirming it is not a
+    # downgrade-floor issue. It is only resolvable by allow-reresolve: true,
+    # which would silently downgrade LogExpFunctions in the sandbox and defeat
+    # the point of strict downgrade testing. Keeping this job disabled until the
+    # ForwardDiff<->LogExpFunctions 0.3/1.0 split is reconciled upstream.
     if: false
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
