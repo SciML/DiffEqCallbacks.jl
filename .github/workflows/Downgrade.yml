@@ -12,12 +12,13 @@ on:
       - 'docs/**'
 jobs:
   test:
-    if: false  # Temporarily disabled, see issue #292
     name: "Downgrade"
+    # Runs strict (allow-reresolve unset, i.e. false). Expected RED until the
+    # upstream fix: ForwardDiff/LogExpFunctions (deeper than the LinearSolve
+    # wall) — red until ForwardDiff 1.3.4 (#811). Auto-greens on upstream release.
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
       julia-version: "1.10"
       group: "Core"
       skip: "Pkg,TOML"
-      allow-reresolve: false
     secrets: "inherit"
