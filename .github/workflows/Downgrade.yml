@@ -18,7 +18,6 @@ jobs:
     # wall) — red until ForwardDiff 1.3.4 (#811). Auto-greens on upstream release.
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
-      julia-version: "1.10"
+      julia-version: "lts"
       group: "Core"
-      skip: "Pkg,TOML"
     secrets: "inherit"
