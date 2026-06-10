@@ -10,6 +10,7 @@ mutable struct SavingIntegrandGKSumAffect{
     gk_step_cache::IntegrandCacheType
     gk_err_cache::IntegrandCacheType
     tol::Float64
+    integrand_inplace::Union{Nothing, Bool}
 end
 
 function integrate_gk!(
@@ -18,44 +19,39 @@ function integrate_gk!(
     )
     affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)
     affect!.gk_err_cache = recursive_zero!(affect!.gk_err_cache)
+    isinplace_prob = DiffEqBase.isinplace(integrator.sol.prob)
+    inplace_integrand = affect!.integrand_inplace === nothing ?
+        (isinplace_prob && affect!.integrand_cache !== nothing) :
+        affect!.integrand_inplace
     for i in 1:(2 * order + 1)
         t_temp = (gk_points[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
-        if DiffEqBase.isinplace(integrator.sol.prob)
+        if isinplace_prob
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
-            if affect!.integrand_cache == nothing
-                recursive_axpy!(
-                    gk_weights[order][i],
-                    affect!.integrand_func(curu, t_temp, integrator), affect!.gk_step_cache
-                )
-                if i % 2 == 0
-                    recursive_axpy!(
-                        g_weights[order][div(i, 2)],
-                        affect!.integrand_func(curu, t_temp, integrator), affect!.gk_err_cache
-                    )
-                end
-            else
-                affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-                recursive_axpy!(
-                    gk_weights[order][i],
-                    affect!.integrand_cache, affect!.gk_step_cache
-                )
-                if i % 2 == 0
-                    recursive_axpy!(
-                        g_weights[order][div(i, 2)],
-                        affect!.integrand_cache, affect!.gk_err_cache
-                    )
-                end
-            end
         else
+            curu = integrator(t_temp)
+        end
+        if inplace_integrand
+            affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
             recursive_axpy!(
                 gk_weights[order][i],
-                affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_step_cache
+                affect!.integrand_cache, affect!.gk_step_cache
             )
             if i % 2 == 0
                 recursive_axpy!(
                     g_weights[order][div(i, 2)],
-                    affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_err_cache
+                    affect!.integrand_cache, affect!.gk_err_cache
+                )
+            end
+        else
+            recursive_axpy!(
+                gk_weights[order][i],
+                affect!.integrand_func(curu, t_temp, integrator), affect!.gk_step_cache
+            )
+            if i % 2 == 0
+                recursive_axpy!(
+                    g_weights[order][div(i, 2)],
+                    affect!.integrand_func(curu, t_temp, integrator), affect!.gk_err_cache
                 )
             end
         end
@@ -108,6 +104,18 @@ returns Integral(integrand_func(u(t),t)dt over the problem tspan.
     that `integrand_func` will output (or higher compatible type).
   - `integrand_prototype` is a prototype of the output from the integrand.
 
+## Keyword Arguments
+
+  - `integrand_inplace = nothing`: controls which form of `integrand_func` is called.
+    With the default `nothing`, the in-place `integrand_func(out, u, t, integrator)`
+    form is used for in-place problems (when an `integrand_prototype` is given) and
+    the allocating `integrand_func(u, t, integrator)` form for out-of-place problems.
+    Pass `integrand_inplace = true` to force the in-place form even for out-of-place
+    problems — the integrand output (e.g. a parameter-shaped buffer) may be mutable
+    even when the state is immutable, which avoids allocating the output on every
+    quadrature node. Requires an `integrand_prototype`. Pass `integrand_inplace = false`
+    to force the allocating form.
+
 The outputted values are saved into `integrand_values`. The values are found
 via `integrand_values.integrand`.
 
@@ -119,11 +127,21 @@ via `integrand_values.integrand`.
     solvers are required.
 """
 function IntegratingGKSumCallback(
-        integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype, tol = 1.0e-7
+        integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype,
+        tol = 1.0e-7;
+        integrand_inplace::Union{Nothing, Bool} = nothing
     )
+    if integrand_inplace === true && integrand_prototype === nothing
+        throw(
+            ArgumentError(
+                "integrand_inplace = true requires an integrand_prototype to use as the output buffer."
+            )
+        )
+    end
     affect! = SavingIntegrandGKSumAffect(
         integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), tol
+        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype),
+        allocate_zeros(integrand_prototype), tol, integrand_inplace
     )
     condition = true_condition
     return DiscreteCallback(condition, affect!, save_positions = (false, false))

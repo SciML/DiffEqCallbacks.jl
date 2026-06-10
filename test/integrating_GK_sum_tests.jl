@@ -80,3 +80,22 @@ dGdp_analytical = analytical_derivative(p, tspan[end])
 @test isapprox(
     dGdp_analytical, integrand_values_inplace.integrand, atol = 1.0e-11, rtol = 1.0e-11
 )
+
+# integrand_inplace = true: in-place integrand with an out-of-place problem
+using StaticArrays
+prob_oop = ODEProblem((u, p, t) -> SVector(1.0), SVector(0.0), (0.0, 1.0))
+integrated = IntegrandValuesSum(zeros(1))
+sol = solve(
+    prob_oop, Euler(),
+    callback = IntegratingGKSumCallback(
+        (out, u, t, integrator) -> (out[1] = u[1]; nothing), integrated, Float64[0.0];
+        integrand_inplace = true
+    ),
+    dt = 0.1
+)
+@test integrated.integrand[1] == 0.5
+
+@test_throws ArgumentError IntegratingGKSumCallback(
+    (out, u, t, integrator) -> nothing, IntegrandValuesSum(zeros(1)), nothing;
+    integrand_inplace = true
+)
