@@ -3,7 +3,7 @@ versions = ["1", "lts", "pre"]
 os = ["ubuntu-latest", "macos-latest", "windows-latest"]
 
 [QA]
-versions = ["1", "lts", "pre"]
+versions = ["lts", "1"]
 
 [NoPre]
 versions = ["1", "lts", "pre"]
