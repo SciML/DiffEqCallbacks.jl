@@ -1,5 +1,6 @@
 using Test, DiffEqCallbacks
 using DiffEqCallbacks: sample, store!, IndependentlyLinearizedSolutionChunks, finish!
+using SciMLBase: ReturnCode
 
 @testset "IndependentlyLinearizedSolution" begin
     ils = IndependentlyLinearizedSolution{Float64, Float64}(

@@ -2,6 +2,8 @@ using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, DiffEqCallbacks
 using QuadGK
 using Test
 
+include("integrating_GK_shared.jl")
+
 prob = ODEProblem((u, p, t) -> [1.0], [0.0], (0.0, 1.0))
 integrated = IntegrandValuesSum(zeros(1))
 sol = solve(
@@ -26,10 +28,9 @@ sol = solve(
 
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 
-# Reuse shared helper functions defined in integrating_GK_tests.jl:
-# compute_dGdp, compute_dGdp_nt, simple_linear_system, adjoint_linear,
+# Shared helper functions (compute_dGdp, simple_linear_system, adjoint_linear,
 # adjoint_linear_inplace, analytical_derivative, callback_saving_linear,
-# callback_saving_linear_inplace
+# callback_saving_linear_inplace) are included from integrating_GK_shared.jl above.
 
 u0 = [1.0, 1.0]     # initial condition
 tspan = (0.0, 10.0) # simulation time

@@ -1,63 +1,64 @@
 using DiffEqCallbacks
 import Functors
 using Test
+using SafeTestsets
 const GROUP = get(ENV, "GROUP", "All")
 
 # write your own tests here
 @time @testset "DiffEqCallbacks" begin
     if GROUP == "QA"
-        @time @testset "Quality Assurance" begin
+        @time @safetestset "Quality Assurance" begin
             include("qa.jl")
         end
     end
 
     if GROUP == "All" || GROUP == "Core"
-        @time @testset "AutoAbstol" begin
+        @time @safetestset "AutoAbstol" begin
             include("autoabstol_tests.jl")
         end
-        @time @testset "TerminateSteadyState tests" begin
+        @time @safetestset "TerminateSteadyState tests" begin
             include("terminatesteadystate_test.jl")
         end
-        @time @testset "StepsizeLimiter tests" begin
+        @time @safetestset "StepsizeLimiter tests" begin
             include("stepsizelimiter_tests.jl")
         end
-        @time @testset "Function Calling tests" begin
+        @time @safetestset "Function Calling tests" begin
             include("funccall_tests.jl")
         end
-        @time @testset "IndependentlyLinearized tests" begin
+        @time @safetestset "IndependentlyLinearized tests" begin
             include("independentlylinearizedtests.jl")
         end
-        @time @testset "PresetTime tests" begin
+        @time @safetestset "PresetTime tests" begin
             include("preset_time.jl")
         end
-        @time @testset "Iterative tests" begin
+        @time @safetestset "Iterative tests" begin
             include("iterative_tests.jl")
         end
-        @time @testset "Periodic tests" begin
+        @time @safetestset "Periodic tests" begin
             include("periodic_tests.jl")
         end
-        @time @testset "Manifold tests" begin
+        @time @safetestset "Manifold tests" begin
             include("manifold_tests.jl")
         end
-        @time @testset "Domain tests" begin
+        @time @safetestset "Domain tests" begin
             include("domain_tests.jl")
         end
-        @time @testset "ProbInts tests" begin
+        @time @safetestset "ProbInts tests" begin
             include("probints.jl")
         end
-        @time @testset "Integrating tests" begin
+        @time @safetestset "Integrating tests" begin
             include("integrating_tests.jl")
         end
-        @time @testset "Integrating sum tests" begin
+        @time @safetestset "Integrating sum tests" begin
             include("integrating_sum_tests.jl")
         end
-        @time @testset "Integrating GK tests" begin
+        @time @safetestset "Integrating GK tests" begin
             include("integrating_GK_tests.jl")
         end
-        @time @testset "Integrating GK Sum tests" begin
+        @time @safetestset "Integrating GK Sum tests" begin
             include("integrating_GK_sum_tests.jl")
         end
-        @time @testset "Saving tests" begin
+        @time @safetestset "Saving tests" begin
             include("saving_tests.jl")
         end
     end
@@ -67,16 +68,16 @@ const GROUP = get(ENV, "GROUP", "All")
         Pkg.activate("nopre")
         Pkg.develop(Pkg.PackageSpec(path = dirname(@__DIR__)))
         Pkg.instantiate()
-        @time @testset "JET tests" begin
+        @time @safetestset "JET tests" begin
             include("nopre/jet_tests.jl")
         end
-        @time @testset "Integrating Sensitivity tests" begin
+        @time @safetestset "Integrating Sensitivity tests" begin
             include("nopre/integrating_sensitivity_tests.jl")
         end
-        @time @testset "Integrating Sum Sensitivity tests" begin
+        @time @safetestset "Integrating Sum Sensitivity tests" begin
             include("nopre/integrating_sum_sensitivity_tests.jl")
         end
-        @time @testset "Saving Tracker tests" begin
+        @time @safetestset "Saving Tracker tests" begin
             include("nopre/saving_tracker_tests.jl")
         end
     end
