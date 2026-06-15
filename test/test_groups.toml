@@ -5,6 +5,7 @@ os = ["ubuntu-latest", "macos-latest", "windows-latest"]
 [QA]
 versions = ["lts", "1"]
 
-[NoPre]
-versions = ["1", "lts", "pre"]
-os = ["ubuntu-latest", "macos-latest", "windows-latest"]
+# SciMLSensitivity/Zygote/Tracker-backed AD tests. The AD stack does not
+# support prerelease Julia; deps live in test/AD/Project.toml.
+[AD]
+versions = ["lts", "1"]
