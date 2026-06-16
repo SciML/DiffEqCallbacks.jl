@@ -1,3 +1,16 @@
+# Read the integrator's scalar error estimate. Older integrators stored it as the
+# `EEst` field directly; current OrdinaryDiffEqCore moved it onto the controller
+# cache (`integrator.controller_cache.EEst`, exposed there as `get_EEst`). Reading
+# it this way keeps DiffEqCallbacks free of an OrdinaryDiffEqCore dependency while
+# supporting both integrator layouts.
+function _integrator_EEst(integrator)
+    if hasproperty(integrator, :EEst)
+        return getproperty(integrator, :EEst)
+    else
+        return integrator.controller_cache.EEst
+    end
+end
+
 struct ProbIntsCache{T}
     σ::T
     order::Int
@@ -40,7 +53,7 @@ struct AdaptiveProbIntsCache
     order::Int
 end
 function (p::AdaptiveProbIntsCache)(integrator)
-    return integrator.u .= integrator.u .+ integrator.EEst * sqrt(integrator.dt^(2 * p.order)) * randn(size(integrator.u))
+    return integrator.u .= integrator.u .+ _integrator_EEst(integrator) * sqrt(integrator.dt^(2 * p.order)) * randn(size(integrator.u))
 end
 
 """
