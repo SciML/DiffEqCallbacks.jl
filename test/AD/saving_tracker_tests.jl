@@ -30,7 +30,11 @@ u0 = TrackedArray([1.0f0, 0.0f0, 0.0f0])
 tspan = TrackedArray([0.0f0, 1.0f0])
 prob = ODEProblem{false}(rober, u0, tspan, p)
 saved_values = SavedValues(eltype(tspan), eltype(p))
-cb = SavingCallback((u, t, integrator) -> integrator.EEst * integrator.dt, saved_values)
+# OrdinaryDiffEqCore's ODEIntegrator no longer has an `EEst` field; the scalar
+# error estimate now lives on the controller cache.
+eest(integrator) = hasproperty(integrator, :EEst) ? integrator.EEst :
+    integrator.controller_cache.EEst
+cb = SavingCallback((u, t, integrator) -> eest(integrator) * integrator.dt, saved_values)
 
 @test !all(
     iszero.(
