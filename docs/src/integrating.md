@@ -45,7 +45,7 @@ IntegratingGKSumCallback
 ## Example
 
 ```@example integrating
-using OrdinaryDiffEq, DiffEqCallbacks, Test
+using OrdinaryDiffEq, OrdinaryDiffEqLowOrderRK, DiffEqCallbacks, Test
 prob = ODEProblem((u, p, t) -> [1.0], [0.0], (0.0, 1.0))
 integrated = IntegrandValues(Float64, Vector{Float64})
 sol = solve(prob, Euler(),
