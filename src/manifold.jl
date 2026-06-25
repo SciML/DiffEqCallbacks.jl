@@ -114,7 +114,7 @@ function (proj::ManifoldProjection)(integrator)
         return
     end
 
-    return SciMLBase.copyto!(integrator.u, u)
+    return copyto!(integrator.u, u)
 end
 
 function initialize_manifold_projection(cb, u, t, integrator)
