@@ -14,7 +14,7 @@ In this example we will determine our uncertainty when solving the FitzHugh-Nagu
 model with the `Euler()` method. We define the FitzHugh-Nagumo model:
 
 ```@example probnum
-using DiffEqCallbacks, OrdinaryDiffEq, Plots
+using DiffEqCallbacks, OrdinaryDiffEq, OrdinaryDiffEqLowOrderRK, Plots
 gr(fmt = :png)
 
 function fitz(du, u, p, t)
