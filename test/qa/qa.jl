@@ -14,20 +14,15 @@ run_qa(
         # as stale because the `else` branch also binds the name as a `const`, but it
         # is used bare on SciMLBase v3.
         no_stale_explicit_imports = (; ignore = (:derivative_discontinuity!,)),
-        # Other packages' non-public names accessed in qualified form; go public as
-        # those packages release. The `Success`/`ConvergenceFailure`/`InitialFailure`/
-        # `successful_retcode`/`Iterators.reverse` group is `public` in its owning module
-        # on Julia 1.11+ but flagged on the LTS (1.10, no `public` keyword), so it must
-        # be ignored for the QA lane's lts run.
+        # Names that are still non-public in their owning module on the released
+        # versions (verified on Julia 1.12 / SciMLBase 3.24.0, DiffEqBase 7.5.7,
+        # LinearAlgebra+Base stdlib): go public as those packages release.
         all_qualified_accesses_are_public = (;
             ignore = (
                 :AbstractDEProblem, :AbstractODEIntegrator, :INITIALIZE_DEFAULT,
-                :_unwrap_val, :alg_order, :isadaptive, :numargs,            # SciMLBase internals
-                :successful_retcode,                                        # SciMLBase (public on 1.11+)
-                :Success, :ConvergenceFailure, :InitialFailure,             # SciMLBase.ReturnCode (public on 1.11+)
-                :QRCompactWY,                                               # LinearAlgebra internal
-                :RefValue, :depwarn,                                        # Base internals
-                :reverse,                                                   # Base.Iterators (public on 1.11+)
+                :_unwrap_val, :alg_order, :isadaptive,   # SciMLBase internals
+                :QRCompactWY,                            # LinearAlgebra internal
+                :RefValue,                               # Base internal
             ),
         ),
         # DiffEqBase internals imported explicitly; go public as DiffEqBase releases.
