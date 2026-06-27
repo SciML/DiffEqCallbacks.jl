@@ -2,7 +2,7 @@ module DiffEqCallbacks
 
 using ConcreteStructs: @concrete
 using DataStructures: DataStructures, BinaryMaxHeap, BinaryMinHeap
-using DiffEqBase: DiffEqBase, get_tstops, get_tstops_array, get_tstops_max
+using DiffEqBase: get_tstops, get_tstops_array, get_tstops_max
 using DifferentiationInterface: DifferentiationInterface, Constant
 using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!, diagind, mul!
 using Markdown: @doc_str

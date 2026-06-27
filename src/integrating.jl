@@ -181,7 +181,7 @@ function (affect!::SavingIntegrandAffect)(integrator)
     for i in 1:n
         t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] +
             (integrator.t + integrator.tprev) / 2
-        if DiffEqBase.isinplace(integrator.sol.prob)
+        if SciMLBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing

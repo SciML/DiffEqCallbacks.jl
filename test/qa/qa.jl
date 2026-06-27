@@ -14,20 +14,15 @@ run_qa(
         # as stale because the `else` branch also binds the name as a `const`, but it
         # is used bare on SciMLBase v3.
         no_stale_explicit_imports = (; ignore = (:derivative_discontinuity!,)),
-        # Names that are still non-public in their owning module on the released
-        # versions (verified on Julia 1.12 / SciMLBase 3.24.0, DiffEqBase 7.5.7,
-        # LinearAlgebra+Base stdlib): go public as those packages release.
+        # Names still non-public in their owning module on the released versions
+        # (verified on Julia 1.12 / SciMLBase 3.27.0, DiffEqBase 7.6.0, LinearAlgebra +
+        # Base stdlib): they go public as those packages release.
         all_qualified_accesses_are_public = (;
             ignore = (
-                :AbstractDEProblem, :AbstractODEIntegrator, :INITIALIZE_DEFAULT,
-                :_unwrap_val, :alg_order, :isadaptive,   # SciMLBase internals
-                :QRCompactWY,                            # LinearAlgebra internal
-                :RefValue,                               # Base internal
+                :AbstractODEIntegrator, :INITIALIZE_DEFAULT, :_unwrap_val,  # SciMLBase internals
+                :QRCompactWY,                                              # LinearAlgebra internal
+                :RefValue,                                                 # Base internal
             ),
-        ),
-        # DiffEqBase internals imported explicitly; go public as DiffEqBase releases.
-        all_explicit_imports_are_public = (;
-            ignore = (:get_tstops, :get_tstops_array, :get_tstops_max),
         ),
     ),
 )

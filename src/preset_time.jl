@@ -34,7 +34,7 @@ end
 """
 ```julia
 PresetTimeCallback(tstops, user_affect!;
-    initialize = DiffEqBase.INITIALIZE_DEFAULT,
+    initialize = SciMLBase.INITIALIZE_DEFAULT,
     filter_tstops = true,
     kwargs...)
 ```

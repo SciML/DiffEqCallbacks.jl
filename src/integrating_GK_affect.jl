@@ -178,7 +178,7 @@ function integrate_gk!(
     affect!.gk_err_cache = recursive_zero!(affect!.gk_err_cache)
     for i in 1:(2 * order + 1)
         t_temp = (gk_points[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
-        if DiffEqBase.isinplace(integrator.sol.prob)
+        if SciMLBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing

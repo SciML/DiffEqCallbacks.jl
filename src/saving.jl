@@ -52,9 +52,9 @@ function (affect!::SavingAffect)(integrator, force_save = false)
         if curt != integrator.t # If <t, interpolate
             if integrator isa SciMLBase.AbstractODEIntegrator
                 # Expand lazy dense for interpolation
-                DiffEqBase.addsteps!(integrator)
+                SciMLBase.addsteps!(integrator)
             end
-            if !DiffEqBase.isinplace(integrator.sol.prob)
+            if !SciMLBase.isinplace(integrator.sol.prob)
                 curu = integrator(curt)
             else
                 curu = first(get_tmp_cache(integrator))
