@@ -114,7 +114,7 @@ function (proj::ManifoldProjection)(integrator)
         return
     end
 
-    return SciMLBase.copyto!(integrator.u, u)
+    return copyto!(integrator.u, u)
 end
 
 function initialize_manifold_projection(cb, u, t, integrator)
@@ -152,7 +152,7 @@ export ManifoldProjection
 # wrapper for non-autonomous functions
 function wrap_autonomous_function(autonomous::Union{Val{true}, Val{false}}, g)
     g === nothing && return nothing
-    return TypedNonAutonomousFunction{SciMLBase._unwrap_val(autonomous)}(g, nothing)
+    return TypedNonAutonomousFunction{_unwrap_val(autonomous)}(g, nothing)
 end
 function wrap_autonomous_function(autonomous::Union{Bool, Nothing}, g)
     g === nothing && return nothing

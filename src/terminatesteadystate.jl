@@ -8,23 +8,23 @@ function allDerivPass(integrator, abstol, reltol, min_t)
     end
 
     testval = if integrator.sol.prob isa DiscreteProblem
-        if DiffEqBase.isinplace(integrator.sol.prob)
+        if SciMLBase.isinplace(integrator.sol.prob)
             testval = first(get_tmp_cache(integrator))
             @. testval = integrator.u - integrator.uprev
         else
             testval = integrator.u .- integrator.uprev
         end
     else
-        if DiffEqBase.isinplace(integrator.sol.prob)
+        if SciMLBase.isinplace(integrator.sol.prob)
             testval = first(get_tmp_cache(integrator))
-            DiffEqBase.get_du!(testval, integrator)
-            if integrator.sol.prob isa DiffEqBase.DiscreteProblem
+            SciMLBase.get_du!(testval, integrator)
+            if integrator.sol.prob isa SciMLBase.DiscreteProblem
                 @. testval = testval - integrator.u
             end
             testval
         else
             testval = get_du(integrator)
-            if integrator.sol.prob isa DiffEqBase.DiscreteProblem
+            if integrator.sol.prob isa SciMLBase.DiscreteProblem
                 testval = testval - integrator.u
             end
             testval
