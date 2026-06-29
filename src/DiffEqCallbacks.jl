@@ -18,15 +18,29 @@ using StaticArraysCore: StaticArraysCore
 
 # SciMLBase v3 renamed `u_modified!` → `derivative_discontinuity!` (with
 # an `@deprecate` on the old name). Support both SciMLBase v2 and v3 by
-# aliasing to whichever name the loaded SciMLBase provides.
-@static if isdefined(SciMLBase, :derivative_discontinuity!)
-    using SciMLBase: derivative_discontinuity!
+# binding a const to whichever name the loaded SciMLBase provides. Both
+# `derivative_discontinuity!` and `u_modified!` are public in their
+# respective SciMLBase versions, so the qualified access is to public API; a
+# `const` (rather than a `using` import on one branch) keeps the name a single
+# local binding and avoids a stale-import false positive.
+const derivative_discontinuity! = if isdefined(SciMLBase, :derivative_discontinuity!)
+    SciMLBase.derivative_discontinuity!
 else
-    const derivative_discontinuity! = SciMLBase.u_modified!
+    SciMLBase.u_modified!
 end
 
 const DI = DifferentiationInterface
 true_condition(u, t, integrator) = true
+
+# Local reproduction of SciMLBase's `_unwrap_val` (a leading-underscore internal
+# that will not be made public): pull the value out of a `Val`, pass anything
+# else through unchanged.
+_unwrap_val(B) = B
+_unwrap_val(::Val{B}) where {B} = B
+
+# No-op default `initialize` for `DiscreteCallback`, matching SciMLBase's
+# (non-public) `INITIALIZE_DEFAULT`: reset the derivative-discontinuity flag.
+INITIALIZE_DEFAULT(cb, u, t, integrator) = derivative_discontinuity!(integrator, false)
 
 include("functor_helpers.jl")
 include("autoabstol.jl")

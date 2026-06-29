@@ -34,7 +34,7 @@ end
 """
 ```julia
 PresetTimeCallback(tstops, user_affect!;
-    initialize = SciMLBase.INITIALIZE_DEFAULT,
+    initialize = INITIALIZE_DEFAULT,
     filter_tstops = true,
     kwargs...)
 ```
@@ -55,7 +55,7 @@ automatic.
 """
 function PresetTimeCallback(
         tstops, user_affect!;
-        initialize = SciMLBase.INITIALIZE_DEFAULT,
+        initialize = INITIALIZE_DEFAULT,
         filter_tstops = true,
         sort_inplace = false, kwargs...
     )
