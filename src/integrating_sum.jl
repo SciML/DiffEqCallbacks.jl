@@ -88,7 +88,7 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
         n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
     end
     accumulation_cache = recursive_zero!(affect!.accumulation_cache)
-    isinplace_prob = DiffEqBase.isinplace(integrator.sol.prob)
+    isinplace_prob = SciMLBase.isinplace(integrator.sol.prob)
     inplace_integrand = affect!.integrand_inplace === nothing ?
         (isinplace_prob && affect!.integrand_cache !== nothing) :
         affect!.integrand_inplace

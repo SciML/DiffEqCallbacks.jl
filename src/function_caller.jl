@@ -19,7 +19,7 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
         if curt != integrator.t # If <t, interpolate
             if integrator isa SciMLBase.AbstractODEIntegrator
                 # Expand lazy dense for interpolation
-                DiffEqBase.addsteps!(integrator)
+                SciMLBase.addsteps!(integrator)
             end
             if integrator.u isa Union{Number, StaticArraysCore.SArray}
                 curu = integrator(curt)
