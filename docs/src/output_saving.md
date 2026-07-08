@@ -3,8 +3,11 @@
 These callbacks extend the output and saving controls available during time stepping.
 
 ```@docs
+SavedValues
 SavingCallback
 FunctionCallingCallback
+IndependentlyLinearizedSolution
+LinearizingSavingCallback
 ```
 
 ### Saving Example

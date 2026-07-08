@@ -1,8 +1,13 @@
 """
     SavedValues{tType<:Real, savevalType}
 
-A struct used to save values of the time in `t::Vector{tType}` and
-additional values in `saveval::Vector{savevalType}`.
+Container used by [`SavingCallback`](@ref) to store saved time points and
+user-defined values.
+
+## Fields
+
+  - `t::Vector{tType}`: saved time points.
+  - `saveval::Vector{savevalType}`: values returned by the saving function.
 """
 struct SavedValues{tType, savevalType}
     t::Vector{tType}
@@ -10,9 +15,21 @@ struct SavedValues{tType, savevalType}
 end
 
 """
-    SavedValues(tType::DataType, savevalType::DataType)
+    SavedValues(tType::Type, savevalType::Type)
 
 Return `SavedValues{tType, savevalType}` with empty storage vectors.
+
+## Arguments
+
+  - `tType`: the element type of saved time points.
+  - `savevalType`: the element type of saved values returned by the saving function.
+
+## Example
+
+```julia
+saved_values = SavedValues(Float64, Tuple{Float64, Float64})
+cb = SavingCallback((u, t, integrator) -> (sum(u), maximum(u)), saved_values)
+```
 """
 function SavedValues(::Type{tType}, ::Type{savevalType}) where {tType, savevalType}
     return SavedValues{tType, savevalType}(Vector{tType}(), Vector{savevalType}())
@@ -360,34 +377,39 @@ end
     LinearizingSavingCallback(ils::IndependentlyLinearizedSolution)
     LinearizingSavingCallback(ilss::Vector{IndependentlyLinearizedSolution})
 
-Provides a saving callback that inserts interpolation points into your signal such that
-a naive linear interpolation of the resultant saved values will be within `abstol`/`reltol`
-of the higher-order interpolation of your solution.  This essentially makes a time/space
-tradeoff, where more points in time are saved, costing more memory, but interpolation is
-incredibly cheap and downstream algorithm complexity is reduced by not needing to bother
-with multiple interpolation types.
+Return a saving callback that inserts interpolation points so that linear interpolation
+of the saved values is within `abstol`/`reltol` of the integrator interpolation.
 
 The algorithm internally checks 3 equidistant points between each time point to determine
 goodness of fit versus the linearly interpolated function; this should be sufficient for
 interpolations up to the 4th order, higher orders may need more points to ensure good
 fit.  This has not been implemented yet.
 
-This callback generator takes in an `IndependentlyLinearizedSolution` object to store
-output into.  An `IndependentlyLinearizedSolution` object itself controls how many
-derivatives (if any) to linearize along with the primal states themselves.
+## Arguments
 
-Example usage:
+  - `ils`: the [`IndependentlyLinearizedSolution`](@ref) storage object to fill.
+  - `ilss`: storage objects for multiple independently linearized solutions.
+
+## Keyword Arguments
+
+  - `interpolate_mask`: a `BitVector` selecting the `u` indices for which the
+    integrator interpolant can be queried. False indices are linearly interpolated
+    from the solution time points without subdivision.
+  - `abstol`: absolute tolerance for comparing linearized and integrator interpolation.
+    Defaults to the integrator absolute tolerance.
+  - `reltol`: relative tolerance for comparing linearized and integrator interpolation.
+    Defaults to the integrator relative tolerance.
+
+## Returns
+
+A `DiscreteCallback` that stores independently linearized output in `ils`.
+
+## Example
 
 ```julia
 ils = IndependentlyLinearizedSolution(prob)
-solve(prob, solver; callback=LinearizingSavingCallback(ils))
+sol = solve(prob, solver; callback = LinearizingSavingCallback(ils))
 ```
-
-# Keyword Arguments
-- `interpolate_mask::BitVector`: a set of `u` indices for which the integrator
-  interpolant can be queried. Any false indices will be linearly-interpolated
-  based on the `sol.t` points instead (no subdivision).  This is useful for when
-  a solution needs to ignore certain indices due to badly-behaved interpolation.
 """
 function LinearizingSavingCallback(
         ils::IndependentlyLinearizedSolution{T, S};
