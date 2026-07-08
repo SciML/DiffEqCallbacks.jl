@@ -1,8 +1,6 @@
 """
-```julia
-IterativeCallback(time_choice, user_affect!, tType = Float64;
-    initial_affect = false, kwargs...)
-```
+    IterativeCallback(time_choice, user_affect!, tType = Float64;
+        initial_affect = false, kwargs...)
 
 A callback to be used to iteratively apply some affect. For example, if given the first
 effect at `t₁`, you can define `t₂` to apply the next effect.
@@ -16,6 +14,28 @@ effect at `t₁`, you can define `t₂` to apply the next effect.
 ## Keyword Arguments
 
   - `initial_affect` is whether to apply the affect at `t=0` which defaults to `false`
+  - `initialize` is the callback initialization function.
+  - `kwargs` are keyword arguments accepted by `DiscreteCallback`.
+
+## Returns
+
+A `DiscreteCallback` that repeatedly schedules the next time returned by
+`time_choice`.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+count = Ref(0)
+hits = Float64[]
+time_choice = integrator -> (count[] += 1; count[] <= 3 ? integrator.t + 0.1 : nothing)
+affect! = integrator -> push!(hits, integrator.t)
+cb = IterativeCallback(time_choice, affect!)
+
+prob = ODEProblem((u, p, t) -> -u, 1.0, (0.0, 1.0))
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function IterativeCallback(
         time_choice, user_affect!, tType = Float64;
@@ -120,11 +140,8 @@ function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
 end
 
 """
-```julia
-PeriodicCallback(f, Δt::Number; phase = 0, initial_affect = false,
-    final_affect = false,
-    kwargs...)
-```
+    PeriodicCallback(f, Δt::Number; phase = 0, initial_affect = false,
+        final_affect = false, kwargs...)
 
 `PeriodicCallback` can be used when a function should be called periodically in terms of
 integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`,
@@ -149,6 +166,24 @@ discrete-time controller for a continuous-time system, running at a fixed rate.
   - `initial_affect` is whether to apply the affect at the initial time, which defaults to `false`
   - `final_affect` is whether to apply the affect at the final time, which defaults to `false`
   - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
+
+## Returns
+
+A `DiscreteCallback` that schedules an `affect!` call every `Δt` units of
+integration time.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+samples = Float64[]
+affect! = integrator -> push!(samples, integrator.u)
+cb = PeriodicCallback(affect!, 0.1; initial_affect = true)
+
+prob = ODEProblem((u, p, t) -> -u, 1.0, (0.0, 1.0))
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function PeriodicCallback(
         f, Δt::Number;

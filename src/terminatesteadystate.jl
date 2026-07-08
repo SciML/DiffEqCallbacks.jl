@@ -81,6 +81,22 @@ the [Steady State Solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/stead
 
   - `min_t` specifies an optional minimum `t` before the steady state calculations are allowed
     to terminate.
+
+## Returns
+
+A `DiscreteCallback` that terminates the integrator when `test` returns `true`.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+f(u, p, t) = 1 - u
+prob = ODEProblem(f, 0.0, (0.0, 100.0))
+cb = TerminateSteadyState(1.0e-8, 1.0e-8)
+
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function TerminateSteadyState(
         abstol = 1.0e-8, reltol = 1.0e-6, test::T = allDerivPass;

@@ -5,7 +5,6 @@ using DataStructures: DataStructures, BinaryMaxHeap, BinaryMinHeap
 using DiffEqBase: get_tstops, get_tstops_array, get_tstops_max
 using DifferentiationInterface: DifferentiationInterface, Constant
 using LinearAlgebra: LinearAlgebra, adjoint, axpy!, copyto!, diagind, mul!
-using Markdown: @doc_str
 using PrecompileTools: PrecompileTools
 using RecipesBase: @recipe
 using RecursiveArrayTools: RecursiveArrayTools, DiffEqArray, copyat_or_push!

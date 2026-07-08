@@ -85,9 +85,11 @@ end
 
 """
 ```julia
-IntegratingCallback(integrand_func,
-    integrand_values::IntegrandValues,
-    cache = nothing)
+IntegratingGKSumCallback(integrand_func,
+    integrand_values::IntegrandValuesSum,
+    integrand_prototype,
+    tol = 1.0e-7;
+    integrand_inplace = nothing)
 ```
 
 Lets one define a function `integrand_func(u, t, integrator)` which
@@ -118,6 +120,24 @@ returns Integral(integrand_func(u(t),t)dt over the problem tspan.
 
 The outputted values are saved into `integrand_values`. The values are found
 via `integrand_values.integrand`.
+
+## Returns
+
+A `DiscreteCallback` that accumulates Gauss-Kronrod quadrature estimates into
+`integrand_values.integrand`.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+prob = ODEProblem((u, p, t) -> -u, 1.0, (0.0, 1.0))
+values = IntegrandValuesSum(0.0)
+cb = IntegratingGKSumCallback((u, t, integrator) -> u^2, values, 0.0)
+
+sol = solve(prob, Tsit5(); callback = cb)
+total = values.integrand
+```
 
 !!! note
 

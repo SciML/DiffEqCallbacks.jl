@@ -66,6 +66,26 @@ order of the integrator even with the ManifoldProjection.
 [1] Ernst Hairer, Christian Lubich, Gerhard Wanner. Geometric Numerical Integration:
 Structure-Preserving Algorithms for Ordinary Differential Equations. Berlin ;
 New York :Springer, 2002.
+
+## Examples
+
+```julia
+using ADTypes, DiffEqCallbacks, OrdinaryDiffEq
+
+function unit_circle(resid, u, p, t)
+    resid[1] = sum(abs2, u) - 1
+end
+
+function rotation!(du, u, p, t)
+    du[1] = -u[2]
+    du[2] = u[1]
+end
+
+prob = ODEProblem(rotation!, [1.0, 0.0], (0.0, 10.0))
+cb = ManifoldProjection(unit_circle; residual_prototype = [0.0], autodiff = AutoFiniteDiff())
+
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 @concrete mutable struct ManifoldProjection
     manifold

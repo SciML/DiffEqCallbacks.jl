@@ -32,12 +32,10 @@ function (f::PresetTimeFunction)(c, u, t, integrator)
 end
 
 """
-```julia
-PresetTimeCallback(tstops, user_affect!;
-    initialize = INITIALIZE_DEFAULT,
-    filter_tstops = true,
-    kwargs...)
-```
+    PresetTimeCallback(tstops, user_affect!;
+        initialize = INITIALIZE_DEFAULT,
+        filter_tstops = true,
+        kwargs...)
 
 A callback that adds callback `affect!` calls at preset times. No playing around with
 `tstops` or anything is required: this callback adds the triggers for you to make it
@@ -52,6 +50,26 @@ automatic.
 
   - `filter_tstops`: Whether to filter out tstops beyond the end of the integration timespan.
     Defaults to true. If false, then tstops can extend the interval of integration.
+  - `initialize`: callback initialization function.
+  - `kwargs`: keyword arguments forwarded to `DiscreteCallback`.
+
+## Returns
+
+A `DiscreteCallback` that schedules the requested `tstops` and calls `user_affect!`
+at those times.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+hits = Float64[]
+affect! = integrator -> push!(hits, integrator.t)
+cb = PresetTimeCallback([0.25, 0.5, 0.75], affect!)
+
+prob = ODEProblem((u, p, t) -> -u, 1.0, (0.0, 1.0))
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function PresetTimeCallback(
         tstops, user_affect!;

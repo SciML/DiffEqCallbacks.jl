@@ -41,6 +41,17 @@ the timesteps and the order of the algorithm.
 
 Conrad P., Girolami M., Särkkä S., Stuart A., Zygalakis. K, Probability
 Measures for Numerical Solutions of Differential Equations, arXiv:1506.04592
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+prob = ODEProblem((u, p, t) -> -u, [1.0], (0.0, 1.0))
+cb = ProbIntsUncertainty(0.01, 5)
+
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function ProbIntsUncertainty(σ, order, save = true)
     affect! = ProbIntsCache(σ, order)
@@ -79,6 +90,17 @@ every step.
 
 Conrad P., Girolami M., Särkkä S., Stuart A., Zygalakis. K, Probability
 Measures for Numerical Solutions of Differential Equations, arXiv:1506.04592
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+prob = ODEProblem((u, p, t) -> -u, [1.0], (0.0, 1.0))
+cb = AdaptiveProbIntsUncertainty(5)
+
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function AdaptiveProbIntsUncertainty(order, save = true)
     affect! = AdaptiveProbIntsCache(order)
