@@ -157,6 +157,7 @@ end
 
 """
     IndependentlyLinearizedSolution
+    IndependentlyLinearizedSolution(prob::SciMLBase.AbstractDEProblem, num_derivatives = 0)
 
 Efficient datastructure that holds a set of independently linearized solutions
 (obtained via the `LinearizingSavingCallback`) with related, but slightly
@@ -165,6 +166,25 @@ denoting which `u` vectors are sampled at which timepoints.  Provides an
 efficient `iterate()` method that can be used to reconstruct coherent views
 of the state variables at all timepoints, as well as an efficient `sample!()`
 method that can sample at arbitrary timesteps.
+
+## Arguments
+
+  - `prob`: differential equation problem used to infer the time, state, and storage
+    dimensions.
+  - `num_derivatives`: number of derivative rows to store in addition to the primal
+    state values.
+
+## Returns
+
+An `IndependentlyLinearizedSolution` storage object for use with
+[`LinearizingSavingCallback`](@ref).
+
+## Example
+
+```julia
+ils = IndependentlyLinearizedSolution(prob)
+sol = solve(prob, solver; callback = LinearizingSavingCallback(ils))
+```
 """
 mutable struct IndependentlyLinearizedSolution{T, S}
     # All timepoints, shared by all `us`
