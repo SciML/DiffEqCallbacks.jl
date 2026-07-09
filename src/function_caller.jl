@@ -60,23 +60,43 @@ function functioncalling_initialize(cb, u, t, integrator)
 end
 
 """
-```julia
-FunctionCallingCallback(func;
-    funcat = Vector{Float64}(),
-    func_everystep = isempty(funcat),
-    func_start = true,
-    tdir = 1)
-```
+    FunctionCallingCallback(func;
+        funcat = Vector{Float64}(),
+        func_everystep = isempty(funcat),
+        func_start = true,
+        tdir = 1)
 
 The function calling callback lets you define a function `func(u,t,integrator)`
-which gets called at the time points of interest. The constructor is:
+which gets called at the time points of interest.
+
+## Arguments
 
   - `func(u, t, integrator)` is the function to be called.
+
+## Keyword Arguments
+
   - `funcat` values or interval that the function is sure to be evaluated at.
   - `func_everystep` whether to call the function after each integrator step.
   - `func_start` whether the function is called at the initial condition.
   - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
     be adapted if `tspan[1] > tspan[end]`.
+
+## Returns
+
+A `DiscreteCallback` that calls `func` without modifying the integrator state.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+seen = Float64[]
+func = (u, t, integrator) -> push!(seen, t)
+cb = FunctionCallingCallback(func; funcat = 0.0:0.25:1.0)
+
+prob = ODEProblem((u, p, t) -> -u, 1.0, (0.0, 1.0))
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function FunctionCallingCallback(
         func;

@@ -280,6 +280,20 @@ inside the domain. Thus, a `PositiveDomain` callback should generally be preferr
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+function nonnegative_residual(resid, u, p, t)
+    @. resid = max(-u, 0)
+end
+
+prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0, 2.0], (0.0, 2.0))
+cb = GeneralDomain(nonnegative_residual, [1.0, 2.0]; abstol = 1.0e-8)
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function GeneralDomain(
         g, u = nothing; save = true, abstol = nothing, scalefactor = nothing,
@@ -310,15 +324,13 @@ function GeneralDomain(
     return CallbackSet(manifold_projection, domain_cb)
 end
 
-@doc doc"""
-```julia
-PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
-```
+"""
+    PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
 
 Especially in biology and other natural sciences, a desired property of
 dynamical systems is the positive invariance of the positive cone, i.e.
 non-negativity of variables at time ``t_0`` ensures their non-negativity at times
-``t \geq t_0`` for which the solution is defined. However, even if a system
+``t \\geq t_0`` for which the solution is defined. However, even if a system
 satisfies this property mathematically it can be difficult for ODE solvers to
 ensure it numerically, as these [MATLAB examples](https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html)
 show.
@@ -346,7 +358,7 @@ depends on how accurately extrapolations approximate next time steps.
 Please note, that the system should be defined also outside the positive domain,
 since even with these approaches, negative variables might occur during the
 calculations. Moreover, one should follow Shampine's et al. advice and set the
-derivative ``x'_i`` of a negative component ``x_i`` to ``\max \{0, f_i(x, t)\}``,
+derivative ``x'_i`` of a negative component ``x_i`` to ``\\max \\{0, f_i(x, t)\\}``,
 where ``t`` denotes the current time point with state vector ``x`` and ``f_i``
 is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 
@@ -370,6 +382,18 @@ is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+f(u, p, t) = -u
+prob = ODEProblem(f, 1.0, (0.0, 2.0))
+cb = PositiveDomain()
+
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
     if u isa Nothing

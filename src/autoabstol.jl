@@ -42,6 +42,23 @@ is set to the maximum value that the state has thus far reached times the relati
 
 If this callback is used in isolation, `save=true` is required for normal saving behavior.
 Otherwise, `save=false` should be set to ensure extra saves do not occur.
+
+## Returns
+
+A `DiscreteCallback` that updates the integrator absolute tolerance from the largest
+state magnitude observed so far.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+f(u, p, t) = 0.5u
+prob = ODEProblem(f, 1.0, (0.0, 2.0))
+cb = AutoAbstol(; init_curmax = 1.0e-8)
+
+sol = solve(prob, Tsit5(); callback = cb, reltol = 1.0e-6)
+```
 """
 function AutoAbstol(save = true; init_curmax = 0.0)
     affect! = AutoAbstolAffect(abs.(init_curmax))

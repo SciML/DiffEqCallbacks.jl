@@ -235,6 +235,23 @@ returns Integral(integrand_func(u(t),t)dt over the problem tspan.
 The outputted values are saved into `integrand_values`. The values are found
 via `integrand_values.integrand`.
 
+## Returns
+
+A `DiscreteCallback` that saves one quadrature estimate per accepted step.
+
+## Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+prob = ODEProblem((u, p, t) -> -u, 1.0, (0.0, 1.0))
+values = IntegrandValues(Float64, Float64)
+cb = IntegratingCallback((u, t, integrator) -> u^2, values, 0.0)
+
+sol = solve(prob, Tsit5(); callback = cb)
+integrals_by_step = values.integrand
+```
+
 !!! note
 
     This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
