@@ -14,9 +14,6 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[sources]
-DiffEqCallbacks = {path = "../.."}
-
 [compat]
 ComponentArrays = "0.15.18"
 ForwardDiff = "0.10.36"
@@ -27,7 +24,7 @@ OrdinaryDiffEqTsit5 = "2"
 QuadGK = "2.9"
 SafeTestsets = "0.0.1, 0.1, 1"
 SciMLSensitivity = "7.105"
-SciMLTesting = "1"
+SciMLTesting = "2.1"
 Test = "1"
 Tracker = "0.2.35"
 Zygote = "0.6.69, 0.7"

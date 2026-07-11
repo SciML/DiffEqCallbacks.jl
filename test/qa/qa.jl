@@ -1,4 +1,4 @@
-using SciMLTesting, DiffEqCallbacks, Test
+using SciMLTesting, DiffEqCallbacks
 
 run_qa(
     DiffEqCallbacks;
@@ -22,6 +22,7 @@ run_qa(
             ),
         ),
     ),
+    api_docs_kwargs = (; rendered = true),
 )
 
 @testset "Public API documentation coverage" begin
