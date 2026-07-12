@@ -130,9 +130,9 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 version = "1.11.0"
 
 [[deps.BinaryHeaps]]
-git-tree-sha1 = "912c65755b7b653fcea9f9f941cdeb24c65335b9"
+git-tree-sha1 = "4661a9d719ef993f2cb792b65d9b810019a4e36d"
 uuid = "b2a6c25c-c996-4615-94ab-6e519ffb8690"
-version = "1.0.2"
+version = "1.0.3"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "bbe1079eecf9c9fbb52765193ad2bae27ae09bc8"
@@ -344,7 +344,7 @@ version = "7.6.1"
 deps = ["ConcreteStructs", "DataStructures", "DiffEqBase", "DifferentiationInterface", "LinearAlgebra", "Markdown", "PrecompileTools", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArraysCore"]
 path = "/home/runner/_work/DiffEqCallbacks.jl/DiffEqCallbacks.jl"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
-version = "4.18.2"
+version = "4.18.3"
 
     [deps.DiffEqCallbacks.extensions]
     DiffEqCallbacksFunctorsExt = "Functors"
@@ -545,9 +545,9 @@ version = "3.0.2"
 
 [[deps.FiniteDiff]]
 deps = ["ArrayInterface", "LinearAlgebra", "Setfield"]
-git-tree-sha1 = "2e5742cda07276e1834281ada4cc71b6bfc87586"
+git-tree-sha1 = "07e98e3f332ee60179813dd9cdf21412e3c0a96a"
 uuid = "6a86dc24-6348-571c-b903-95158fe2bd41"
-version = "2.31.1"
+version = "2.32.0"
 
     [deps.FiniteDiff.extensions]
     FiniteDiffBandedMatricesExt = "BandedMatrices"
@@ -912,9 +912,9 @@ version = "2.42.0+0"
 
 [[deps.LineSearch]]
 deps = ["ADTypes", "CommonSolve", "ConcreteStructs", "FastClosures", "LinearAlgebra", "MaybeInplace", "PrecompileTools", "SciMLBase", "SciMLJacobianOperators", "StaticArraysCore"]
-git-tree-sha1 = "0d3ab459682495fa263cd59e239dcb249ee421aa"
+git-tree-sha1 = "0ddc77c97e42b3024a1646278bdaafee0bd61583"
 uuid = "87fe0de2-c867-4266-b59a-2f0a94fc965b"
-version = "0.1.11"
+version = "0.1.12"
 
     [deps.LineSearch.extensions]
     LineSearchLineSearchesExt = "LineSearches"
