@@ -3,10 +3,23 @@
 
 A struct used to save the accumulated integrand value in `integrand::integrandType`.
 
+## Fields
+
+  - `integrand::integrandType`: the running quadrature total. The callback mutates this value
+    in place for mutable values such as arrays; scalar totals are replaced with the updated
+    scalar value.
+
+Do not mutate `integrand` while a solve using this storage is active.
+
 ## Constructors
 
   - `IntegrandValuesSum(initial_value)`: Create with an initial value (recommended).
     The type is inferred from the value. Use `zeros(n)` for arrays or `zero(T)` for scalars.
+
+## Returns
+
+An `IntegrandValuesSum` container for [`IntegratingSumCallback`](@ref) or
+[`IntegratingGKSumCallback`](@ref).
 
 ## Examples
 
@@ -102,18 +115,22 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
         end
         if inplace_integrand
             affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-            recursive_axpy!(
+            accumulation_cache = recursive_axpy!(
                 gauss_weights[n][i], affect!.integrand_cache, accumulation_cache
             )
         else
-            recursive_axpy!(
+            accumulation_cache = recursive_axpy!(
                 gauss_weights[n][i],
                 affect!.integrand_func(curu, t_temp, integrator), accumulation_cache
             )
         end
     end
-    recursive_scalar_mul!(accumulation_cache, (integrator.t - integrator.tprev) / 2)
-    recursive_add!(affect!.integrand_values.integrand, accumulation_cache)
+    accumulation_cache = recursive_scalar_mul!(
+        accumulation_cache, (integrator.t - integrator.tprev) / 2
+    )
+    affect!.integrand_values.integrand = recursive_add!(
+        affect!.integrand_values.integrand, accumulation_cache
+    )
     return derivative_discontinuity!(integrator, false)
 end
 

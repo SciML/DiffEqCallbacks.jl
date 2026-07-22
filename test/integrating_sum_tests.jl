@@ -21,6 +21,16 @@ sol = solve(
 )
 @test integrated.integrand[1] == 0.5
 
+integrated_scalar = IntegrandValuesSum(0.0)
+sol = solve(
+    prob, Euler(),
+    callback = IntegratingSumCallback(
+        (u, t, integrator) -> u[1], integrated_scalar, 0.0
+    ),
+    dt = 0.1
+)
+@test integrated_scalar.integrand == 0.5
+
 # integrand_inplace = true: in-place integrand with an out-of-place problem
 # (e.g. immutable state with a mutable, parameter-shaped integrand buffer)
 using StaticArrays

@@ -167,6 +167,19 @@ efficient `iterate()` method that can be used to reconstruct coherent views
 of the state variables at all timepoints, as well as an efficient `sample!()`
 method that can sample at arbitrary timesteps.
 
+## Fields
+
+  - `ts::Vector{T}`: sorted union of the stored time points.
+  - `us::Vector{Matrix{S}}`: state and derivative samples. Each matrix corresponds to one
+    state component and contains its available samples in columns.
+  - `time_mask::BitMatrix`: maps rows of `us` to entries in `ts`; use iteration or `sample`
+    rather than interpreting this packed representation directly.
+  - `ilsc`: construction cache used while [`LinearizingSavingCallback`](@ref) is active.
+    It becomes `nothing` once the solve finishes and is not an extension point.
+
+The vectors and mask are storage owned by the callback. Read the result through the generic
+iteration and sampling operations after the solve; do not mutate its fields during solving.
+
 ## Arguments
 
   - `prob`: differential equation problem used to infer the time, state, and storage
@@ -179,7 +192,7 @@ method that can sample at arbitrary timesteps.
 An `IndependentlyLinearizedSolution` storage object for use with
 [`LinearizingSavingCallback`](@ref).
 
-## Example
+## Examples
 
 ```julia
 ils = IndependentlyLinearizedSolution(prob)

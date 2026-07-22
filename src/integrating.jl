@@ -132,9 +132,31 @@ const gauss_weights = [
 ]
 
 """
-    IntegrandValues{integrandType}
+    IntegrandValues{tType, integrandType}
 
-A struct used to save values of the integrand values in `integrand::Vector{integrandType}`.
+Storage used by [`IntegratingCallback`](@ref) and [`IntegratingGKCallback`](@ref) for
+one quadrature estimate per accepted solver step. Construct it before solving and pass the
+same instance to the callback; the callback appends to it in place.
+
+## Fields
+
+  - `ts::Vector{tType}`: accepted-step end times associated with the stored estimates.
+  - `integrand::Vector{integrandType}`: quadrature estimates over the corresponding solver
+    steps. Entry `integrand[i]` approximates the integral from the previous saved solver time
+    to `ts[i]`.
+
+Do not mutate either vector while a solve using the storage is active.
+
+## Constructors
+
+  - `IntegrandValues(tType, integrandType)`: create empty storage with time element type
+    `tType` and estimate element type `integrandType`.
+
+## Example
+
+```julia
+values = IntegrandValues(Float64, Float64)
+```
 """
 struct IntegrandValues{tType, integrandType}
     ts::Vector{tType}
@@ -142,9 +164,18 @@ struct IntegrandValues{tType, integrandType}
 end
 
 """
-    IntegrandValues(integrandType::DataType)
+    IntegrandValues(tType::Type, integrandType::Type)
 
-Return `IntegrandValues{integrandType}` with empty storage vectors.
+Create empty [`IntegrandValues`](@ref) storage.
+
+## Arguments
+
+  - `tType`: element type used for saved step end times.
+  - `integrandType`: element type returned by the callback integrand function.
+
+## Returns
+
+An `IntegrandValues{tType, integrandType}` whose `ts` and `integrand` vectors are empty.
 """
 function IntegrandValues(::Type{tType}, ::Type{integrandType}) where {tType, integrandType}
     return IntegrandValues{tType, integrandType}(Vector{tType}(), Vector{integrandType}())

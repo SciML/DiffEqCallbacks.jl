@@ -33,23 +33,23 @@ function integrate_gk!(
         end
         if inplace_integrand
             affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
-            recursive_axpy!(
+            affect!.gk_step_cache = recursive_axpy!(
                 gk_weights[order][i],
                 affect!.integrand_cache, affect!.gk_step_cache
             )
             if i % 2 == 0
-                recursive_axpy!(
+                affect!.gk_err_cache = recursive_axpy!(
                     g_weights[order][div(i, 2)],
                     affect!.integrand_cache, affect!.gk_err_cache
                 )
             end
         else
-            recursive_axpy!(
+            affect!.gk_step_cache = recursive_axpy!(
                 gk_weights[order][i],
                 affect!.integrand_func(curu, t_temp, integrator), affect!.gk_step_cache
             )
             if i % 2 == 0
-                recursive_axpy!(
+                affect!.gk_err_cache = recursive_axpy!(
                     g_weights[order][div(i, 2)],
                     affect!.integrand_func(curu, t_temp, integrator), affect!.gk_err_cache
                 )
@@ -57,7 +57,9 @@ function integrate_gk!(
         end
     end
     return if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)) < tol
-        recursive_axpy!(1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache)
+        affect!.accumulation_cache = recursive_axpy!(
+            1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
+        )
     else
         integrate_gk!(
             affect!, integrator, bound_l, (bound_l + bound_r) / 2, order = order, tol = tol / 2
@@ -75,11 +77,13 @@ function (affect!::SavingIntegrandGKSumAffect)(integrator)
     else
         n = div(SciMLBase.alg_order(integrator.alg) + 1, 2)
     end
-    accumulation_cache = recursive_zero!(affect!.accumulation_cache)
+    affect!.accumulation_cache = recursive_zero!(affect!.accumulation_cache)
     integrate_gk!(
         affect!, integrator, integrator.tprev, integrator.t, order = n, tol = affect!.tol
     )
-    recursive_add!(affect!.integrand_values.integrand, accumulation_cache)
+    affect!.integrand_values.integrand = recursive_add!(
+        affect!.integrand_values.integrand, affect!.accumulation_cache
+    )
     return derivative_discontinuity!(integrator, false)
 end
 

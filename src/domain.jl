@@ -173,14 +173,9 @@ function _set_neg_zero!(integrator, u::Number)
 end
 
 function _set_neg_zero!(integrator, u::StaticArraysCore.SArray)
-    modified = false
-    @inbounds for i in eachindex(integrator.u)
-        if u[i] < 0
-            u = setindex(u, zero(first(u)), i)
-            modified = true
-        end
-    end
-    modified && (integrator.u = u)
+    new_u = map(ui -> ui < zero(ui) ? zero(ui) : ui, u)
+    modified = new_u != u
+    modified && (integrator.u = new_u)
     return modified
 end
 
