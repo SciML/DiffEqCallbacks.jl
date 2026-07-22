@@ -24,6 +24,16 @@ sol = solve(
 )
 @test sum(integrated.integrand)[1] .≈ sin(1000) / 1000
 
+integrated_scalar = IntegrandValuesSum(0.0)
+sol = solve(
+    prob, Euler(),
+    callback = IntegratingGKSumCallback(
+        (u, t, integrator) -> u[1], integrated_scalar, 0.0
+    ),
+    dt = 0.1
+)
+@test integrated_scalar.integrand ≈ 0.5
+
 #### TESTING ON LINEAR SYSTEM WITH ANALYTICAL SOLUTION ####
 
 function compute_dGdp(integrand)

@@ -57,6 +57,7 @@ internal_sub!(y, x) = nothing
 function recursive_add! end
 
 recursive_add!(y::AbstractArray, x::AbstractArray) = internal_add!(y, x)
+recursive_add!(y::Number, x::Number) = y + x
 
 internal_add!(y::AbstractArray, x::AbstractArray) = y .+= x
 internal_add!(y, x) = nothing
