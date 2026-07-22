@@ -1,5 +1,5 @@
 using DiffEqCallbacks, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5,
-    OrdinaryDiffEqRosenbrock, Test, ADTypes, NonlinearSolve
+    OrdinaryDiffEqRosenbrock, Test, ADTypes, NonlinearSolve, StaticArrays
 
 # Non-negative ODE examples
 #
@@ -76,6 +76,16 @@ positive_sol_absval = solve(
 )
 @test all(x -> x[1] ≥ 0, positive_sol_absval.u)
 @test general_sol_absval.errors[:l∞] ≈ positive_sol_absval.errors[:l∞]
+
+mutable struct StaticStateIntegrator{U}
+    u::U
+end
+
+static_u = @SVector [-1.0, 2.0]
+static_integrator = StaticStateIntegrator(static_u)
+@test DiffEqCallbacks._set_neg_zero!(static_integrator, static_u)
+@test static_integrator.u == @SVector [0.0, 2.0]
+@test static_integrator.u isa typeof(static_u)
 
 # specify abstol as array or scalar
 positive_sol_absval2 = solve(
