@@ -110,7 +110,7 @@ sol = solve(prob, Tsit5(), callback = cb)
 @testset "Rational PeriodicCallback period" begin
     firings = Float64[]
     cb_rat = PeriodicCallback(
-        integrator -> push!(firings, integrator.t), 1//10;
+        integrator -> push!(firings, integrator.t), 1 // 10;
         initial_affect = true
     )
     prob_rat = ODEProblem((du, u, p, t) -> (du[1] = -u[1]), [1.0], (0.0, 1.0))
@@ -121,7 +121,7 @@ sol = solve(prob, Tsit5(), callback = cb)
     # interior grid).
     @test length(firings) >= 10
     @test firings[1] == 0.0
-    @test all(isapprox(firings[i], (i - 1) / 10; atol = 1e-12) for i in eachindex(firings) if firings[i] <= 1.0)
+    @test all(isapprox(firings[i], (i - 1) / 10; atol = 1.0e-12) for i in eachindex(firings) if firings[i] <= 1.0)
 end
 
 # Fix indexing repeats
