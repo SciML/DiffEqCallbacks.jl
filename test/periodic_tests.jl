@@ -105,6 +105,25 @@ prob = ODEProblem(fff, u0, tspan, p)
 sol = solve(prob, Tsit5(), callback = cb)
 @test sol.t[end] == tspan[2]
 
+# Rational Δt must fire periodically (DifferentialEquations.jl #878).
+# Exact `t == t0 + index*Δt` fails when t is Float64 and Δt is Rational.
+@testset "Rational PeriodicCallback period" begin
+    firings = Float64[]
+    cb_rat = PeriodicCallback(
+        integrator -> push!(firings, integrator.t), 1 // 10;
+        initial_affect = true
+    )
+    prob_rat = ODEProblem((du, u, p, t) -> (du[1] = -u[1]), [1.0], (0.0, 1.0))
+    sol_rat = solve(prob_rat, Tsit5(); callback = cb_rat)
+    @test sol_rat.retcode == ReturnCode.Success
+    # t = 0, 0.1, ..., 1.0 → 11 firings (initial + 10 periods; final tstop may or
+    # may not double-fire depending on tstop handling — require at least the
+    # interior grid).
+    @test length(firings) >= 10
+    @test firings[1] == 0.0
+    @test all(isapprox(firings[i], (i - 1) / 10; atol = 1.0e-12) for i in eachindex(firings) if firings[i] <= 1.0)
+end
+
 # Fix indexing repeats
 # https://github.com/SciML/ModelingToolkit.jl/issues/2528
 

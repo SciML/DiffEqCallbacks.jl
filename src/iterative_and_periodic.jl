@@ -124,8 +124,10 @@ end
 
 function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
     cache = _periodic_cache(S.cache_key, typeof(S.Δt))
-    # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
-    tnew = cache.t0[] + (cache.index[] + 1) * S.Δt
+    # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever.
+    # Convert into the integrator time type so Rational Δt produces Float64
+    # tstops that match the condition comparison (DifferentialEquations.jl #878).
+    tnew = convert(typeof(integrator.t), cache.t0[] + (cache.index[] + 1) * S.Δt)
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -203,8 +205,12 @@ function PeriodicCallback(
     condition = function (u, t, integrator)
         cache = _periodic_cache(cache_key, typeof(Δt))
         fin = isfinished(integrator)
-        return (t == (cache.t0[] + cache.index[] * Δt) && !fin) ||
-            (final_affect && fin)
+        # Convert the Rational (or other) period target into the integrator's
+        # time type. Exact `t == t0 + index*Δt` fails when `t::Float64` and
+        # `Δt::Rational` because e.g. `Float64(3//10) == 3//10` is false
+        # (DifferentialEquations.jl #878).
+        t_target = convert(typeof(t), cache.t0[] + cache.index[] * Δt)
+        return (t == t_target && !fin) || (final_affect && fin)
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
