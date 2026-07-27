@@ -16,7 +16,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 ComponentArrays = "0.15.18"
-ForwardDiff = "0.10.36"
+ForwardDiff = "0.10.36, 1"
 Functors = "0.5"
 JLArrays = "0.1, 0.2"
 OrdinaryDiffEqLowOrderRK = "2"
