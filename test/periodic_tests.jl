@@ -207,7 +207,10 @@ end
     cb_thread = PeriodicCallback(integ -> nothing, 0.1)
     ensemble = EnsembleProblem(
         prob_thread,
-        prob_func = (prob, i, repeat) -> remake(prob; u0 = [Float64(i)])
+        prob_func = (prob, ctx_or_i, _...) -> begin
+            sim_id = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
+            remake(prob; u0 = [Float64(sim_id)])
+        end
     )
     for _ in 1:10
         sol_thread = solve(
