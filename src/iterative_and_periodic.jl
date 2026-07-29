@@ -1,28 +1,34 @@
 """
     IterativeCallback(time_choice, user_affect!, tType = Float64;
-        initial_affect = false, kwargs...)
+        initial_affect = false, initialize = ..., kwargs...) -> DiscreteCallback
 
-A callback to be used to iteratively apply some affect. For example, if given the first
-effect at `t₁`, you can define `t₂` to apply the next effect.
+Construct a callback that applies `user_affect!` at the sequence of integration times
+returned by `time_choice`.
 
-## Arguments
+# Arguments
 
-  - `time_choice(integrator)` determines the time of the next callback. If `nothing` is
-    returned for the time choice, then the iterator ends.
-  - `user_affect!` is the effect applied to the integrator at the stopping points.
+  - `time_choice`: a function `time_choice(integrator)` that returns the next callback
+    time or `nothing` to stop scheduling further affects.
+  - `user_affect!`: a function `user_affect!(integrator)` applied at each scheduled time.
+  - `tType::Type = Float64`: type used to store the next callback time. Set this to the
+    problem time type when it is not `Float64`.
 
-## Keyword Arguments
+# Keywords
 
-  - `initial_affect` is whether to apply the affect at `t=0` which defaults to `false`
-  - `initialize` is the callback initialization function.
-  - `kwargs` are keyword arguments accepted by `DiscreteCallback`.
+  - `initial_affect::Bool = false`: apply `user_affect!` during callback initialization
+    at the initial integration time before asking `time_choice` for the next time.
+  - `initialize = ...`: callback initialization function called as
+    `initialize(callback, u, t, integrator)` before the initial affect or first scheduled
+    stop.
+    By default, it marks a derivative discontinuity according to `initial_affect`.
+  - `kwargs...`: keyword arguments forwarded to `DiscreteCallback`.
 
-## Returns
+# Returns
 
-A `DiscreteCallback` that repeatedly schedules the next time returned by
-`time_choice`.
+  - `DiscreteCallback`: a callback that schedules each time returned by `time_choice`
+    until it returns `nothing`.
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq
@@ -143,38 +149,40 @@ end
 
 """
     PeriodicCallback(f, Δt::Number; phase = 0, initial_affect = false,
-        final_affect = false, kwargs...)
+        final_affect = false, initialize = ..., kwargs...) -> DiscreteCallback
 
-`PeriodicCallback` can be used when a function should be called periodically in terms of
-integration time (as opposed to wall time), i.e. at `t = tspan[1]`, `t = tspan[1] + Δt`,
-`t = tspan[1] + 2Δt`, and so on.
+Construct a callback that applies `f` at regular intervals of integration time. Scheduled
+stops are separated by `Δt` and are offset from the initial time by `phase`. When
+`initial_affect = true`, `f` is also applied during callback initialization.
 
-If a non-zero `phase` is provided, the invocations of the callback will be shifted by
-`phase` time units, i.e., the calls will occur at
-`t = tspan[1] + phase`, `t = tspan[1] + phase + Δt`,
-`t = tspan[1] + phase + 2Δt`, and so on.
+# Arguments
 
-This callback can, for example, be used to model a
-discrete-time controller for a continuous-time system, running at a fixed rate.
+  - `f`: a function `f(integrator)` applied at each periodic stop.
+  - `Δt::Number`: signed integration-time period. Its sign must match the integration
+    direction.
 
-## Arguments
+# Keywords
 
-  - `f` the `affect!(integrator)` function to be called periodically
-  - `Δt` is the period
+  - `phase = 0`: nonnegative offset of scheduled periodic stops from the initial integration
+    time. A negative phase throws an `ArgumentError`.
+  - `initial_affect::Bool = false`: apply `f` during callback initialization at the initial
+    integration time.
+  - `final_affect::Bool = false`: apply `f` when the integrator finishes, even when the
+    final time is not a periodic stop.
+  - `initialize = ...`: callback initialization function called as
+    `initialize(callback, u, t, integrator)` before periodic stops are scheduled. By
+    default, it marks a derivative discontinuity according to `initial_affect`.
+  - `kwargs...`: keyword arguments forwarded to `DiscreteCallback`.
 
-  ## Keyword Arguments
+# Returns
 
-  - `phase` is a phase offset
-  - `initial_affect` is whether to apply the affect at the initial time, which defaults to `false`
-  - `final_affect` is whether to apply the affect at the final time, which defaults to `false`
-  - `kwargs` are keyword arguments accepted by the `DiscreteCallback` constructor.
+  - `DiscreteCallback`: a callback that schedules `f` at periodic integration-time stops.
 
-## Returns
+# Throws
 
-A `DiscreteCallback` that schedules an `affect!` call every `Δt` units of
-integration time.
+  - `ArgumentError`: if `phase < 0`.
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

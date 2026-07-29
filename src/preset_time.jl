@@ -32,33 +32,38 @@ function (f::PresetTimeFunction)(c, u, t, integrator)
 end
 
 """
-    PresetTimeCallback(tstops, user_affect!;
-        initialize = INITIALIZE_DEFAULT,
-        filter_tstops = true,
-        kwargs...)
+    PresetTimeCallback(tstops, user_affect!; initialize = INITIALIZE_DEFAULT,
+        filter_tstops = true, sort_inplace = false, kwargs...) -> DiscreteCallback
 
-A callback that adds callback `affect!` calls at preset times. No playing around with
-`tstops` or anything is required: this callback adds the triggers for you to make it
-automatic.
+Construct a callback that schedules `user_affect!` at the supplied integration-time stops.
 
-## Arguments
+# Arguments
 
-  - `tstops`: the times for the `affect!` to trigger at.
-  - `user_affect!`: an `affect!(integrator)` function to use at the time points.
+  - `tstops::Union{Number, AbstractVector}`: one time or a collection of callback times.
+    Vector inputs are sorted before use.
+  - `user_affect!`: a function `user_affect!(integrator)` applied at each scheduled stop.
 
-## Keyword Arguments
+# Keywords
 
-  - `filter_tstops`: Whether to filter out tstops beyond the end of the integration timespan.
-    Defaults to true. If false, then tstops can extend the interval of integration.
-  - `initialize`: callback initialization function.
-  - `kwargs`: keyword arguments forwarded to `DiscreteCallback`.
+  - `initialize = INITIALIZE_DEFAULT`: callback initialization function called as
+    `initialize(callback, u, t, integrator)` before the stops are scheduled.
+  - `filter_tstops::Bool = true`: schedule only stops strictly inside the integration
+    interval. Set this to `false` to schedule all supplied stops, including values outside
+    that interval.
+  - `sort_inplace::Bool = false`: sort a vector `tstops` in place. By default, sort a
+    copy and leave the supplied vector unchanged.
+  - `kwargs...`: keyword arguments forwarded to `DiscreteCallback`.
 
-## Returns
+# Returns
 
-A `DiscreteCallback` that schedules the requested `tstops` and calls `user_affect!`
-at those times.
+  - `DiscreteCallback`: a callback that schedules the requested stops and calls
+    `user_affect!`.
 
-## Examples
+# Throws
+
+  - `ArgumentError`: if `tstops` is neither a number nor a vector.
+
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

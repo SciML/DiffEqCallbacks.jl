@@ -88,49 +88,43 @@ function (affect!::SavingIntegrandGKSumAffect)(integrator)
 end
 
 """
-```julia
-IntegratingGKSumCallback(integrand_func,
-    integrand_values::IntegrandValuesSum,
-    integrand_prototype,
-    tol = 1.0e-7;
-    integrand_inplace = nothing)
-```
+    IntegratingGKSumCallback(integrand_func, integrand_values::IntegrandValuesSum,
+        integrand_prototype, tol = 1.0e-7; integrand_inplace = nothing) -> DiscreteCallback
 
-Lets one define a function `integrand_func(u, t, integrator)` which
-returns Integral(integrand_func(u(t),t)dt over the problem tspan.
+Construct a callback that uses adaptive Gauss-Kronrod quadrature to accumulate the integral
+of `integrand_func` over accepted solver steps in `integrand_values.integrand`.
 
-## Arguments
+# Arguments
 
-  - `integrand_func(out, u, t, integrator)` for in-place problems and `out = integrand_func(u, t, integrator)` for
-    out-of-place problems. Returns the quantity in the integral for computing dG/dp.
-    Note that for out-of-place problems, this should allocate the output (not as a view to `u`).
-  - `integrand_values::IntegrandValues` is the types that `integrand_func` will return, i.e.
-    `integrand_func(t, u, integrator)::integrandType`. It's specified via
-    `IntegrandValues(integrandType)`, i.e. give the type
-    that `integrand_func` will output (or higher compatible type).
-  - `integrand_prototype` is a prototype of the output from the integrand.
+  - `integrand_func`: define either `integrand_func(u, t, integrator)` to return the
+    integrand or `integrand_func(out, u, t, integrator)` to write it into `out`. Returned or
+    written values must be compatible with `integrand_values.integrand`.
+  - `integrand_values::IntegrandValuesSum`: storage for the running integral. Construct it
+    as
+    `IntegrandValuesSum(initial_value)` with an initial value compatible with the integrand.
+  - `integrand_prototype`: representative integrand output used as an in-place output
+    buffer.
+  - `tol::Real = 1.0e-7`: absolute error tolerance for adaptive quadrature on each accepted
+    solver step.
 
-## Keyword Arguments
+# Keywords
 
-  - `integrand_inplace = nothing`: controls which form of `integrand_func` is called.
-    With the default `nothing`, the in-place `integrand_func(out, u, t, integrator)`
-    form is used for in-place problems (when an `integrand_prototype` is given) and
-    the allocating `integrand_func(u, t, integrator)` form for out-of-place problems.
-    Pass `integrand_inplace = true` to force the in-place form even for out-of-place
-    problems — the integrand output (e.g. a parameter-shaped buffer) may be mutable
-    even when the state is immutable, which avoids allocating the output on every
-    quadrature node. Requires an `integrand_prototype`. Pass `integrand_inplace = false`
-    to force the allocating form.
+  - `integrand_inplace::Union{Nothing, Bool} = nothing`: select the integrand calling form.
+    With `nothing`, use the in-place form for an in-place problem when a cache can be
+    allocated, and otherwise use the allocating form. Set this to `true` to force the
+    in-place form or `false` to force the allocating form. `true` requires a non-`nothing`
+    `integrand_prototype`.
 
-The outputted values are saved into `integrand_values`. The values are found
-via `integrand_values.integrand`.
+# Returns
 
-## Returns
+  - `DiscreteCallback`: a callback that adds each Gauss-Kronrod estimate to
+    `integrand_values.integrand`.
 
-A `DiscreteCallback` that accumulates Gauss-Kronrod quadrature estimates into
-`integrand_values.integrand`.
+# Throws
 
-## Examples
+  - `ArgumentError`: if `integrand_inplace = true` and `integrand_prototype === nothing`.
+
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

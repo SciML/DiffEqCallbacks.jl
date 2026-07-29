@@ -26,29 +26,27 @@ function AutoAbstol_initialize(cb, u, t, integrator)
 end
 
 """
-```julia
-AutoAbstol(save = true; init_curmax = 1e-6)
-```
+    AutoAbstol(save = true; init_curmax = 0.0) -> DiscreteCallback
 
-Provides a way to automatically adapt the absolute tolerance to the problem. This
-helps the solvers automatically “learn” what appropriate limits are. This callback set
-starts the absolute tolerance at `init_curmax` (default `1e-6`), and at each iteration it
-is set to the maximum value that the state has thus far reached times the relative tolerance.
+Construct a callback that updates `integrator.opts.abstol` after every accepted step to the
+largest magnitude observed in the state so far, multiplied by `integrator.opts.reltol`.
 
-## Keyword Arguments
+# Arguments
 
-  - `save` determines whether this callback has saving enabled
-  - `init_curmax` is the initial `abstol`.
+  - `save::Bool = true`: save the solution immediately before the callback affect. Set this
+    to `false` when another callback controls saving.
 
-If this callback is used in isolation, `save=true` is required for normal saving behavior.
-Otherwise, `save=false` should be set to ensure extra saves do not occur.
+# Keywords
 
-## Returns
+  - `init_curmax = 0.0`: initial maximum state magnitude. A zero value is replaced during
+    initialization with the integrator's configured `abstol`; arrays update elementwise.
 
-A `DiscreteCallback` that updates the integrator absolute tolerance from the largest
-state magnitude observed so far.
+# Returns
 
-## Examples
+  - `DiscreteCallback`: a callback that updates the absolute tolerance, then marks
+    a derivative discontinuity after each affect.
+
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

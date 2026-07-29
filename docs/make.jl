@@ -13,13 +13,12 @@ makedocs(
     sitename = "DiffEqCallbacks.jl",
     authors = "Chris Rackauckas",
     modules = [DiffEqCallbacks],
-    clean = true, doctest = false, linkcheck = true,
+    clean = true, linkcheck = true,
     linkcheck_ignore = [
         "https://www.sciencedirect.com/science/article/pii/S0096300304009683",
         "http://mathworld.wolfram.com/ShadowingTheorem.html",
         "https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html",
     ],
-    warnonly = [:missing_docs],
     format = Documenter.HTML(
         assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/DiffEqCallbacks/stable/"
