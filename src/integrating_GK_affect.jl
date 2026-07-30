@@ -249,34 +249,32 @@ function (affect!::SavingIntegrandGKAffect)(integrator)
 end
 
 """
-```julia
-IntegratingGKCallback(integrand_func,
-    integrand_values::IntegrandValues, integrand_prototype)
-```
+    IntegratingGKCallback(integrand_func, integrand_values::IntegrandValues,
+        integrand_prototype, tol = 1.0e-7) -> DiscreteCallback
 
-Let one define a function `integrand_func(u, t, integrator)::typeof(integrand_prototype)` which
-returns Integral(integrand_func(u(t),t)dt) over the problem tspan.
+Construct a callback that uses adaptive Gauss-Kronrod quadrature to save one integral
+estimate over each accepted solver step in `integrand_values.integrand`.
 
-## Arguments
+# Arguments
 
-  - `integrand_func(out, u, t, integrator)` for in-place problems and `out = integrand_func(u, t, integrator)` for
-    out-of-place problems. Returns the quantity in the integral for computing dG/dp.
-    Note that for out-of-place problems, this should allocate the output (not as a view to `u`).
-  - `integrand_values::IntegrandValues` is the types that `integrand_func` will return, i.e.
-    `integrand_func(t, u, integrator)::integrandType`. It's specified via
-    `IntegrandValues(integrandType)`, i.e. give the type
-    that `integrand_func` will output (or higher compatible type).
-  - `integrand_prototype` is a prototype of the output from the integrand.
+  - `integrand_func`: for out-of-place problems, define
+    `integrand_func(u, t, integrator)` to return the integrand. For in-place problems,
+    define `integrand_func(out, u, t, integrator)` to write the integrand into `out`.
+    Returned values must be compatible with `integrand_values`.
+  - `integrand_values::IntegrandValues`: storage for accepted-step end times and quadrature
+    estimates. Construct it as `IntegrandValues(time_type, integrand_type)` with an
+    `integrand_type` that accepts the returned integrand values.
+  - `integrand_prototype`: representative integrand output used to allocate the
+    in-place cache.
+  - `tol::Real = 1.0e-7`: absolute error tolerance for adaptive quadrature on each accepted
+    solver step.
 
-The outputted values are saved into `integrand_values`. The values are found
-via `integrand_values.integrand`.
+# Returns
 
-## Returns
+  - `DiscreteCallback`: a callback that appends one Gauss-Kronrod estimate after
+    each accepted step.
 
-A `DiscreteCallback` that saves one Gauss-Kronrod quadrature estimate per
-accepted step.
-
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

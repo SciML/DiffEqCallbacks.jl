@@ -9,4 +9,5 @@ pages = [
     "step_control.md",
     "projection.md",
     "uncertainty_quantification.md",
+    "internals.md",
 ]
