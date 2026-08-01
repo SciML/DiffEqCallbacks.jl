@@ -1,9 +1,15 @@
-using SciMLTesting, DiffEqCallbacks
+using SciMLTesting, DiffEqCallbacks, Test
 
 # Package extensions only exist as modules once their trigger weakdep is loaded, and
 # ExplicitImports skips extensions it cannot resolve via `Base.get_extension`. Loading
 # Functors here is what puts `DiffEqCallbacksFunctorsExt` in scope for the QA checks.
 using Functors
+
+# ExplicitImports silently skips an extension that fails to load, so assert the
+# extension modules actually exist rather than trusting a green run_qa.
+@testset "Extensions loaded" begin
+    @test Base.get_extension(DiffEqCallbacks, :DiffEqCallbacksFunctorsExt) !== nothing
+end
 
 run_qa(
     DiffEqCallbacks;
