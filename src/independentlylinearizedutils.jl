@@ -156,47 +156,52 @@ function store!(
 end
 
 """
-    IndependentlyLinearizedSolution
-    IndependentlyLinearizedSolution(prob::SciMLBase.AbstractDEProblem, num_derivatives = 0)
+    IndependentlyLinearizedSolution{T, S}
+    IndependentlyLinearizedSolution(prob::SciMLBase.AbstractDEProblem,
+        num_derivatives = 0) -> IndependentlyLinearizedSolution
 
-Efficient datastructure that holds a set of independently linearized solutions
-(obtained via the `LinearizingSavingCallback`) with related, but slightly
-different time vectors.  Stores a single time vector with a packed `BitMatrix`
-denoting which `u` vectors are sampled at which timepoints.  Provides an
-efficient `iterate()` method that can be used to reconstruct coherent views
-of the state variables at all timepoints, as well as an efficient `sample!()`
-method that can sample at arbitrary timesteps.
+Efficient storage for independently linearized state components obtained from
+[`LinearizingSavingCallback`](@ref). It stores a single time vector with a packed
+`BitMatrix` denoting which state components were sampled at each time and implements Julia's
+iteration interface to reconstruct a coherent state at every stored time.
 
-## Fields
+# Fields
 
   - `ts::Vector{T}`: sorted union of the stored time points.
   - `us::Vector{Matrix{S}}`: state and derivative samples. Each matrix corresponds to one
-    state component and contains its available samples in columns.
-  - `time_mask::BitMatrix`: maps rows of `us` to entries in `ts`; use iteration or `sample`
-    rather than interpreting this packed representation directly.
-  - `ilsc`: construction cache used while [`LinearizingSavingCallback`](@ref) is active.
-    It becomes `nothing` once the solve finishes and is not an extension point.
+    state component, uses rows for the primal and requested derivatives, and stores its
+    available time samples in columns.
+  - `time_mask::BitMatrix`: maps rows of `us` to entries in `ts`; use iteration rather than
+    interpreting this packed representation directly.
+The vectors and mask are storage owned by the callback. Iterate the result after the solve;
+do not mutate its fields while solving.
 
-The vectors and mask are storage owned by the callback. Read the result through the generic
-iteration and sampling operations after the solve; do not mutate its fields during solving.
-
-## Arguments
+# Arguments
 
   - `prob`: differential equation problem used to infer the time, state, and storage
     dimensions.
-  - `num_derivatives`: number of derivative rows to store in addition to the primal
-    state values.
+  - `num_derivatives::Int = 0`: nonnegative number of derivative rows to store in
+    addition to the primal state values.
 
-## Returns
+# Iteration
 
-An `IndependentlyLinearizedSolution` storage object for use with
-[`LinearizingSavingCallback`](@ref).
+Iteration yields `(t, values)` for each stored time, where `values` is a matrix with one row
+per state component and columns containing the primal followed by the requested derivatives.
 
-## Examples
+# Returns
+
+  - `IndependentlyLinearizedSolution`: storage to pass to
+    [`LinearizingSavingCallback`](@ref).
+
+# Examples
 
 ```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0, 2.0], (0.0, 1.0))
 ils = IndependentlyLinearizedSolution(prob)
-sol = solve(prob, solver; callback = LinearizingSavingCallback(ils))
+sol = solve(prob, Tsit5(); callback = LinearizingSavingCallback(ils))
+first_time, first_values = first(ils)
 ```
 """
 mutable struct IndependentlyLinearizedSolution{T, S}

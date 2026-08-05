@@ -64,28 +64,31 @@ end
         funcat = Vector{Float64}(),
         func_everystep = isempty(funcat),
         func_start = true,
-        tdir = 1)
+        tdir = 1) -> DiscreteCallback
 
 The function calling callback lets you define a function `func(u,t,integrator)`
 which gets called at the time points of interest.
 
-## Arguments
+# Arguments
 
-  - `func(u, t, integrator)` is the function to be called.
+  - `func`: function called as `func(u, t, integrator)` at each selected time. Its return
+    value is ignored, and it should not modify `u` or the integrator.
 
-## Keyword Arguments
+# Keywords
 
-  - `funcat` values or interval that the function is sure to be evaluated at.
-  - `func_everystep` whether to call the function after each integrator step.
-  - `func_start` whether the function is called at the initial condition.
-  - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
-    be adapted if `tspan[1] > tspan[end]`.
+  - `funcat = Vector{Float64}()`: selected integration times, or a scalar interval at which
+    to call `func` throughout the problem time span.
+  - `func_everystep::Bool = isempty(funcat)`: whether to call `func` after every accepted
+    step.
+  - `func_start::Bool = true`: whether to call `func` at the initial condition.
+  - `tdir = 1`: integration direction used to order `funcat`. Set this to
+    `sign(tspan[end] - tspan[1])` for reverse-time problems.
 
-## Returns
+# Returns
 
-A `DiscreteCallback` that calls `func` without modifying the integrator state.
+  - `DiscreteCallback`: a callback that calls `func` without modifying the integrator state.
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

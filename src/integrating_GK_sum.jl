@@ -123,6 +123,8 @@ of `integrand_func` over accepted solver steps in `integrand_values.integrand`.
 # Throws
 
   - `ArgumentError`: if `integrand_inplace = true` and `integrand_prototype === nothing`.
+  - An exception when used with an `SDEProblem` or `RODEProblem`, for which this
+    Gauss-Kronrod algorithm is not guaranteed to converge.
 
 # Examples
 
@@ -141,8 +143,7 @@ total = values.integrand
 
     This method uses Gauss-Kronrod quadrature rule to allow for error control.
 
-    This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
-    solvers are required.
+    This method is currently limited to ODE solvers of order 10 or lower.
 """
 function IntegratingGKSumCallback(
         integrand_func, integrand_values::IntegrandValuesSum, integrand_prototype,

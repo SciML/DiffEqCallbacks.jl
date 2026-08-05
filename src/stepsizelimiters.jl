@@ -28,7 +28,7 @@ end
 
 """
     StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
-        cached_dtcache = 0.0)
+        cached_dtcache = 0.0) -> DiscreteCallback
 
 In many cases, there is a known maximal stepsize for which the computation is
 stable and produces correct results. For example, in hyperbolic PDEs one normally
@@ -38,24 +38,23 @@ by the CFL condition. For nonlinear hyperbolic PDEs this limit can be a function
 you pass a function which will adaptively limit the stepsizes to match these
 constraints.
 
-## Arguments
+# Arguments
 
-- `dtFE` is the maximal timestep and is calculated using the previous `t` and `u`.
+  - `dtFE`: function called as `dtFE(u, p, t)` to compute the current maximum stable step.
 
-## Keyword Arguments
+# Keywords
 
-- `safety_factor` is the factor below the true maximum that will be stepped to
-  which defaults to `9//10`.
-- `max_step=true` makes every step equal to `safety_factor*dtFE(u,p,t)` when the
-  solver is set to `adaptive=false`.
-- `cached_dtcache` should be set to match the type for time when not using
-  Float64 values.
+  - `safety_factor = 9 // 10`: factor applied to the maximum returned by `dtFE`.
+  - `max_step::Bool = false`: when `true`, set every proposed step to
+    `safety_factor * dtFE(u, p, t)`, including for a non-adaptive solver.
+  - `cached_dtcache = 0.0`: initial cache for the unconstrained step. Set it to a value with
+    the problem time type when that type is not `Float64`.
 
-## Returns
+# Returns
 
-A `DiscreteCallback` that updates `integrator.opts.dtmax` before every step.
+  - `DiscreteCallback`: a callback that updates `integrator.opts.dtmax` before every step.
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

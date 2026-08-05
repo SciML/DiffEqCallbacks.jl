@@ -3,7 +3,7 @@
 
 A struct used to save the accumulated integrand value in `integrand::integrandType`.
 
-## Fields
+# Fields
 
   - `integrand::integrandType`: the running quadrature total. The callback mutates this value
     in place for mutable values such as arrays; scalar totals are replaced with the updated
@@ -11,17 +11,17 @@ A struct used to save the accumulated integrand value in `integrand::integrandTy
 
 Do not mutate `integrand` while a solve using this storage is active.
 
-## Constructors
+# Constructors
 
   - `IntegrandValuesSum(initial_value)`: Create with an initial value (recommended).
     The type is inferred from the value. Use `zeros(n)` for arrays or `zero(T)` for scalars.
 
-## Returns
+# Returns
 
 An `IntegrandValuesSum` container for [`IntegratingSumCallback`](@ref) or
 [`IntegratingGKSumCallback`](@ref).
 
-## Examples
+# Examples
 
 ```julia
 # For array-valued integrands
@@ -39,7 +39,7 @@ end
 # and is the recommended API. It correctly infers the type from the value.
 
 """
-    IntegrandValuesSum(integrandType::DataType)
+    IntegrandValuesSum(integrandType::Type)
 
 !!! warning "Deprecated"
     Passing a type is deprecated. Pass a value instead:
@@ -47,6 +47,15 @@ end
     - For arrays: `IntegrandValuesSum(zeros(n))` instead of `IntegrandValuesSum(Vector{T})`
 
 This method is kept for backwards compatibility but will be removed in a future version.
+
+# Returns
+
+  - `IntegrandValuesSum`: scalar storage initialized with `zero(integrandType)`.
+
+# Throws
+
+  - `ArgumentError`: if `integrandType` is not a subtype of `Number`, because its shape
+    cannot be inferred from the type alone.
 """
 function IntegrandValuesSum(::Type{integrandType}) where {integrandType}
     Base.depwarn(

@@ -222,8 +222,8 @@ end
 """
     GeneralDomain(
         g, u = nothing; save = true, abstol = nothing, scalefactor = nothing,
-        autonomous = nothing, domain_jacobian = nothing,
-        nlsolve_kwargs = (; abstol = 10 * eps()), kwargs...)
+        autonomous = nothing, domain_jacobian = nothing, manifold_jacobian = missing,
+        nlsolve_kwargs = (; abstol = 10 * eps()), kwargs...) -> CallbackSet
 
 A `GeneralDomain` callback in DiffEqCallbacks.jl generalizes the concept of
 a `PositiveDomain` callback to arbitrary domains.
@@ -244,49 +244,68 @@ desired domain, but in contrast to a `PositiveDomain` callback the nonlinear sol
 `ManifoldProjection` cannot guarantee that all state vectors of the solution are actually
 inside the domain. Thus, a `PositiveDomain` callback should generally be preferred.
 
-## Arguments
+# Arguments
 
   - `g`: the implicit definition of the domain as a function as described above which is
     zero when the value is in the domain.
-  - `u`: A prototype of the state vector of the integrator. A copy of it is saved and
+  - `u = nothing`: a prototype of the state vector of the integrator. A copy is saved and
     extrapolated values are written to it. If it is not specified,
     every application of the callback allocates a new copy of the state vector.
 
-## Keyword Arguments
+# Keywords
 
-  - `save`: Whether to do the standard saving (applied after the callback).
-  - `abstol`: Tolerance up to, which residuals are accepted. Element-wise tolerances
-    are allowed. If it is not specified, every application of the callback uses the
-    current absolute tolerances of the integrator.
-  - `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
-    specified, time steps are halved.
-  - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)`.
+  - `save::Bool = true`: whether to save immediately after applying the domain callback.
+  - `abstol = nothing`: tolerance below which residuals are accepted. Element-wise
+    tolerances are allowed. If it is not specified, every application of the callback uses
+    the current absolute tolerances of the integrator.
+  - `scalefactor = nothing`: factor by which an unaccepted time step is reduced. If it is
+    not specified, time steps are halved.
+  - `autonomous = nothing`: whether `g` is an autonomous function of the form
+    `g(resid, u, p)` or `g(u, p)`.
     If it is not specified, it is determined automatically.
-  - `kwargs`: All other keyword arguments are passed to [`ManifoldProjection`](@ref).
-  - `nlsolve_kwargs`: All keyword arguments are passed to the nonlinear solver in
+  - `domain_jacobian = nothing`: analytic Jacobian of `g` with respect to the state, using
+    the same calling form as `g` and a leading Jacobian output for an in-place problem.
+  - `manifold_jacobian = missing`: unsupported compatibility keyword. Supplying any value
+    throws an `ArgumentError`; use `domain_jacobian` instead.
+  - `nlsolve_kwargs = (; abstol = 10 * eps())`: keywords passed to the nonlinear solver in
     `ManifoldProjection`. The default is `(; abstol = 10 * eps())`.
-  - `domain_jacobian`: The Jacobian of the domain (wrt the state). This has the same
-    signature as `g` and the first argument is the Jacobian if inplace. This corresponds to
-    the `manifold_jacobian` argument of [`ManifoldProjection`](@ref). Note that passing
-    a `manifold_jacobian` is not supported for `GeneralDomain` and results in an error.
+  - `kwargs...`: additional keywords passed to [`ManifoldProjection`](@ref), including
+    `autodiff`, `nlsolve`, and `resid_prototype`. Either `domain_jacobian` or `autodiff`
+    must be provided.
 
-## References
+# Returns
+
+  - `CallbackSet`: a manifold projection followed by a discrete callback that restricts the
+    proposed step to the requested domain.
+
+# Throws
+
+  - `ArgumentError`: if `manifold_jacobian` is supplied, or if the callback is applied with
+    a non-adaptive integrator.
+  - `DimensionMismatch`: if an element-wise `abstol` does not match the residual length.
+  - `ErrorException`: during callback initialization if both `domain_jacobian` and the
+    forwarded `autodiff` keyword are `nothing`.
+
+# References
 
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 
-## Examples
+# Examples
 
 ```julia
-using DiffEqCallbacks, OrdinaryDiffEq
+using ADTypes, DiffEqCallbacks, OrdinaryDiffEq
 
 function nonnegative_residual(resid, u, p, t)
     @. resid = max(-u, 0)
 end
 
 prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0, 2.0], (0.0, 2.0))
-cb = GeneralDomain(nonnegative_residual, [1.0, 2.0]; abstol = 1.0e-8)
+cb = GeneralDomain(
+    nonnegative_residual, [1.0, 2.0]; abstol = 1.0e-8,
+    autodiff = AutoForwardDiff()
+)
 sol = solve(prob, Tsit5(); callback = cb)
 ```
 """
@@ -320,26 +339,30 @@ function GeneralDomain(
 end
 
 """
-    PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor = nothing)
+    PositiveDomain(u = nothing; save = true, abstol = nothing,
+        scalefactor = nothing) -> DiscreteCallback
 
 Especially in biology and other natural sciences, a desired property of
 dynamical systems is the positive invariance of the positive cone, i.e.
 non-negativity of variables at time ``t_0`` ensures their non-negativity at times
 ``t \\geq t_0`` for which the solution is defined. However, even if a system
 satisfies this property mathematically it can be difficult for ODE solvers to
-ensure it numerically, as these [MATLAB examples](https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html)
+ensure it numerically, as these
+[MATLAB examples](https://www.mathworks.com/help/matlab/math/nonnegative-ode-solution.html)
 show.
 
 To deal with this problem, one can specify `isoutofdomain=(u,p,t) -> any(x
--> x < 0, u)` as additional [solver option](https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/),
-which will reject any step that leads to non-negative values and reduce the next
-time step. However, since this approach only rejects steps and hence
+-> x < 0, u)` as an additional
+[solver option](https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/), which
+will reject any step that leads to negative values and reduce the next time step.
+However, since this approach only rejects steps and hence
 calculations might be repeated multiple times until a step is accepted, it can
 be computationally expensive.
 
 Another approach is taken by a `PositiveDomain` callback in
 DiffEqCallbacks.jl, which is inspired by
-[Shampine's et al. paper about non-negative ODE solutions](https://www.sciencedirect.com/science/article/pii/S0096300304009683).
+[Shampine et al.'s paper about non-negative ODE
+solutions](https://www.sciencedirect.com/science/article/pii/S0096300304009683).
 It reduces the next step by a certain scale factor until the extrapolated value
 at the next time point is non-negative with a certain tolerance. Extrapolations
 are cheap to compute but might be inaccurate, so if a time step is changed it
@@ -357,34 +380,44 @@ derivative ``x'_i`` of a negative component ``x_i`` to ``\\max \\{0, f_i(x, t)\\
 where ``t`` denotes the current time point with state vector ``x`` and ``f_i``
 is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 
-## Arguments
+# Arguments
 
-- `u`: A prototype of the state vector of the integrator. A copy of it is saved and
-  extrapolated values are written to it. If it is not specified,
-  every application of the callback allocates a new copy of the state vector.
+  - `u = nothing`: a prototype of the state vector of the integrator. A copy is saved and
+    extrapolated values are written to it. If it is not specified, every application of the
+    callback allocates a new copy of the state vector.
 
-## Keyword Arguments
+# Keywords
 
-- `save`: Whether to do the standard saving (applied after the callback).
-- `abstol`: Tolerance up to, which negative extrapolated values are accepted.
-  Element-wise tolerances are allowed. If it is not specified, every application
-  of the callback uses the current absolute tolerances of the integrator.
-- `scalefactor`: Factor by which an unaccepted time step is reduced. If it is not
-  specified, time steps are halved.
+  - `save::Bool = true`: whether to save immediately after applying the domain callback.
+  - `abstol = nothing`: tolerance above the negative of which extrapolated values are
+    accepted. Element-wise tolerances are allowed. If it is not specified, every application
+    of the callback uses the current absolute tolerances of the integrator.
+  - `scalefactor = nothing`: factor by which an unaccepted time step is reduced. If it is
+    not specified, time steps are halved.
 
-## References
+# Returns
+
+  - `DiscreteCallback`: a callback that restricts proposed steps to the positive domain and
+    replaces negative entries in each accepted state with zero.
+
+# Throws
+
+  - `ArgumentError`: if the callback is applied with a non-adaptive integrator.
+  - `DimensionMismatch`: if an element-wise `abstol` does not match the state length.
+
+# References
 
 Shampine, Lawrence F., Skip Thompson, Jacek Kierzenka and G. D. Byrne.
 Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 (2005): 556-569.
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq
 
 f(u, p, t) = -u
-prob = ODEProblem(f, 1.0, (0.0, 2.0))
+prob = ODEProblem(f, [1.0], (0.0, 2.0))
 cb = PositiveDomain()
 
 sol = solve(prob, Tsit5(); callback = cb)
