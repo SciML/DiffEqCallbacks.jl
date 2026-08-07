@@ -1,7 +1,8 @@
 """
     ManifoldProjection(
         manifold; nlsolve = missing, save = true, autonomous = nothing,
-        manifold_jacobian = nothing, autodiff = nothing, kwargs...)
+        manifold_jacobian = nothing, autodiff = nothing,
+        resid_prototype = nothing, kwargs...) -> DiscreteCallback
 
 In many cases, you may want to declare a manifold on which a solution lives. Mathematically,
 a manifold `M` is defined by a function `g` as the set of points where `g(u) = 0`. An
@@ -18,38 +19,45 @@ conserve properties. If the solution is supposed to live on a specific manifold 
 such property, this guarantees the conservation law without modifying the convergence
 properties.
 
-## Arguments
+# Arguments
 
-  - `manifold`: The residual function for the manifold. If the ODEProblem is an inplace
-    problem, then `g` must be an inplace function of form `g(resid, u, p)` or
-    `g(resid, u, p, t)` and similarly if the ODEProblem is an out-of-place problem then `g`
-    must be a function of form `g(u, p)` or `g(u, p, t)`.
+  - `manifold`: residual function defining the manifold. For an in-place problem, define
+    `manifold(resid, u, p)` or `manifold(resid, u, p, t)`. For an out-of-place problem,
+    define `manifold(u, p)` or `manifold(u, p, t)`. The residual is zero on the manifold.
 
-## Keyword Arguments
+# Keywords
 
-  - `nlsolve`: Defaults to a special single-factorize algorithm (denoted by `missing`) that
-    would work in most cases (See [1] for details). Alternatively, a nonlinear solver as
-    defined in the
+  - `nlsolve = missing`: use the built-in single-factorization projection algorithm. Pass a
+    nonlinear solver in the
     [NonlinearSolve.jl format](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/)
-    can be specified. Additionally if NonlinearSolve.jl is loaded and `nothing` is specified
-    a polyalgorithm is used.
-  - `save`: Whether to do the standard saving (applied after the callback)
-  - `autonomous`: Whether `g` is an autonomous function of the form `g(resid, u, p)` or
-    `g(u, p)`. Specify it as `Val(::Bool)` to disable runtime branching. If `nothing`,
-    we attempt to infer it from the signature of `g`.
-  - `residual_prototype`: The size of the manifold residual. If it is not specified,
-    we assume it to be same as `u` in the inplace case. Else we run a single evaluation of
-    `manifold` to determine the size.
-  - `kwargs`: All other keyword arguments are passed to
+    to select another algorithm. Pass `nothing` to use the NonlinearSolve polyalgorithm.
+  - `save::Bool = true`: save immediately after the projection.
+  - `autonomous = nothing`: whether `manifold` omits the time argument. Pass `Val(true)`
+    or `Val(false)` to avoid runtime branching; `nothing` infers the form during
+    initialization.
+  - `resid_prototype = nothing`: prototype defining the residual shape for an in-place
+    problem. Without one, the residual is assumed to have the same shape as `u`.
+  - `autodiff = nothing`: DifferentiationInterface automatic-differentiation backend used
+    when `manifold_jacobian` is not supplied.
+  - `manifold_jacobian = nothing`: analytic Jacobian of `manifold` with respect to `u`. Use
+    the same calling form as `manifold`, with the Jacobian output as the first argument for
+    an in-place problem.
+  - `kwargs...`: additional keywords passed to the built-in projection algorithm or to
     [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/stable/basics/solve/) if
     `nlsolve` is not `missing`.
-  - `autodiff`: The autodifferentiation algorithm to use to compute the Jacobian if
-    `manifold_jacobian` is not specified. This must be specified if `manifold_jacobian` is
-    not specified.
-  - `manifold_jacobian`: The Jacobian of the manifold (wrt the state). This has the same
-    signature as `manifold` and the first argument is the Jacobian if inplace.
 
-### Saveat Warning
+# Returns
+
+  - `DiscreteCallback`: a callback that projects the state after each accepted step. If the
+    nonlinear projection does not converge, the callback terminates the integrator with the
+    projection solver's unsuccessful return code.
+
+# Throws
+
+  - `ErrorException`: during callback initialization if both `manifold_jacobian` and
+    `autodiff` are `nothing`.
+
+# Saveat Warning
 
 Note that the `ManifoldProjection` callback modifies the endpoints of the integration
 intervals and thus breaks assumptions of internal interpolations. Because of this, the
@@ -58,16 +66,16 @@ be proportional to the change by the projection, so if the projection is making 
 changes then one is still safe. However, if there are large changes from each projection,
 you should consider only saving at stopping/projection times. To do this, set `tstops` to
 the same values as `saveat`. There is a performance hit by doing so because now the
-integrator is forced to stop at every saving point, but this is guerenteed to match the
-order of the integrator even with the ManifoldProjection.
+integrator is forced to stop at every saving point, but this is guaranteed to match the
+order of the integrator even with the `ManifoldProjection`.
 
-## References
+# References
 
 [1] Ernst Hairer, Christian Lubich, Gerhard Wanner. Geometric Numerical Integration:
 Structure-Preserving Algorithms for Ordinary Differential Equations. Berlin ;
 New York :Springer, 2002.
 
-## Examples
+# Examples
 
 ```julia
 using ADTypes, DiffEqCallbacks, OrdinaryDiffEq
@@ -82,7 +90,7 @@ function rotation!(du, u, p, t)
 end
 
 prob = ODEProblem(rotation!, [1.0, 0.0], (0.0, 10.0))
-cb = ManifoldProjection(unit_circle; residual_prototype = [0.0], autodiff = AutoFiniteDiff())
+cb = ManifoldProjection(unit_circle; resid_prototype = [0.0], autodiff = AutoFiniteDiff())
 
 sol = solve(prob, Tsit5(); callback = cb)
 ```

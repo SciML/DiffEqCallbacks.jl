@@ -126,4 +126,10 @@ display(@benchmark sample(ils, many_ts))
     finish!(ils, ReturnCode.Default)
     @test sample(ils, ils.ts) == repeat(1:num_timepoints, 1, num_us)
     @test sample(ils, ils.ts, 1) == 2 * repeat(1:num_timepoints, 1, num_us)
+
+    first_t, first_values = first(ils)
+    @test first_t == 1.0
+    @test size(first_values) == (num_us, num_derivatives + 1)
+    @test first_values[:, 1] == fill(1.0, num_us)
+    @test first_values[:, 2] == fill(2.0, num_us)
 end

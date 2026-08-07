@@ -181,6 +181,8 @@ stops are separated by `Δt` and are offset from the initial time by `phase`. Wh
 # Throws
 
   - `ArgumentError`: if `phase < 0`.
+  - `AssertionError`: during callback initialization if the sign of `Δt` does not match
+    the integration direction.
 
 # Examples
 

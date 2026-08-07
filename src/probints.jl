@@ -20,29 +20,33 @@ function (p::ProbIntsCache)(integrator)
 end
 
 """
-```julia
-ProbIntsUncertainty(σ, order, save = true)
-```
+    ProbIntsUncertainty(σ, order, save = true) -> DiscreteCallback
 
 The [ProbInts](https://arxiv.org/abs/1506.04592) method for uncertainty quantification
 involves the transformation of an ODE into an associated SDE where the noise is related to
 the timesteps and the order of the algorithm.
 
-## Arguments
+# Arguments
 
-  - `σ` is the noise scaling factor. It is recommended that `σ` is representative of the size
+  - `σ`: noise scaling factor. It is recommended that `σ` is representative of the size
     of the errors in a single step of the equation. If such a value is unknown, it can be
-    estimated automatically in adaptive time-stepping algorithms via AdaptiveProbIntsUncertainty
-  - `order` is the order of the ODE solver algorithm.
-  - `save` is for choosing whether this callback should control the saving behavior. Generally
-    this is true unless one is stacking callbacks in a `CallbackSet`.
+    estimated automatically in adaptive time-stepping algorithms with
+    [`AdaptiveProbIntsUncertainty`](@ref).
+  - `order::Integer`: order of the ODE solver algorithm.
+  - `save::Bool = true`: whether to save immediately before applying the random
+    perturbation.
 
-## References
+# Returns
+
+  - `DiscreteCallback`: a callback that perturbs the array state after every accepted step.
+    The state must support in-place broadcasting and have a defined `size`.
+
+# References
 
 Conrad P., Girolami M., Särkkä S., Stuart A., Zygalakis. K, Probability
 Measures for Numerical Solutions of Differential Equations, arXiv:1506.04592
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq
@@ -68,9 +72,7 @@ function (p::AdaptiveProbIntsCache)(integrator)
 end
 
 """
-```julia
-AdaptiveProbIntsUncertainty(order, save = true)
-```
+    AdaptiveProbIntsUncertainty(order, save = true) -> DiscreteCallback
 
 The [ProbInts](https://arxiv.org/abs/1506.04592) method for uncertainty quantification
 involves the transformation of an ODE into an associated SDE where the noise is related to
@@ -80,18 +82,28 @@ the timesteps and the order of the algorithm.
 uses the error estimate from within adaptive time stepping methods to estimate `σ` at
 every step.
 
-## Arguments
+# Arguments
 
-  - `order` is the order of the ODE solver algorithm.
-  - `save` is for choosing whether this callback should control the saving behavior. Generally
-    this is true unless one is stacking callbacks in a `CallbackSet`.
+  - `order::Integer`: order of the ODE solver algorithm.
+  - `save::Bool = true`: whether to save immediately before applying the random
+    perturbation.
 
-## References
+# Returns
+
+  - `DiscreteCallback`: a callback that scales its array-state perturbation by the adaptive
+    integrator's current local error estimate after every accepted step.
+
+# Throws
+
+  - An error during callback execution if the integrator does not expose a local error
+    estimate through `EEst` or its controller cache.
+
+# References
 
 Conrad P., Girolami M., Särkkä S., Stuart A., Zygalakis. K, Probability
 Measures for Numerical Solutions of Differential Equations, arXiv:1506.04592
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

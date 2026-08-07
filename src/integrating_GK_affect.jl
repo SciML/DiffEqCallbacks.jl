@@ -274,6 +274,11 @@ estimate over each accepted solver step in `integrand_values.integrand`.
   - `DiscreteCallback`: a callback that appends one Gauss-Kronrod estimate after
     each accepted step.
 
+# Throws
+
+  - An exception when used with an `SDEProblem` or `RODEProblem`, for which this
+    Gauss-Kronrod algorithm is not guaranteed to converge.
+
 # Examples
 
 ```julia
@@ -291,10 +296,10 @@ integrals_by_step = values.integrand
 
     Method has automatic error control (h-adaptive quadrature).
 
-    This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
-    solvers are required.
+    This method is currently limited to ODE solvers of order 10 or lower.
 
-    If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
+    For the four-argument in-place form of `integrand_func`, pass an
+    `integrand_prototype` that can be used as its output buffer.
 """
 function IntegratingGKCallback(
         integrand_func, integrand_values::IntegrandValues, integrand_prototype, tol = 1.0e-7

@@ -138,21 +138,21 @@ Storage used by [`IntegratingCallback`](@ref) and [`IntegratingGKCallback`](@ref
 one quadrature estimate per accepted solver step. Construct it before solving and pass the
 same instance to the callback; the callback appends to it in place.
 
-## Fields
+# Fields
 
   - `ts::Vector{tType}`: accepted-step end times associated with the stored estimates.
-  - `integrand::Vector{integrandType}`: quadrature estimates over the corresponding solver
-    steps. Entry `integrand[i]` approximates the integral from the previous saved solver time
-    to `ts[i]`.
+  - `integrand::Vector{integrandType}`: quadrature estimates over the corresponding
+    solver steps. Entry `integrand[i]` approximates the integral from the previous saved
+    solver time to `ts[i]`.
 
 Do not mutate either vector while a solve using the storage is active.
 
-## Constructors
+# Constructors
 
   - `IntegrandValues(tType, integrandType)`: create empty storage with time element type
     `tType` and estimate element type `integrandType`.
 
-## Example
+# Examples
 
 ```julia
 values = IntegrandValues(Float64, Float64)
@@ -168,14 +168,15 @@ end
 
 Create empty [`IntegrandValues`](@ref) storage.
 
-## Arguments
+# Arguments
 
   - `tType`: element type used for saved step end times.
   - `integrandType`: element type returned by the callback integrand function.
 
-## Returns
+# Returns
 
-An `IntegrandValues{tType, integrandType}` whose `ts` and `integrand` vectors are empty.
+  - `IntegrandValues{tType, integrandType}`: storage whose `ts` and `integrand` vectors are
+    empty.
 """
 function IntegrandValues(::Type{tType}, ::Type{integrandType}) where {tType, integrandType}
     return IntegrandValues{tType, integrandType}(Vector{tType}(), Vector{integrandType}())
@@ -244,33 +245,32 @@ function (affect!::SavingIntegrandAffect)(integrator)
 end
 
 """
-```julia
-IntegratingCallback(integrand_func,
-    integrand_values::IntegrandValues, integrand_prototype)
-```
+    IntegratingCallback(integrand_func, integrand_values::IntegrandValues,
+        integrand_prototype) -> DiscreteCallback
 
-Let one define a function `integrand_func(u, t, integrator)::typeof(integrand_prototype)` which
-returns Integral(integrand_func(u(t),t)dt over the problem tspan.
+Construct a callback that uses fixed-order Gaussian quadrature to save the integral of
+`integrand_func` over each accepted solver step. The callback appends the step end time to
+`integrand_values.ts` and the corresponding integral estimate to
+`integrand_values.integrand`.
 
-## Arguments
+# Arguments
 
-  - `integrand_func(out, u, t, integrator)` for in-place problems and `out = integrand_func(u, t, integrator)` for
-    out-of-place problems. Returns the quantity in the integral for computing dG/dp.
-    Note that for out-of-place problems, this should allocate the output (not as a view to `u`).
-  - `integrand_values::IntegrandValues` is the types that `integrand_func` will return, i.e.
-    `integrand_func(t, u, integrator)::integrandType`. It's specified via
-    `IntegrandValues(integrandType)`, i.e. give the type
-    that `integrand_func` will output (or higher compatible type).
-  - `integrand_prototype` is a prototype of the output from the integrand.
+  - `integrand_func`: for an out-of-place problem, define
+    `integrand_func(u, t, integrator)` to return the integrand. For an in-place problem,
+    define `integrand_func(out, u, t, integrator)` to write the integrand into `out`; when
+    `integrand_prototype === nothing`, the allocating three-argument form is used instead.
+    A returned value must not alias `u`.
+  - `integrand_values::IntegrandValues`: storage for accepted-step end times and quadrature
+    estimates. Its element types must accept the integration times and integrand outputs.
+  - `integrand_prototype`: representative integrand output used to allocate the in-place
+    output and accumulation buffers. Pass `nothing` to use the allocating form.
 
-The outputted values are saved into `integrand_values`. The values are found
-via `integrand_values.integrand`.
+# Returns
 
-## Returns
+  - `DiscreteCallback`: a callback that saves one Gaussian quadrature estimate per accepted
+    step.
 
-A `DiscreteCallback` that saves one quadrature estimate per accepted step.
-
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq
@@ -285,10 +285,10 @@ integrals_by_step = values.integrand
 
 !!! note
 
-    This method is currently limited to ODE solvers of order 10 or lower. Open an issue if other
-    solvers are required.
+    This method is currently limited to ODE solvers of order 10 or lower.
 
-    If `integrand_func` is in-place, you must use `cache` to store the output of `integrand_func`.
+    For the four-argument in-place form of `integrand_func`, pass an
+    `integrand_prototype` that can be used as its output buffer.
 """
 function IntegratingCallback(
         integrand_func, integrand_values::IntegrandValues, integrand_prototype

@@ -56,37 +56,39 @@ end
 # test function must take integrator, time, followed by absolute
 #   and relative tolerance and return true/false
 """
-    TerminateSteadyState(abstol = 1e-8, reltol = 1e-6, test = allDerivPass; min_t = nothing,
-        wrap_test::Val = Val(true))
+    TerminateSteadyState(abstol = 1.0e-8, reltol = 1.0e-6, test = allDerivPass;
+        min_t = nothing, wrap_test::Val = Val(true)) -> DiscreteCallback
 
 `TerminateSteadyState` can be used to solve the problem for the steady-state
 by running the solver until the derivatives of the problem converge to 0 or
-`tspan[2]` is reached. This is an alternative approach to root finding (see
-the [Steady State Solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/steady_state_solve/) section).
+`tspan[2]` is reached. This is an alternative approach to root finding; see the
+[Steady State Solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/steady_state_solve/)
+documentation.
 
-## Arguments
+# Arguments
 
-  - `abstol` and `reltol` are the absolute and relative tolerance, respectively.
-    These tolerances may be specified as scalars or as arrays of the same length
-    as the states of the problem.
-  - `test` represents the function that evaluates the condition for termination. The default
-    condition is that all derivatives should become smaller than `abstol` or the states times
-    `reltol`. The user can pass any other function to implement a different termination condition.
-    Such function should take four arguments: `integrator`, `abstol`, `reltol`, and `min_t`.
-  - `wrap_test` can be set to `Val(false)`, in which case `test` must have the definition
-    `test(u, t, integrator)`. Otherwise, `test` must have the definition
-    `test(integrator, abstol, reltol, min_t)`.
+  - `abstol = 1.0e-8`: absolute termination tolerance. It may be a scalar or an array with
+    the same length as the state.
+  - `reltol = 1.0e-6`: relative termination tolerance. It may be a scalar or an array with
+    the same length as the state.
+  - `test = allDerivPass`: function that evaluates the termination condition. By default,
+    every derivative must be smaller than `abstol` or the corresponding state magnitude
+    times `reltol`. A custom wrapped test must accept `integrator`, `abstol`, `reltol`, and
+    `min_t`.
 
-## Keyword Arguments
+# Keywords
 
-  - `min_t` specifies an optional minimum `t` before the steady state calculations are allowed
-    to terminate.
+  - `min_t = nothing`: optional minimum integration time before termination is allowed.
+  - `wrap_test::Val = Val(true)`: with `Val(true)`, call `test` as
+    `test(integrator, abstol, reltol, min_t)`. With `Val(false)`, use `test` directly as the
+    callback condition `test(u, t, integrator)`.
 
-## Returns
+# Returns
 
-A `DiscreteCallback` that terminates the integrator when `test` returns `true`.
+  - `DiscreteCallback`: a callback that terminates the integrator when `test` returns
+    `true`.
 
-## Examples
+# Examples
 
 ```julia
 using DiffEqCallbacks, OrdinaryDiffEq

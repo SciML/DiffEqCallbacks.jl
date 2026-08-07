@@ -4,10 +4,13 @@
 Container used by [`SavingCallback`](@ref) to store saved time points and
 user-defined values.
 
-## Fields
+# Fields
 
   - `t::Vector{tType}`: saved time points.
   - `saveval::Vector{savevalType}`: values returned by the saving function.
+
+Construct empty storage with `SavedValues(tType, savevalType)`. The callback appends to both
+vectors in place; do not mutate them while a solve is active.
 """
 struct SavedValues{tType, savevalType}
     t::Vector{tType}
@@ -17,18 +20,23 @@ end
 """
     SavedValues(tType::Type, savevalType::Type)
 
-Return `SavedValues{tType, savevalType}` with empty storage vectors.
+Construct empty storage for [`SavingCallback`](@ref).
 
-## Arguments
+# Arguments
 
   - `tType`: the element type of saved time points.
   - `savevalType`: the element type of saved values returned by the saving function.
 
-## Example
+# Returns
+
+  - `SavedValues{tType, savevalType}`: storage whose `t` and `saveval` vectors are empty.
+
+# Examples
 
 ```julia
+using DiffEqCallbacks
+
 saved_values = SavedValues(Float64, Tuple{Float64, Float64})
-cb = SavingCallback((u, t, integrator) -> (sum(u), maximum(u)), saved_values)
 ```
 """
 function SavedValues(::Type{tType}, ::Type{savevalType}) where {tType, savevalType}
@@ -140,37 +148,52 @@ function saving_initialize(cb, u, t, integrator)
 end
 
 """
-```julia
-SavingCallback(save_func, saved_values::SavedValues;
-    saveat = Vector{eltype(saved_values.t)}(),
-    save_everystep = isempty(saveat),
-    save_start = true,
-    tdir = 1)
-```
+    SavingCallback(save_func, saved_values::SavedValues;
+        saveat = Vector{eltype(saved_values.t)}(),
+        save_everystep = isempty(saveat),
+        save_start = save_everystep || isempty(saveat) || saveat isa Number,
+        save_end = save_everystep || isempty(saveat) || saveat isa Number,
+        tdir = 1) -> DiscreteCallback
 
 The saving callback lets you define a function `save_func(u, t, integrator)` which
 returns quantities of interest that shall be saved.
 
-## Arguments
+# Arguments
 
-  - `save_func(u, t, integrator)` returns the quantities which shall be saved.
-    Note that this should allocate the output (not as a view to `u`).
-  - `saved_values::SavedValues` is the types that `save_func` will return, i.e.
-    `save_func(t, u, integrator)::savevalType`. It's specified via
-    `SavedValues(typeof(t),savevalType)`, i.e. give the type for time and the
-    type that `save_func` will output (or higher compatible type).
+  - `save_func`: function called as `save_func(u, t, integrator)`. It must return a value
+    compatible with `eltype(saved_values.saveval)` and must not return a view of `u`.
+  - `saved_values::SavedValues`: storage whose time and value element types match the
+    integration time and the output of `save_func`.
 
-## Keyword Arguments
+# Keywords
 
-  - `saveat` mimics `saveat` in `solve` from `solve`.
-  - `save_everystep` mimics `save_everystep` from `solve`.
-  - `save_start` mimics `save_start` from `solve`.
-  - `save_end` mimics `save_end` from `solve`.
-  - `tdir` should be `sign(tspan[end]-tspan[1])`. It defaults to `1` and should
-    be adapted if `tspan[1] > tspan[end]`.
+  - `saveat = Vector{eltype(saved_values.t)}()`: selected integration times, or a scalar
+    interval at which to evaluate `save_func` throughout the problem time span.
+  - `save_everystep::Bool = isempty(saveat)`: whether to save after every accepted step.
+  - `save_start::Bool = ...`: whether to save at the initial condition.
+  - `save_end::Bool = ...`: whether to save at the final time.
+  - `tdir = 1`: integration direction used to order `saveat`. Set this to
+    `sign(tspan[end] - tspan[1])` for reverse-time problems.
 
-The outputted values are saved into `saved_values`. Time points are found via
+The output values are saved into `saved_values`. Time points are found via
 `saved_values.t` and the values are `saved_values.saveval`.
+
+# Returns
+
+  - `DiscreteCallback`: a callback that evaluates `save_func` at the requested times and
+    appends the results to `saved_values`.
+
+# Examples
+
+```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+prob = ODEProblem((u, p, t) -> -u, 1.0, (0.0, 1.0))
+saved_values = SavedValues(Float64, Float64)
+cb = SavingCallback((u, t, integrator) -> u^2, saved_values; saveat = 0.0:0.25:1.0)
+
+sol = solve(prob, Tsit5(); callback = cb)
+```
 """
 function SavingCallback(
         save_func, saved_values::SavedValues;
@@ -374,8 +397,8 @@ function with_cache(f::Function, cache::CachePool{T}) where {T}
 end
 
 """
-    LinearizingSavingCallback(ils::IndependentlyLinearizedSolution)
-    LinearizingSavingCallback(ilss::Vector{IndependentlyLinearizedSolution})
+    LinearizingSavingCallback(ils::IndependentlyLinearizedSolution;
+        kwargs...) -> DiscreteCallback
 
 Return a saving callback that inserts interpolation points so that linear interpolation
 of the saved values is within `abstol`/`reltol` of the integrator interpolation.
@@ -385,30 +408,31 @@ goodness of fit versus the linearly interpolated function; this should be suffic
 interpolations up to the 4th order, higher orders may need more points to ensure good
 fit.  This has not been implemented yet.
 
-## Arguments
+# Arguments
 
   - `ils`: the [`IndependentlyLinearizedSolution`](@ref) storage object to fill.
-  - `ilss`: storage objects for multiple independently linearized solutions.
+# Keywords
 
-## Keyword Arguments
-
-  - `interpolate_mask`: a `BitVector` selecting the `u` indices for which the
+  - `interpolate_mask::BitVector`: select the state indices for which the
     integrator interpolant can be queried. False indices are linearly interpolated
-    from the solution time points without subdivision.
-  - `abstol`: absolute tolerance for comparing linearized and integrator interpolation.
-    Defaults to the integrator absolute tolerance.
-  - `reltol`: relative tolerance for comparing linearized and integrator interpolation.
-    Defaults to the integrator relative tolerance.
+    from the solution time points without subdivision. By default, all indices are selected.
+  - `abstol = nothing`: absolute tolerance for comparing linearized and integrator
+    interpolation. Defaults to the integrator absolute tolerance.
+  - `reltol = nothing`: relative tolerance for comparing linearized and integrator
+    interpolation. Defaults to the integrator relative tolerance.
 
-## Returns
+# Returns
 
-A `DiscreteCallback` that stores independently linearized output in `ils`.
+  - `DiscreteCallback`: a callback that stores independently linearized output in `ils`.
 
-## Example
+# Examples
 
 ```julia
+using DiffEqCallbacks, OrdinaryDiffEq
+
+prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0, 2.0], (0.0, 1.0))
 ils = IndependentlyLinearizedSolution(prob)
-sol = solve(prob, solver; callback = LinearizingSavingCallback(ils))
+sol = solve(prob, Tsit5(); callback = LinearizingSavingCallback(ils))
 ```
 """
 function LinearizingSavingCallback(

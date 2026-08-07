@@ -43,8 +43,8 @@ largest magnitude observed in the state so far, multiplied by `integrator.opts.r
 
 # Returns
 
-  - `DiscreteCallback`: a callback that updates the absolute tolerance, then marks
-    a derivative discontinuity after each affect.
+  - `DiscreteCallback`: a callback that updates the absolute tolerance after each accepted
+    step without marking the state as modified.
 
 # Examples
 
