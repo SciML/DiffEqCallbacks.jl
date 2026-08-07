@@ -1,6 +1,6 @@
 name = "DiffEqCallbacks"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
-version = "4.19.1"
+version = "4.19.2"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 
 [deps]
