@@ -489,15 +489,14 @@ function safe_factorize!(A::AbstractMatrix)
         fact_successful(fact) && return fact
     elseif size(A, 1) > size(A, 2)
         fact = LinearAlgebra.qr(A)
-        fact_successful(fact) && return fact
+        qr_successful(fact) && return fact
     end
     return LinearAlgebra.qr!(A, LinearAlgebra.ColumnNorm())
 end
 
-function fact_successful(F::LinearAlgebra.QRCompactWY)
-    m, n = size(F)
-    U = view(F.factors, 1:min(m, n), 1:n)
-    return all(!iszero, Iterators.reverse(@view U[diagind(U)]))
+function qr_successful(F)
+    R = F.R
+    return all(!iszero, Iterators.reverse(@view R[diagind(R)]))
 end
 function fact_successful(F::FT) where {FT}
     return hasmethod(LinearAlgebra.issuccess, (FT,)) ? LinearAlgebra.issuccess(F) : true

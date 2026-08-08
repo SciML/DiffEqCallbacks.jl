@@ -1,6 +1,15 @@
 using OrdinaryDiffEqVerner, Test, DiffEqBase, DiffEqCallbacks, RecursiveArrayTools,
     NonlinearSolve
 using ForwardDiff, ADTypes
+using LinearAlgebra: qr
+
+@testset "Factorization fallback" begin
+    full_rank = [1.0 0.0; 0.0 1.0; 1.0 1.0]
+    rank_deficient = [1.0 0.0; 2.0 0.0; 3.0 0.0]
+
+    @test DiffEqCallbacks.qr_successful(qr(full_rank))
+    @test !DiffEqCallbacks.qr_successful(qr(rank_deficient))
+end
 
 u0 = ones(2, 2)
 f = function (du, u, p, t)
