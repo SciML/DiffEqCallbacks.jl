@@ -116,10 +116,11 @@ end
 # only place that creates/overwrites the entry, so concurrent integrators
 # running the same callback on separate Tasks (e.g. `EnsembleThreads`) each
 # get their own independent `t0`/`index`. See #99.
-const _PeriodicCache{T} = NamedTuple{(:t0, :index), Tuple{Base.RefValue{T}, Base.RefValue{Int}}}
+_periodic_cache_type(::Type{T}) where {T} =
+    NamedTuple{(:t0, :index), Tuple{typeof(Ref{T}()), typeof(Ref{Int}())}}
 
 @inline function _periodic_cache(key::Symbol, ::Type{T}) where {T}
-    return task_local_storage(key)::_PeriodicCache{T}
+    return task_local_storage(key)::_periodic_cache_type(T)
 end
 
 function (S::PeriodicCallbackAffect)(integrator)
@@ -242,7 +243,7 @@ function PeriodicCallback(
             storage[cache_key] = c
             c
         else
-            existing::_PeriodicCache{typeof(Δt)}
+            existing::_periodic_cache_type(typeof(Δt))
         end
         cache.t0[] = convert(typeof(Δt), t + phase)
         cache.index[] = iszero(phase) ? 0 : -1
