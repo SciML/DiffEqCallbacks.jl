@@ -3,6 +3,13 @@ versions = ["1", "lts", "pre"]
 os = ["ubuntu-latest", "macos-latest", "windows-latest"]
 
 # QA is its own CI lane, never part of the "All" aggregate.
+
+["Core 32-bit"]
+group = "Core"
+versions = ["1"]
+os = ["ubuntu-latest"]
+arch = "x86"
+
 [QA]
 versions = ["lts", "1"]
 in_all = false
