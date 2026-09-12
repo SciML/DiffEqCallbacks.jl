@@ -9,7 +9,7 @@ OrdinaryDiffEqLowOrderRK = "1344f307-1e59-4825-a18e-ace9aa3fa4c6"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [sources]
-DiffEqCallbacks = {path = "/home/runner/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl"}
+DiffEqCallbacks = {path = "/home/runner/_work/DiffEqCallbacks.jl/DiffEqCallbacks.jl"}
 
 [compat]
 ADTypes = "1.9.0"
