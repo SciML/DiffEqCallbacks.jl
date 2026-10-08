@@ -162,3 +162,24 @@ sol = solve(prob, Vern7(), callback = cb_false)
 
 sol = solve(prob, Vern7(), callback = cb_t_false)
 @test sol.u[end][1]^2 + sol.u[end][2]^2 ≈ 2
+
+let
+    rot!(du, u, p, t) = (du[1] = -u[2]; du[2] = u[1]; nothing)
+    unit_circle(resid, u, p, t) = (resid[1] = u[1]^2 + u[2]^2 - 1; nothing)
+    prob_rot = ODEProblem{true, SciMLBase.FullSpecialize}(
+        rot!, [1.0, 0.0], (0.0, 1.0e4)
+    )
+    cb_rot = ManifoldProjection(
+        unit_circle; resid_prototype = [0.0], autodiff = AutoForwardDiff(), save = false
+    )
+    integ = init(prob_rot, Vern7(); callback = cb_rot, save_everystep = false)
+    for _ in 1:20
+        step!(integ)
+    end
+    step!(integ)
+    n = 200
+    bytes = @allocated for _ in 1:n
+        step!(integ)
+    end
+    @test bytes / n < 500
+end

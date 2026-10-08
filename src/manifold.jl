@@ -134,15 +134,18 @@ function (proj::ManifoldProjection)(integrator)
     proj.manifold.t = integrator.t
     proj.manifold_jacobian !== nothing && (proj.manifold_jacobian.t = integrator.t)
 
-    SciMLBase.reinit!(proj.nlcache, integrator.u; integrator.p)
-    _, u, retcode = SciMLBase.solve!(proj.nlcache)
-
+    _project!(integrator, proj.nlcache)
+    return nothing
+end
+function _project!(integrator, nlcache)
+    SciMLBase.reinit!(nlcache, integrator.u; p = integrator.p)
+    _, u, retcode = SciMLBase.solve!(nlcache)
     if !SciMLBase.successful_retcode(retcode)
         SciMLBase.terminate!(integrator, retcode)
-        return
+        return nothing
     end
-
-    return copyto!(integrator.u, u)
+    copyto!(integrator.u, u)
+    return nothing
 end
 
 function initialize_manifold_projection(cb, u, t, integrator)
@@ -412,7 +415,7 @@ function SciMLBase.solve!(cache::SingleFactorizeManifoldProjectionCache{iip}) wh
         @. cache.λ_cache -= δλ
 
         mul!(vec(cache.u_cache), cache.J', vec(cache.λ_cache))
-        cache.u_cache += ũ
+        cache.u_cache .+= ũ
         if cache.gu_cache !== nothing
             cache.manifold(gu, cache.u_cache, cache.p)
         else
