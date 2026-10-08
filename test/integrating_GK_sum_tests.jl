@@ -235,3 +235,26 @@ sol = solve(
     (out, u, t, integrator) -> nothing, IntegrandValuesSum(zeros(1)), nothing;
     integrand_inplace = true
 )
+
+# Warmed IntegratingGKSumCallback step must allocate 0 B (FullSpecialize, iip, alloc-free RHS)
+using LinearAlgebra, SciMLBase
+const _gk_A = [-0.001 1.0 0 0; -1.0 -0.001 0 0; 0 0 -0.001 2.0; 0 0 -2.0 -0.001]
+_gk_osc!(du, u, p, t) = mul!(du, _gk_A, u)
+_gk_intg!(out, u, t, integ) = (out .= u .^ 2; nothing)
+function _gk_step_n!(integ, n)
+    for _ in 1:n
+        step!(integ)
+    end
+    return nothing
+end
+let
+    u0 = [1.0, 0.0, 0.5, 0.0]
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(_gk_osc!, copy(u0), (0.0, 1.0e4))
+    mkcb = () -> IntegratingGKSumCallback(_gk_intg!, IntegrandValuesSum(zeros(4)), zeros(4))
+    integ = init(prob, Tsit5(); callback = mkcb(), save_everystep = false)
+    _gk_step_n!(integ, 20)
+    _gk_step_n!(integ, 1)
+    n = 200
+    bytes = @allocated _gk_step_n!(integ, n)
+    @test bytes / n == 0
+end

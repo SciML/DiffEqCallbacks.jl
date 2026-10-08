@@ -56,9 +56,9 @@ function integrate_gk!(
             end
         end
     end
-    return if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)) < tol
+    return if sum(Base.Broadcast.instantiate(Base.Broadcast.broadcasted(x -> abs(x), Base.Broadcast.broadcasted(*, Base.Broadcast.broadcasted(-, affect!.gk_step_cache, affect!.gk_err_cache), (bound_r - bound_l) / 2)))) < tol
         affect!.accumulation_cache = recursive_axpy!(
-            1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
+            (bound_r - bound_l) / 2, affect!.gk_step_cache, affect!.accumulation_cache
         )
     else
         integrate_gk!(

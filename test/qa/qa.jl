@@ -25,6 +25,10 @@ run_qa(
             ignore = (
                 :QRCompactWY,  # LinearAlgebra internal concrete factorization type
                 :RefValue,     # Base internal concrete Ref type
+                # Lazy Gauss–Kronrod error check: `sum(abs.((a.-b).*s))` allocates;
+                # `broadcasted`/`instantiate` are the only non-allocating spelling.
+                :broadcasted,
+                :instantiate,
             ),
         ),
         # `DiffEqCallbacksFunctorsExt` exists to implement DiffEqCallbacks' own internal
