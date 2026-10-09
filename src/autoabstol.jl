@@ -6,7 +6,7 @@ function (p::AutoAbstolAffect)(integrator)
     if p.curmax isa AbstractArray
         @. p.curmax = max(p.curmax, abs(integrator.u))
     else
-        p.curmax = max(p.curmax, maximum(abs.(integrator.u)))
+        p.curmax = max(p.curmax, maximum(abs, integrator.u))
     end
 
     if integrator.opts.abstol isa AbstractArray
