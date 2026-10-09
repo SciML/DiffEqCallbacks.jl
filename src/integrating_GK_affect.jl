@@ -155,6 +155,32 @@ const g_weights = [
     ],
 ]
 
+# Lazy error estimate matching `sum(abs.((step .- err) .* hh))` bitwise without
+# materializing the broadcast temporary. (`sum(abs((s-e)*hh) for ...)` and
+# `sum(abs, broadcasted(...))` change reduction order and are not bitwise-equal.)
+@inline function _gk_err_sum(step, err, hh)
+    return sum(
+        Base.Broadcast.instantiate(
+            Base.Broadcast.broadcasted(
+                abs,
+                Base.Broadcast.broadcasted(
+                    *, Base.Broadcast.broadcasted(-, step, err), hh
+                ),
+            ),
+        ),
+    )
+end
+
+# Accumulate `step * h / 2` into `acc`, bitwise-matching master's
+# `recursive_axpy!(1, step .* h ./ 2, acc)`. Using `recursive_axpy!(h/2, step, acc)`
+# instead changes rounding via OpenBLAS `daxpy` FMA (Float64, length ≥ 16) and
+# Float32 narrowing of a Float64 `h/2`.
+@inline function _gk_accumulate!(acc::AbstractArray, step, h)
+    acc .+= step .* h ./ 2
+    return acc
+end
+@inline _gk_accumulate!(acc, step, h) = recursive_axpy!(1, step .* h ./ 2, acc)
+
 mutable struct SavingIntegrandGKAffect{
         IntegrandFunc,
         tType,
@@ -218,9 +244,11 @@ function integrate_gk!(
             end
         end
     end
-    return if sum(Base.Broadcast.instantiate(Base.Broadcast.broadcasted(x -> abs(x), Base.Broadcast.broadcasted(*, Base.Broadcast.broadcasted(-, affect!.gk_step_cache, affect!.gk_err_cache), (bound_r - bound_l) / 2)))) < tol
-        affect!.accumulation_cache = recursive_axpy!(
-            (bound_r - bound_l) / 2, affect!.gk_step_cache, affect!.accumulation_cache
+    return if _gk_err_sum(
+            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
+        ) < tol
+        affect!.accumulation_cache = _gk_accumulate!(
+            affect!.accumulation_cache, affect!.gk_step_cache, bound_r - bound_l
         )
     else
         integrate_gk!(

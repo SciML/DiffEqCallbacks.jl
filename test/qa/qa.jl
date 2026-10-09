@@ -25,8 +25,12 @@ run_qa(
             ignore = (
                 :QRCompactWY,  # LinearAlgebra internal concrete factorization type
                 :RefValue,     # Base internal concrete Ref type
-                # Lazy Gauss–Kronrod error check: `sum(abs.((a.-b).*s))` allocates;
-                # `broadcasted`/`instantiate` are the only non-allocating spelling.
+                # Lazy GK error check (`_gk_err_sum`): matches master's
+                # `sum(abs.((step.-err).*hh))` bitwise without materializing the
+                # temporary. Public alternatives (`sum(abs((s-e)*hh) for ...)`,
+                # `sum(abs, broadcasted(...))`) change reduction order and are
+                # not bitwise-equal; both `broadcasted` and `instantiate` are
+                # non-public on Julia 1.12/1.13 (`Base.ispublic` → false).
                 :broadcasted,
                 :instantiate,
             ),
