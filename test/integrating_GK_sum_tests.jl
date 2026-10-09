@@ -235,3 +235,48 @@ sol = solve(
     (out, u, t, integrator) -> nothing, IntegrandValuesSum(zeros(1)), nothing;
     integrand_inplace = true
 )
+
+# Warmed IntegratingGKSumCallback step must stay allocation-free (FullSpecialize,
+# iip, alloc-free RHS). Bound is ≤16 B so pre / 32-bit / Downgrade CI legs are not
+# brittle against exact-zero noise from upstream stepping paths.
+using LinearAlgebra, SciMLBase
+const _gk_A = [-0.001 1.0 0 0; -1.0 -0.001 0 0; 0 0 -0.001 2.0; 0 0 -2.0 -0.001]
+_gk_osc!(du, u, p, t) = mul!(du, _gk_A, u)
+_gk_intg!(out, u, t, integ) = (out .= u .^ 2; nothing)
+function _gk_step_n!(integ, n)
+    for _ in 1:n
+        step!(integ)
+    end
+    return nothing
+end
+let
+    u0 = [1.0, 0.0, 0.5, 0.0]
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(_gk_osc!, copy(u0), (0.0, 1.0e4))
+    mkcb = () -> IntegratingGKSumCallback(_gk_intg!, IntegrandValuesSum(zeros(4)), zeros(4))
+    integ = init(prob, Tsit5(); callback = mkcb(), save_everystep = false)
+    _gk_step_n!(integ, 20)
+    _gk_step_n!(integ, 1)
+    n = 200
+    bytes = @allocated _gk_step_n!(integ, n)
+    @test bytes / n <= 16
+end
+
+# Integral accumulation must be bitwise-identical to master's
+# `axpy!(1, step .* h ./ 2, acc)`. The `recursive_axpy!(h/2, step, acc)` spelling
+# (previous PR head) differs on Float64 length ≥ 16 (OpenBLAS daxpy FMA) and on
+# Float32 integrands with Float64 `h` (α narrowed before the product).
+@testset "GK accumulate bitwise vs master axpy formula" begin
+    for (T, n, h) in ((Float64, 16, 0.37), (Float64, 64, 0.37), (Float32, 8, 0.37))
+        ndiff = 0
+        for k in 1:200
+            step = T[sin(T(i) + T(0.1) * T(k)) for i in 1:n]
+            acc0 = T[cos(T(i) + T(0.2) * T(k)) for i in 1:n]
+            ref = copy(acc0)
+            axpy!(1, step .* h ./ 2, ref)
+            got = copy(acc0)
+            DiffEqCallbacks._gk_accumulate!(got, step, h)
+            ndiff += got != ref
+        end
+        @test ndiff == 0
+    end
+end

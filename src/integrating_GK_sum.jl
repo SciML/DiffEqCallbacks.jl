@@ -56,9 +56,11 @@ function integrate_gk!(
             end
         end
     end
-    return if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)) < tol
-        affect!.accumulation_cache = recursive_axpy!(
-            1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
+    return if _gk_err_sum(
+            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
+        ) < tol
+        affect!.accumulation_cache = _gk_accumulate!(
+            affect!.accumulation_cache, affect!.gk_step_cache, bound_r - bound_l
         )
     else
         integrate_gk!(

@@ -4,7 +4,7 @@
 Precomputed Gaussian-Kronrod nodes up to degree 3*10-1 = 29.
 Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[1] for i in 1:10]`
 """
-gk_points = [
+const gk_points = [
     [-0.7745966692414833, 0.0, 0.7745966692414834],
     [-0.9258200997725514, -0.5773502691896257, 0.0, 0.5773502691896257, 0.9258200997725514],
     [
@@ -61,7 +61,7 @@ gk_points = [
 Precomputed Gaussian-Kronrod node weights up to degree 3*10-1 = 29.
 Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[2] for i in 1:10]`
 """
-gk_weights = [
+const gk_weights = [
     [0.5555555555555556, 0.8888888888888888, 0.5555555555555556],
     [
         0.19797979797979798, 0.4909090909090911, 0.6222222222222223,
@@ -122,7 +122,7 @@ gk_weights = [
 Precomputed respective Gaussian node weights up to degree 2*10-1 = 19.
 Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[3] for i in 1:10]`
 """
-g_weights = [
+const g_weights = [
     [2.0],
     [1.0000000000000002, 1.0000000000000002],
     [0.5555555555555556, 0.8888888888888885, 0.5555555555555556],
@@ -154,6 +154,32 @@ g_weights = [
         0.2190863625159821, 0.14945134915058084, 0.06667134430868811,
     ],
 ]
+
+# Lazy error estimate matching `sum(abs.((step .- err) .* hh))` bitwise without
+# materializing the broadcast temporary. (`sum(abs((s-e)*hh) for ...)` and
+# `sum(abs, broadcasted(...))` change reduction order and are not bitwise-equal.)
+@inline function _gk_err_sum(step, err, hh)
+    return sum(
+        Base.Broadcast.instantiate(
+            Base.Broadcast.broadcasted(
+                abs,
+                Base.Broadcast.broadcasted(
+                    *, Base.Broadcast.broadcasted(-, step, err), hh
+                ),
+            ),
+        ),
+    )
+end
+
+# Accumulate `step * h / 2` into `acc`, bitwise-matching master's
+# `recursive_axpy!(1, step .* h ./ 2, acc)`. Using `recursive_axpy!(h/2, step, acc)`
+# instead changes rounding via OpenBLAS `daxpy` FMA (Float64, length ≥ 16) and
+# Float32 narrowing of a Float64 `h/2`.
+@inline function _gk_accumulate!(acc::AbstractArray, step, h)
+    acc .+= step .* h ./ 2
+    return acc
+end
+@inline _gk_accumulate!(acc, step, h) = recursive_axpy!(1, step .* h ./ 2, acc)
 
 mutable struct SavingIntegrandGKAffect{
         IntegrandFunc,
@@ -218,9 +244,11 @@ function integrate_gk!(
             end
         end
     end
-    return if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)) < tol
-        affect!.accumulation_cache = recursive_axpy!(
-            1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
+    return if _gk_err_sum(
+            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
+        ) < tol
+        affect!.accumulation_cache = _gk_accumulate!(
+            affect!.accumulation_cache, affect!.gk_step_cache, bound_r - bound_l
         )
     else
         integrate_gk!(
