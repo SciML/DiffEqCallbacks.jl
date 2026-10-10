@@ -11,16 +11,27 @@ function _integrator_EEst(integrator)
     end
 end
 
+function _probints_add_noise!(integrator, scale)
+    cache = get_tmp_cache(integrator)
+    if cache !== nothing
+        tmp = first(cache)
+        if eltype(tmp) <: Real
+            randn!(tmp)
+            @. integrator.u = integrator.u + scale * tmp
+            return nothing
+        end
+    end
+    integrator.u .= integrator.u .+ scale * randn(size(integrator.u))
+    return nothing
+end
+
 struct ProbIntsCache{T}
     σ::T
     order::Int
 end
 function (p::ProbIntsCache)(integrator)
-    tmp = first(get_tmp_cache(integrator))
-    randn!(tmp)
     scale = p.σ * sqrt(integrator.dt^(2 * p.order))
-    @. integrator.u = integrator.u + scale * tmp
-    return nothing
+    return _probints_add_noise!(integrator, scale)
 end
 
 """
@@ -72,11 +83,8 @@ struct AdaptiveProbIntsCache
     order::Int
 end
 function (p::AdaptiveProbIntsCache)(integrator)
-    tmp = first(get_tmp_cache(integrator))
-    randn!(tmp)
     scale = _integrator_EEst(integrator) * sqrt(integrator.dt^(2 * p.order))
-    @. integrator.u = integrator.u + scale * tmp
-    return nothing
+    return _probints_add_noise!(integrator, scale)
 end
 
 """

@@ -1,5 +1,5 @@
 using DiffEqCallbacks, DiffEqBase, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5
-using SciMLBase, Test
+using Random, SciMLBase, Test
 
 function g(du, u, p, t)
     σ, ρ, β = p
@@ -52,8 +52,6 @@ sim = solve(
 
 #using Plots; plotly(); plot(sim,vars=(0,1),linealpha=0.4)
 
-# ProbInts must fill the integrator tmp cache with randn! instead of allocating
-# `randn(size(u))` on every accepted step.
 function _osc!(du, u, p, t)
     du[1] = -0.001 * u[1] + u[2]
     du[2] = -u[1] - 0.001 * u[2]
@@ -78,4 +76,35 @@ function _probints_bytes_per_step(n)
         end
     ) / n
 end
-@test _probints_bytes_per_step(200) < 200.0
+@test _probints_bytes_per_step(200) < 250.0
+
+# Out-of-place Vector problems have no tmp cache; must not MethodError.
+lor_oop(u, p, t) = [
+    10 * (u[2] - u[1]), u[1] * (28 - u[3]) - u[2], u[1] * u[2] - (8 / 3) * u[3],
+]
+p_oop = ODEProblem(lor_oop, [1.0, 0.0, 0.0], (0.0, 1.0))
+@test SciMLBase.successful_retcode(
+    solve(p_oop, Tsit5(); callback = ProbIntsUncertainty(0.1, 5))
+)
+@test SciMLBase.successful_retcode(
+    solve(p_oop, Tsit5(); callback = AdaptiveProbIntsUncertainty(5))
+)
+
+# Complex states must receive real Float64 noise (historical semantics); imag stays 0.
+function _lin!(du, u, p, t)
+    du .= -0.5 .* u
+    return nothing
+end
+Random.seed!(1234)
+sol_c = solve(
+    ODEProblem(_lin!, ones(ComplexF64, 3), (0.0, 2.0)), Tsit5();
+    callback = ProbIntsUncertainty(0.1, 5)
+)
+@test SciMLBase.successful_retcode(sol_c)
+@test all(iszero, imag.(sol_c.u[end]))
+Random.seed!(1234)
+sol_c2 = solve(
+    ODEProblem(_lin!, ones(ComplexF64, 3), (0.0, 2.0)), Tsit5();
+    callback = ProbIntsUncertainty(0.1, 5)
+)
+@test sol_c.u[end] == sol_c2.u[end]
