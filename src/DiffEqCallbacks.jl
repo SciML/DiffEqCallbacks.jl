@@ -7,6 +7,7 @@ using DifferentiationInterface: DifferentiationInterface, Constant
 using Base: adjoint, copyto!
 using LinearAlgebra: LinearAlgebra, axpy!, diagind, mul!
 using PrecompileTools: PrecompileTools
+using Random: Random, randn!
 using RecipesBase: @recipe
 using RecursiveArrayTools: RecursiveArrayTools, DiffEqArray, copyat_or_push!
 using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, DiscreteProblem,

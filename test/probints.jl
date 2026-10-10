@@ -1,5 +1,5 @@
 using DiffEqCallbacks, DiffEqBase, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5
-using Test
+using SciMLBase, Test
 
 function g(du, u, p, t)
     σ, ρ, β = p
@@ -51,3 +51,31 @@ sim = solve(
 )
 
 #using Plots; plotly(); plot(sim,vars=(0,1),linealpha=0.4)
+
+# ProbInts must fill the integrator tmp cache with randn! instead of allocating
+# `randn(size(u))` on every accepted step.
+function _osc!(du, u, p, t)
+    du[1] = -0.001 * u[1] + u[2]
+    du[2] = -u[1] - 0.001 * u[2]
+    du[3] = -0.001 * u[3] + 2.0 * u[4]
+    du[4] = -2.0 * u[3] - 0.001 * u[4]
+    return nothing
+end
+function _probints_bytes_per_step(n)
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(
+        _osc!, [1.0, 0.0, 0.5, 0.0], (0.0, 1.0e4)
+    )
+    integ = init(
+        prob, Tsit5(); callback = ProbIntsUncertainty(0.01, 5), save_everystep = false
+    )
+    for _ in 1:20
+        step!(integ)
+    end
+    step!(integ)
+    return (
+        @allocated for _ in 1:n
+            step!(integ)
+        end
+    ) / n
+end
+@test _probints_bytes_per_step(200) < 200.0

@@ -16,7 +16,11 @@ struct ProbIntsCache{T}
     order::Int
 end
 function (p::ProbIntsCache)(integrator)
-    return integrator.u .= integrator.u .+ p.σ * sqrt(integrator.dt^(2 * p.order)) * randn(size(integrator.u))
+    tmp = first(get_tmp_cache(integrator))
+    randn!(tmp)
+    scale = p.σ * sqrt(integrator.dt^(2 * p.order))
+    @. integrator.u = integrator.u + scale * tmp
+    return nothing
 end
 
 """
@@ -68,7 +72,11 @@ struct AdaptiveProbIntsCache
     order::Int
 end
 function (p::AdaptiveProbIntsCache)(integrator)
-    return integrator.u .= integrator.u .+ _integrator_EEst(integrator) * sqrt(integrator.dt^(2 * p.order)) * randn(size(integrator.u))
+    tmp = first(get_tmp_cache(integrator))
+    randn!(tmp)
+    scale = _integrator_EEst(integrator) * sqrt(integrator.dt^(2 * p.order))
+    @. integrator.u = integrator.u + scale * tmp
+    return nothing
 end
 
 """
