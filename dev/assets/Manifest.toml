@@ -2,7 +2,7 @@
 
 julia_version = "1.13.1"
 manifest_format = "2.1"
-project_hash = "4d1a3234eb86cb49072d212c8ef834828fc27d6a"
+project_hash = "be1cbc60868a9091e9e08016a9d386d9d886dfb2"
 
 [[deps.ADTypes]]
 deps = ["PrecompileTools"]
@@ -377,7 +377,7 @@ version = "7.21.3"
 
 [[deps.DiffEqCallbacks]]
 deps = ["ConcreteStructs", "DataStructures", "DiffEqBase", "DifferentiationInterface", "LinearAlgebra", "Markdown", "PrecompileTools", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArraysCore"]
-path = "/home/runner/work/DiffEqCallbacks.jl/DiffEqCallbacks.jl"
+path = "/home/runner/_work/DiffEqCallbacks.jl/DiffEqCallbacks.jl"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 version = "4.19.4"
 
@@ -485,10 +485,10 @@ uuid = "4e289a0a-7415-4d19-859d-a7e5c4648b56"
 version = "1.0.7"
 
 [[deps.EnzymeCore]]
-git-tree-sha1 = "90ab232666984c3eafa9d14cc85f8ff51cf6c353"
+git-tree-sha1 = "156ede9181d50b3b21b74d98a7edb08bc7bbdbf1"
 registries = "General"
 uuid = "f151be2c-9106-41f4-ab19-57ee4f262869"
-version = "0.8.22"
+version = "0.8.23"
 
     [deps.EnzymeCore.extensions]
     AdaptExt = "Adapt"
