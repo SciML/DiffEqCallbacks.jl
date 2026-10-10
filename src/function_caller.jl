@@ -21,7 +21,7 @@ function (affect!::FunctionCallingAffect)(integrator, force_func = false)
                 # Expand lazy dense for interpolation
                 SciMLBase.addsteps!(integrator)
             end
-            if integrator.u isa Union{Number, StaticArraysCore.SArray}
+            if !SciMLBase.isinplace(integrator.sol.prob)
                 curu = integrator(curt)
             else
                 curu = first(get_tmp_cache(integrator))
