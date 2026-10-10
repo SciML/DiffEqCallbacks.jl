@@ -186,13 +186,14 @@ end
 let
     sol_default = solve(
         prob_absval, BS3();
-        callback = PositiveDomain(; save = false), save_everystep = false
+        callback = PositiveDomain(; save = false)
     )
     sol_buf = solve(
         prob_absval, BS3();
-        callback = PositiveDomain([1.0]; save = false), save_everystep = false
+        callback = PositiveDomain([1.0]; save = false)
     )
     @test any(x -> x[1] == 0, sol_default.u)
+    @test length(sol_default.t) > 2
     @test sol_default.t == sol_buf.t
     @test sol_default.u == sol_buf.u
 end
