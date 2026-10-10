@@ -50,7 +50,8 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
         if integrator.u isa Union{Number, StaticArraysCore.SArray}
             u = integrator.u
         else
-            u = first(get_tmp_cache(integrator))
+            tmp = get_tmp_cache(integrator)
+            u = tmp === nothing ? similar(integrator.u) : first(tmp)
         end
     else
         u = f.u
@@ -249,8 +250,10 @@ inside the domain. Thus, a `PositiveDomain` callback should generally be preferr
   - `g`: the implicit definition of the domain as a function as described above which is
     zero when the value is in the domain.
   - `u = nothing`: a prototype of the state vector of the integrator. A copy is saved and
-    extrapolated values are written to it. If it is not specified,
-    every application of the callback allocates a new copy of the state vector.
+    extrapolated values are written to it. If it is not specified, the state buffer uses the
+    integrator's temporary cache for in-place problems (or a fresh array otherwise); the
+    residual buffer is still allocated on each callback application when no prototype is
+    provided.
 
 # Keywords
 
@@ -384,7 +387,8 @@ is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 
   - `u = nothing`: a prototype of the state vector of the integrator. A copy is saved and
     extrapolated values are written to it. If it is not specified, extrapolated values are
-    written into the integrator's temporary cache (`first(get_tmp_cache(integrator))`).
+    written into the integrator's temporary cache for in-place problems, and into a freshly
+    allocated array otherwise.
 
 # Keywords
 
