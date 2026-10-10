@@ -50,7 +50,7 @@ function affect!(integrator, f::AbstractDomainAffect{T, S, uType}) where {T, S, 
         if integrator.u isa Union{Number, StaticArraysCore.SArray}
             u = integrator.u
         else
-            u = similar(integrator.u)
+            u = first(get_tmp_cache(integrator))
         end
     else
         u = f.u
@@ -383,8 +383,8 @@ is the ``i``-th component of function ``f`` in an ODE system ``x' = f(x, t)``.
 # Arguments
 
   - `u = nothing`: a prototype of the state vector of the integrator. A copy is saved and
-    extrapolated values are written to it. If it is not specified, every application of the
-    callback allocates a new copy of the state vector.
+    extrapolated values are written to it. If it is not specified, extrapolated values are
+    written into the integrator's temporary cache (`first(get_tmp_cache(integrator))`).
 
 # Keywords
 

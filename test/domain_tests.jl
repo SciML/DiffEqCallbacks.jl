@@ -1,5 +1,5 @@
 using DiffEqCallbacks, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5,
-    OrdinaryDiffEqRosenbrock, Test, ADTypes, NonlinearSolve, StaticArrays
+    OrdinaryDiffEqRosenbrock, Test, ADTypes, NonlinearSolve, StaticArrays, SciMLBase
 
 # Non-negative ODE examples
 #
@@ -149,3 +149,41 @@ t = (0.0, 20.0)
 logistic_p = ODEProblem(logistic, 0.02, t)
 logistic_s = solve(logistic_p, Tsit5())
 logistic_s_positive = solve(logistic_p, Tsit5(), callback = PositiveDomain())
+
+# Default PositiveDomain() must reuse the integrator tmp cache (not similar(u) each step).
+# User-supplied buffers remain bitwise-identical to the default path.
+function _posdom_decay!(du, u, p, t)
+    du[1] = -0.001 * u[1] + u[2] - (-0.001 * 2.0 + 2.0)
+    du[2] = -u[1] - 0.001 * u[2] - (-2.0 - 0.001 * 2.0)
+    du[3] = -0.001 * u[3] + 2.0 * u[4] - (-0.001 * 2.0 + 2.0 * 2.0)
+    du[4] = -2.0 * u[3] - 0.001 * u[4] - (-2.0 * 2.0 - 0.001 * 2.0)
+    return nothing
+end
+function _positivedomain_bytes_per_step(n)
+    u0 = [3.0, 2.0, 2.5, 2.0]
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(_posdom_decay!, u0, (0.0, 1.0e4))
+    integ = init(prob, Tsit5(); callback = PositiveDomain(), save_everystep = false)
+    for _ in 1:20
+        step!(integ)
+    end
+    step!(integ)
+    return (
+        @allocated for _ in 1:n
+            step!(integ)
+        end
+    ) / n
+end
+@test _positivedomain_bytes_per_step(200) < 200.0
+
+let u0 = [3.0, 2.0, 2.5, 2.0]
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(_posdom_decay!, u0, (0.0, 1.0e4))
+    sol_default = solve(
+        prob, Tsit5(); callback = PositiveDomain(; save = false), save_everystep = false
+    )
+    sol_buf = solve(
+        prob, Tsit5();
+        callback = PositiveDomain(copy(u0); save = false), save_everystep = false
+    )
+    @test sol_default.t == sol_buf.t
+    @test sol_default.u == sol_buf.u
+end
