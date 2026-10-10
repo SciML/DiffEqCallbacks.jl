@@ -1,5 +1,5 @@
 using DiffEqCallbacks, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5,
-    OrdinaryDiffEqRosenbrock, Test, ADTypes, NonlinearSolve, StaticArrays
+    OrdinaryDiffEqRosenbrock, Test, ADTypes, NonlinearSolve, StaticArrays, SciMLBase
 
 # Non-negative ODE examples
 #
@@ -149,3 +149,51 @@ t = (0.0, 20.0)
 logistic_p = ODEProblem(logistic, 0.02, t)
 logistic_s = solve(logistic_p, Tsit5())
 logistic_s_positive = solve(logistic_p, Tsit5(), callback = PositiveDomain())
+
+# Out-of-place Vector: get_tmp_cache is nothing; default PositiveDomain() must still work.
+absval_oop(u, p, t) = -abs.(u)
+prob_absval_oop = ODEProblem(absval_oop, [1.0], (0.0, 40.0))
+positive_sol_absval_oop = solve(
+    prob_absval_oop, Tsit5(); callback = PositiveDomain(), save_everystep = false
+)
+@test all(x -> x[1] ≥ 0, positive_sol_absval_oop.u)
+@test SciMLBase.successful_retcode(positive_sol_absval_oop)
+
+function _posdom_decay!(du, u, p, t)
+    du[1] = -0.001 * u[1] + u[2] - (-0.001 * 2.0 + 2.0)
+    du[2] = -u[1] - 0.001 * u[2] - (-2.0 - 0.001 * 2.0)
+    du[3] = -0.001 * u[3] + 2.0 * u[4] - (-0.001 * 2.0 + 2.0 * 2.0)
+    du[4] = -2.0 * u[3] - 0.001 * u[4] - (-2.0 * 2.0 - 0.001 * 2.0)
+    return nothing
+end
+function _positivedomain_bytes_per_step(n)
+    u0 = [3.0, 2.0, 2.5, 2.0]
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(_posdom_decay!, u0, (0.0, 1.0e4))
+    integ = init(prob, Tsit5(); callback = PositiveDomain(), save_everystep = false)
+    for _ in 1:20
+        step!(integ)
+    end
+    step!(integ)
+    return (
+        @allocated for _ in 1:n
+            step!(integ)
+        end
+    ) / n
+end
+@test _positivedomain_bytes_per_step(200) < 230.0
+
+# Bitwise match default vs user buffer on a problem that clips negatives.
+let
+    sol_default = solve(
+        prob_absval, BS3();
+        callback = PositiveDomain(; save = false)
+    )
+    sol_buf = solve(
+        prob_absval, BS3();
+        callback = PositiveDomain([1.0]; save = false)
+    )
+    @test any(x -> x[1] == 0, sol_default.u)
+    @test length(sol_default.t) > 2
+    @test sol_default.t == sol_buf.t
+    @test sol_default.u == sol_buf.u
+end
