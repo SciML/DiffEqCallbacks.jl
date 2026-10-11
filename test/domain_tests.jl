@@ -166,10 +166,10 @@ function _posdom_decay!(du, u, p, t)
     du[4] = -2.0 * u[3] - 0.001 * u[4] - (-2.0 * 2.0 - 0.001 * 2.0)
     return nothing
 end
-function _positivedomain_bytes_per_step(n)
+function _positivedomain_bytes_per_step(callback; n = 200)
     u0 = [3.0, 2.0, 2.5, 2.0]
     prob = ODEProblem{true, SciMLBase.FullSpecialize}(_posdom_decay!, u0, (0.0, 1.0e4))
-    integ = init(prob, Tsit5(); callback = PositiveDomain(), save_everystep = false)
+    integ = init(prob, Tsit5(); callback, save_everystep = false)
     for _ in 1:20
         step!(integ)
     end
@@ -180,7 +180,10 @@ function _positivedomain_bytes_per_step(n)
         end
     ) / n
 end
-@test _positivedomain_bytes_per_step(200) < 230.0
+let u0 = [3.0, 2.0, 2.5, 2.0]
+    @test _positivedomain_bytes_per_step(PositiveDomain(; save = false)) ==
+        _positivedomain_bytes_per_step(PositiveDomain(copy(u0); save = false))
+end
 
 # Bitwise match default vs user buffer on a problem that clips negatives.
 let
