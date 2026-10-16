@@ -36,8 +36,7 @@ sol2 = solve(
 @test sol1.t == sol2.t && sol1.u == sol2.u
 @test_throws MethodError solve(prob, BS3(), callback = cb2D, abstol = 1.0e-6)
 
-# `AutoAbstol()` keeps a scalar `curmax` even for a vector state, so the per-step update
-# takes the `maximum(abs, u)` branch; it must not allocate a temporary via `abs.(u)`
+# `AutoAbstol()` keeps a scalar `curmax` even for a vector state; its update must not allocate
 function _osc!(du, u, p, t)
     du[1] = -0.001 * u[1] + u[2]
     du[2] = -u[1] - 0.001 * u[2]
@@ -45,17 +44,12 @@ function _osc!(du, u, p, t)
     du[4] = -2.0 * u[3] - 0.001 * u[4]
     return nothing
 end
-function _autoabstol_bytes_per_step(n)
+function _autoabstol_affect_bytes()
     prob = ODEProblem{true, SciMLBase.FullSpecialize}(_osc!, [1.0, 0.0, 0.5, 0.0], (0.0, 1.0e4))
-    integ = init(prob, Tsit5(); callback = AutoAbstol(), save_everystep = false)
-    for _ in 1:20
-        step!(integ)
-    end
+    integ = init(prob, Tsit5(); callback = AutoAbstol())
     step!(integ)
-    return (
-        @allocated for _ in 1:n
-            step!(integ)
-        end
-    ) / n
+    affect! = integ.opts.callback.discrete_callbacks[1].affect!
+    affect!(integ)
+    return @allocated affect!(integ)
 end
-@test _autoabstol_bytes_per_step(200) < 200.0
+@test _autoabstol_affect_bytes() == 0
