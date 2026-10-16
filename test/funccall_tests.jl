@@ -35,3 +35,11 @@ cb = FunctionCallingCallback(
 )
 sol = solve(prob, Tsit5(), callback = cb)
 @test intersect(collect(0.0:0.25:1.0), ts) == collect(0.0:0.25:1.0)
+
+# out-of-place problems with a plain Vector (not Number/SArray) state must not route
+# through get_tmp_cache, which returns `nothing` for out-of-place integrators
+oop_prob = ODEProblem((u, p, t) -> -u, [1.0, 2.0], (0.0, 1.0))
+ts = Vector{Float64}()
+cb = FunctionCallingCallback((u, t, integrator) -> push!(ts, t), funcat = 0.1:0.1:1.0)
+sol = solve(oop_prob, Tsit5(), callback = cb)
+@test collect(0.1:0.1:1.0) ≈ ts
