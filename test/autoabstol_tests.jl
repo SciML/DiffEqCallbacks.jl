@@ -1,4 +1,5 @@
-using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, Test, DiffEqBase, DiffEqCallbacks
+using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, Test, DiffEqBase, DiffEqCallbacks,
+    SciMLBase
 import ODEProblemLibrary: prob_ode_2Dlinear, prob_ode_linear
 
 prob = prob_ode_linear
@@ -34,3 +35,21 @@ sol2 = solve(
 )
 @test sol1.t == sol2.t && sol1.u == sol2.u
 @test_throws MethodError solve(prob, BS3(), callback = cb2D, abstol = 1.0e-6)
+
+# `AutoAbstol()` keeps a scalar `curmax` even for a vector state; its update must not allocate
+function _osc!(du, u, p, t)
+    du[1] = -0.001 * u[1] + u[2]
+    du[2] = -u[1] - 0.001 * u[2]
+    du[3] = -0.001 * u[3] + 2.0 * u[4]
+    du[4] = -2.0 * u[3] - 0.001 * u[4]
+    return nothing
+end
+function _autoabstol_affect_bytes()
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(_osc!, [1.0, 0.0, 0.5, 0.0], (0.0, 1.0e4))
+    integ = init(prob, Tsit5(); callback = AutoAbstol())
+    step!(integ)
+    affect! = integ.opts.callback.discrete_callbacks[1].affect!
+    affect!(integ)
+    return @allocated affect!(integ)
+end
+@test _autoabstol_affect_bytes() == 0
