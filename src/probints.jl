@@ -12,10 +12,10 @@ function _integrator_EEst(integrator)
 end
 
 function _probints_add_noise!(integrator, scale)
-    cache = get_tmp_cache(integrator)
+    cache = eltype(integrator.u) === Float64 ? get_tmp_cache(integrator) : nothing
     if cache !== nothing
         tmp = first(cache)
-        if eltype(tmp) <: Real
+        if typeof(tmp) === typeof(integrator.u) && size(tmp) == size(integrator.u)
             randn!(tmp)
             @. integrator.u = integrator.u + scale * tmp
             return nothing
