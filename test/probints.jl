@@ -1,5 +1,6 @@
 using DiffEqCallbacks, DiffEqBase, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5
-using ForwardDiff, OrdinaryDiffEqRosenbrock, Random, SciMLBase, Test
+using ForwardDiff, OrdinaryDiffEqRosenbrock, Random, RecursiveArrayTools, SciMLBase,
+    StaticArrays, Test
 
 function g(du, u, p, t)
     σ, ρ, β = p
@@ -130,6 +131,36 @@ end
     @test _probints_endpoint(0.7) ≈ u[1] atol = 1.0e-14
     @test actual ≈ derivative[1] atol = 1.0e-12
     @test actual ≈ finite_difference atol = 1.0e-9
+end
+
+function _probints_wrapper_endpoint(make_u0, p)
+    Random.seed!(1234)
+    prob = ODEProblem(_probints_decay!, make_u0(p), (0.0, 1.0), p)
+    sol = solve(
+        prob, Euler(); dt = 0.125, adaptive = false,
+        callback = ProbIntsUncertainty(0.2, 1, false), save_everystep = false
+    )
+    return sol.u[end][1]
+end
+
+@testset "ProbInts wrapper-state derivative" begin
+    Random.seed!(1234)
+    u, derivative = ones(8), zeros(8)
+    for _ in 1:8
+        derivative .= (1 - 0.125 * 0.7) .* derivative .- 0.125 .* u
+        u .= (1 - 0.125 * 0.7) .* u .+ 0.2 * sqrt(0.125^2) * randn(8)
+    end
+    for make_u0 in (
+            p -> ArrayPartition(fill(one(p), 4), fill(one(p), 4)),
+            p -> MVector{8}(fill(one(p), 8)),
+        )
+        endpoint = Base.Fix1(_probints_wrapper_endpoint, make_u0)
+        actual = ForwardDiff.derivative(endpoint, 0.7)
+        finite_difference = (endpoint(0.7 + 1.0e-5) - endpoint(0.7 - 1.0e-5)) / 2.0e-5
+        @test endpoint(0.7) ≈ u[1] atol = 1.0e-14
+        @test actual ≈ derivative[1] atol = 1.0e-12
+        @test actual ≈ finite_difference atol = 1.0e-9
+    end
 end
 
 @testset "ProbInts non-Float64 noise" begin

@@ -15,7 +15,11 @@ function _probints_add_noise!(integrator, scale)
     cache = eltype(integrator.u) === Float64 ? get_tmp_cache(integrator) : nothing
     if cache !== nothing
         tmp = first(cache)
-        if typeof(tmp) === typeof(integrator.u) && size(tmp) == size(integrator.u)
+        if typeof(tmp) === Vector{Float64} && size(tmp) == size(integrator.u)
+            randn!(tmp)
+            @. integrator.u = integrator.u + scale * tmp
+            return nothing
+        elseif tmp isa Array{Float64} && size(tmp) == size(integrator.u)
             randn!(tmp)
             @. integrator.u = integrator.u + scale * tmp
             return nothing
