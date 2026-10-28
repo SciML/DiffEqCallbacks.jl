@@ -1,5 +1,5 @@
 using DiffEqCallbacks, DiffEqBase, OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5
-using ForwardDiff, OrdinaryDiffEqRosenbrock, Random, RecursiveArrayTools, SciMLBase,
+using ForwardDiff, LinearAlgebra, OrdinaryDiffEqRosenbrock, Random, RecursiveArrayTools, SciMLBase,
     StaticArrays, Test
 
 function g(du, u, p, t)
@@ -107,6 +107,49 @@ end
 function _probints_decay!(du, u, p, t)
     du .= -p .* u
     return nothing
+end
+
+@testset "ProbInts operator noise scales" begin
+    for alg in (Tsit5(), Rosenbrock23()), u0 in (ones(8), ones(2, 2))
+        n = size(u0, 1)
+        for σ in (
+                0.2I, Diagonal(range(0.1, 0.2; length = n)),
+                0.1Matrix{Float64}(I, n, n) .+ 0.1 / n,
+            )
+            @testset "$(typeof(alg)), $(size(u0)), $(typeof(σ))" begin
+                prob = ODEProblem(_probints_decay!, u0, (0.0, 1.0), 0.7)
+                Random.seed!(1234)
+                expected = solve(prob, alg; callback = _reference_probints(σ, 2))
+                @test expected.retcode == ReturnCode.Success
+                Random.seed!(1234)
+                actual = solve(prob, alg; callback = ProbIntsUncertainty(σ, 2))
+                @test actual.retcode == ReturnCode.Success
+                @test isequal(actual.t, expected.t)
+                @test isequal(actual.u, expected.u)
+            end
+        end
+    end
+end
+
+@testset "Seeded ProbInts out-of-place solutions" begin
+    for alg in (Tsit5(), Rosenbrock23()), T in (Float64, ComplexF64), (cb, reference) in (
+                (ProbIntsUncertainty(0.1, 2), _reference_probints(0.1, 2)),
+                (AdaptiveProbIntsUncertainty(2), _reference_adaptive_probints(2)),
+            )
+        f = ODEFunction(
+            (u, p, t) -> -p .* u;
+            jac = (u, p, t) -> -p * Matrix{T}(I, length(u), length(u)),
+            tgrad = (u, p, t) -> zero(u)
+        )
+        prob = ODEProblem(f, ones(T, 8), (0.0, 1.0), 0.7)
+        Random.seed!(1234)
+        actual = solve(prob, alg; callback = cb)
+        Random.seed!(1234)
+        expected = solve(prob, alg; callback = reference)
+        @test actual.retcode == expected.retcode == ReturnCode.Success
+        @test isequal(actual.t, expected.t)
+        @test isequal(actual.u, expected.u)
+    end
 end
 
 function _probints_endpoint(p)

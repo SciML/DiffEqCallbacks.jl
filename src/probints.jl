@@ -12,7 +12,7 @@ function _integrator_EEst(integrator)
 end
 
 function _probints_add_noise!(integrator, scale)
-    cache = eltype(integrator.u) === Float64 ? get_tmp_cache(integrator) : nothing
+    cache = scale isa Number && eltype(integrator.u) === Float64 ? get_tmp_cache(integrator) : nothing
     if cache !== nothing
         tmp = first(cache)
         if typeof(tmp) === Vector{Float64} && size(tmp) == size(integrator.u)
