@@ -236,9 +236,6 @@ sol = solve(
     integrand_inplace = true
 )
 
-# Warmed IntegratingGKSumCallback step must stay allocation-free (FullSpecialize,
-# iip, alloc-free RHS). Bound is ≤16 B so pre / 32-bit / Downgrade CI legs are not
-# brittle against exact-zero noise from upstream stepping paths.
 using LinearAlgebra, SciMLBase
 const _gk_A = [-0.001 1.0 0 0; -1.0 -0.001 0 0; 0 0 -0.001 2.0; 0 0 -2.0 -0.001]
 _gk_osc!(du, u, p, t) = mul!(du, _gk_A, u)
@@ -261,11 +258,7 @@ let
     @test bytes / n <= 16
 end
 
-# Integral accumulation must be bitwise-identical to master's
-# `axpy!(1, step .* h ./ 2, acc)`. The `recursive_axpy!(h/2, step, acc)` spelling
-# (previous PR head) differs on Float64 length ≥ 16 (OpenBLAS daxpy FMA) and on
-# Float32 integrands with Float64 `h` (α narrowed before the product).
-@testset "GK accumulate bitwise vs master axpy formula" begin
+@testset "GK accumulation rounding" begin
     for (T, n, h) in ((Float64, 16, 0.37), (Float64, 64, 0.37), (Float32, 8, 0.37))
         ndiff = 0
         for k in 1:200
@@ -278,5 +271,39 @@ end
             ndiff += got != ref
         end
         @test ndiff == 0
+    end
+end
+
+@testset "GK empty integrands" begin
+    for T in (Float32, Float64), inplace in (false, true)
+        rhs = inplace ? ((du, u, p, t) -> fill!(du, 0)) : ((u, p, t) -> zero(u))
+        prob = ODEProblem(rhs, [0.0], (0.0, 1.0))
+        integrand = inplace ? ((out, u, t, integrator) -> fill!(out, t^2)) :
+            ((u, t, integrator) -> T[])
+        saved = IntegrandValues(Float64, Vector{T})
+        total = IntegrandValuesSum(T[])
+        for (callback, values) in ((IntegratingGKCallback, saved), (IntegratingGKSumCallback, total))
+            @testset "$callback ($T, inplace=$inplace)" begin
+                solve(prob, Euler(); callback = callback(integrand, values, T[]), dt = 0.1)
+            end
+        end
+        @test !isempty(saved.integrand)
+        @test all(isempty, saved.integrand)
+        @test isempty(total.integrand)
+    end
+end
+
+@testset "GK error estimate" begin
+    for T in (Float32, Float64), shape in ((33,), (3, 11))
+        step = reshape(T[sin(i) for i in 1:33], shape)
+        err = reshape(T[cos(i) for i in 1:33], shape)
+        for (s, e) in ((step, err), (view(step, 1:2:length(step)), view(err, 1:2:length(err))))
+            @test DiffEqCallbacks._gk_err_sum(s, e, 0.37) ≈ sum(abs.((s .- e) .* 0.37))
+        end
+        @test DiffEqCallbacks._gk_err_sum(T[], T[], 0.37) === 0.0
+    end
+    @test DiffEqCallbacks._gk_err_sum(2.0, 0.5, 0.37) === abs((2.0 - 0.5) * 0.37)
+    for table in (:gk_points, :gk_weights, :g_weights)
+        @test Base.isconst(DiffEqCallbacks, table)
     end
 end
