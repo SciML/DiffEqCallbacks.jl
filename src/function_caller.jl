@@ -130,4 +130,15 @@ function FunctionCallingCallback(
     )
 end
 
+# Each integrator keeps its own position in `funcat`
+function SciMLBase.instantiate_callback(
+        cb::DiscreteCallback{<:Any, <:FunctionCallingAffect}
+    )
+    a = cb.affect!
+    affect! = FunctionCallingAffect(
+        a.func, a.funcat, a.funcat_cache, a.func_everystep, a.func_start, 1
+    )
+    return SciMLBase.remake(cb; affect!)
+end
+
 export FunctionCallingCallback

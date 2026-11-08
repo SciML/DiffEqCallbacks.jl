@@ -437,4 +437,21 @@ function PositiveDomain(u = nothing; save = true, abstol = nothing, scalefactor 
     return DiscreteCallback(condition, affect!; save_positions = (false, save))
 end
 
+# Each integrator gets its own work arrays and time-dependent residual
+function SciMLBase.instantiate_callback(cb::DiscreteCallback{<:Any, <:GeneralDomainAffect})
+    a = cb.affect!
+    affect! = GeneralDomainAffect(
+        wrap_autonomous_function(a.autonomous, a.g.f), a.abstol, a.scalefactor,
+        deepcopy(a.u), deepcopy(a.resid), a.autonomous
+    )
+    return SciMLBase.remake(cb; affect!)
+end
+
+function SciMLBase.instantiate_callback(cb::DiscreteCallback{<:Any, <:PositiveDomainAffect})
+    a = cb.affect!
+    a.u === nothing && return cb
+    affect! = PositiveDomainAffect(a.abstol, a.scalefactor, deepcopy(a.u))
+    return SciMLBase.remake(cb; affect!)
+end
+
 export GeneralDomain, PositiveDomain

@@ -80,4 +80,13 @@ function StepsizeLimiter(
     )
 end
 
+# Each integrator caches its own step size
+function SciMLBase.instantiate_callback(
+        cb::DiscreteCallback{<:Any, <:StepsizeLimiterAffect}
+    )
+    a = cb.affect!
+    affect! = StepsizeLimiterAffect(a.dtFE, a.cached_dtcache, a.safety_factor, a.max_step)
+    return SciMLBase.remake(cb; affect!)
+end
+
 export StepsizeLimiter

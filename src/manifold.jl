@@ -178,6 +178,16 @@ function initialize_manifold_projection(affect!::ManifoldProjection, u, t, integ
     return derivative_discontinuity!(integrator, false)
 end
 
+# Each integrator gets its own nonlinear solve cache and time-dependent residual
+function SciMLBase.instantiate_callback(cb::DiscreteCallback{<:Any, <:ManifoldProjection})
+    a = cb.affect!
+    jacobian = a.manifold_jacobian === nothing ? nothing : a.manifold_jacobian.f
+    affect! = ManifoldProjection(
+        a.manifold.f, a.autodiff, jacobian, a.nlsolve, a.kwargs, a.autonomous
+    )
+    return SciMLBase.remake(cb; affect!)
+end
+
 export ManifoldProjection
 
 # wrapper for non-autonomous functions
