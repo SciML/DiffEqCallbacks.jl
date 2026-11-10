@@ -159,9 +159,16 @@ g_weights = [
 # the subinterval width is then at the resolution of the interval endpoints.
 const GK_MAX_DEPTH = 50
 
-# An error estimate at this multiple of roundoff times the integral scale is
-# floating-point noise, so further bisection cannot reduce it.
+# A component error estimate at this multiple of roundoff times that
+# component's integral scale is floating-point noise that bisection cannot
+# reduce, so subdivision stops once every component is at that level.
 const GK_ROUNDOFF_FACTOR = 100
+
+function gk_has_resolvable_error(gk_step_cache, gk_err_cache, half_width)
+    err = abs.((gk_step_cache .- gk_err_cache) .* half_width)
+    scale = abs.(gk_step_cache .* half_width)
+    return any(err .> GK_ROUNDOFF_FACTOR * eps(real(eltype(gk_step_cache))) .* scale)
+end
 
 function warn_gk_tol_unmet!(affect!)
     if !affect!.tol_warned
@@ -248,19 +255,19 @@ function integrate_gk!(
         abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)
     )
     bound_m = (bound_l + bound_r) / 2
-    if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r
-        scale = sum(abs.(affect!.gk_step_cache .* (bound_r - bound_l) ./ 2))
-        if err_est > GK_ROUNDOFF_FACTOR * eps(Float64) * scale
-            integrate_gk!(
-                affect!, integrator, bound_l, bound_m,
-                order = order, tol = tol / 2, depth = depth + 1
-            )
-            integrate_gk!(
-                affect!, integrator, bound_m, bound_r,
-                order = order, tol = tol / 2, depth = depth + 1
-            )
-            return nothing
-        end
+    if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r &&
+            gk_has_resolvable_error(
+            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
+        )
+        integrate_gk!(
+            affect!, integrator, bound_l, bound_m,
+            order = order, tol = tol / 2, depth = depth + 1
+        )
+        integrate_gk!(
+            affect!, integrator, bound_m, bound_r,
+            order = order, tol = tol / 2, depth = depth + 1
+        )
+        return nothing
     end
     if err_est > tol
         warn_gk_tol_unmet!(affect!)
@@ -287,6 +294,11 @@ function (affect!::SavingIntegrandGKAffect)(integrator)
     return derivative_discontinuity!(integrator, false)
 end
 
+function IntegratingGK_initialize(cb, u, t, integrator)
+    cb.affect!.tol_warned = false
+    return INITIALIZE_DEFAULT(cb, u, t, integrator)
+end
+
 """
     IntegratingGKCallback(integrand_func, integrand_values::IntegrandValues,
         integrand_prototype, tol = 1.0e-7) -> DiscreteCallback
@@ -308,8 +320,8 @@ so higher-precision integrands such as `BigFloat` are not capped at `Float64` pr
   - `integrand_prototype`: representative integrand output used to allocate the
     in-place cache.
   - `tol::Real = 1.0e-7`: absolute error tolerance for adaptive quadrature on each accepted
-    solver step. A tolerance below the floating-point roundoff level of the integrand
-    cannot be reached by further subdivision: subdivision stops at that level, a
+    solver step. A tolerance below the floating-point roundoff level of every integrand
+    component cannot be reached by further subdivision: subdivision stops at that level, a
     warning states that the tolerance was not met, and the best estimate is used.
 
 # Returns
@@ -358,7 +370,10 @@ function IntegratingGKCallback(
         gk_pts, gk_ws, g_ws, false
     )
     condition = true_condition
-    return DiscreteCallback(condition, affect!, save_positions = (false, false))
+    return DiscreteCallback(
+        condition, affect!, save_positions = (false, false),
+        initialize = IntegratingGK_initialize
+    )
 end
 
 export IntegratingGKCallback

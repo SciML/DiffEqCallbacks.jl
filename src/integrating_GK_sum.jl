@@ -66,19 +66,19 @@ function integrate_gk!(
         abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)
     )
     bound_m = (bound_l + bound_r) / 2
-    if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r
-        scale = sum(abs.(affect!.gk_step_cache .* (bound_r - bound_l) ./ 2))
-        if err_est > GK_ROUNDOFF_FACTOR * eps(Float64) * scale
-            integrate_gk!(
-                affect!, integrator, bound_l, bound_m,
-                order = order, tol = tol / 2, depth = depth + 1
-            )
-            integrate_gk!(
-                affect!, integrator, bound_m, bound_r,
-                order = order, tol = tol / 2, depth = depth + 1
-            )
-            return nothing
-        end
+    if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r &&
+            gk_has_resolvable_error(
+            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
+        )
+        integrate_gk!(
+            affect!, integrator, bound_l, bound_m,
+            order = order, tol = tol / 2, depth = depth + 1
+        )
+        integrate_gk!(
+            affect!, integrator, bound_m, bound_r,
+            order = order, tol = tol / 2, depth = depth + 1
+        )
+        return nothing
     end
     if err_est > tol
         warn_gk_tol_unmet!(affect!)
@@ -106,6 +106,11 @@ function (affect!::SavingIntegrandGKSumAffect)(integrator)
     return derivative_discontinuity!(integrator, false)
 end
 
+function IntegratingGKSum_initialize(cb, u, t, integrator)
+    cb.affect!.tol_warned = false
+    return INITIALIZE_DEFAULT(cb, u, t, integrator)
+end
+
 """
     IntegratingGKSumCallback(integrand_func, integrand_values::IntegrandValuesSum,
         integrand_prototype, tol = 1.0e-7; integrand_inplace = nothing) -> DiscreteCallback
@@ -126,8 +131,8 @@ integrands such as `BigFloat` are not capped at `Float64` precision.
   - `integrand_prototype`: representative integrand output used as an in-place output
     buffer.
   - `tol::Real = 1.0e-7`: absolute error tolerance for adaptive quadrature on each accepted
-    solver step. A tolerance below the floating-point roundoff level of the integrand
-    cannot be reached by further subdivision: subdivision stops at that level, a
+    solver step. A tolerance below the floating-point roundoff level of every integrand
+    component cannot be reached by further subdivision: subdivision stops at that level, a
     warning states that the tolerance was not met, and the best estimate is used.
 
 # Keywords
@@ -190,7 +195,10 @@ function IntegratingGKSumCallback(
         allocate_zeros(integrand_prototype), tol, gk_pts, gk_ws, g_ws, integrand_inplace, false
     )
     condition = true_condition
-    return DiscreteCallback(condition, affect!, save_positions = (false, false))
+    return DiscreteCallback(
+        condition, affect!, save_positions = (false, false),
+        initialize = IntegratingGKSum_initialize
+    )
 end
 
 export IntegratingGKSumCallback

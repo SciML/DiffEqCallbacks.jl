@@ -225,7 +225,7 @@ solve(
     )
 )
 reference_tol = sum(integrated_tol.integrand)[1]
-for tol in (1.0e-17, 0.0)
+for tol in (1.0e-20, 1.0e-17, 0.0)
     integrated_unattainable = IntegrandValues(Float64, Vector{Float64})
     @test_logs (:warn, r"stopped before reaching the requested tolerance") match_mode = :any solve(
         prob_tol, Tsit5(),
@@ -235,4 +235,37 @@ for tol in (1.0e-17, 0.0)
     )
     @test sum(integrated_unattainable.integrand)[1] ≈ exact_tol atol = 1.0e-5
     @test sum(integrated_unattainable.integrand)[1] ≈ reference_tol atol = 1.0e-10
+end
+
+# A large component at its own roundoff level does not stop refinement of a
+# smaller component whose error is still resolvable
+exact_mixed = [1.0e15, (1 - cos(10.0)) / 10]
+prob_mixed_oop = ODEProblem((u, p, t) -> [0.0], [0.0], (0.0, 1.0))
+prob_mixed_iip = ODEProblem((du, u, p, t) -> (du .= 0.0; nothing), [0.0], (0.0, 1.0))
+for (prob_mixed, integrand_mixed) in (
+        (prob_mixed_oop, (u, t, integrator) -> [1.0e15, sin(10t)]),
+        (
+            prob_mixed_iip,
+            (out, u, t, integrator) -> (out .= [1.0e15, sin(10t)]; nothing),
+        ),
+    )
+    integrated_mixed = IntegrandValues(Float64, Vector{Float64})
+    @test_logs solve(
+        prob_mixed, Euler(),
+        callback = IntegratingGKCallback(integrand_mixed, integrated_mixed, zeros(2)),
+        dt = 1.0, adaptive = false
+    )
+    @test integrated_mixed.integrand[end][1] ≈ exact_mixed[1]
+    @test integrated_mixed.integrand[end][2] ≈ exact_mixed[2] atol = 1.0e-7
+end
+
+# The unmet-tolerance warning is issued again when the same callback is reused
+integrated_reused = IntegrandValues(Float64, Vector{Float64})
+cb_reused = IntegratingGKCallback(
+    (out, u, t, integrator) -> (out .= u .^ 2), integrated_reused, [0.0], 0.0
+)
+for _ in 1:2
+    @test_logs (:warn, r"stopped before reaching the requested tolerance") match_mode = :any solve(
+        prob_tol, Tsit5(), callback = cb_reused
+    )
 end
