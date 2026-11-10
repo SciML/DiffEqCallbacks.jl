@@ -155,6 +155,26 @@ g_weights = [
     ],
 ]
 
+# Bisection past this depth cannot improve a Float64 quadrature estimate:
+# the subinterval width is then at the resolution of the interval endpoints.
+const GK_MAX_DEPTH = 50
+
+# An error estimate at this multiple of roundoff times the integral scale is
+# floating-point noise, so further bisection cannot reduce it.
+const GK_ROUNDOFF_FACTOR = 100
+
+function warn_gk_tol_unmet!(affect!)
+    if !affect!.tol_warned
+        affect!.tol_warned = true
+        @warn "Gauss-Kronrod quadrature stopped before reaching the requested " *
+            "tolerance tol = $(affect!.tol): the subinterval or error estimate " *
+            "reached the limit of floating-point resolution, so further " *
+            "subdivision cannot reliably reduce it. The computed integral may " *
+            "be less accurate than the requested tolerance."
+    end
+    return nothing
+end
+
 mutable struct SavingIntegrandGKAffect{
         IntegrandFunc,
         tType,
@@ -173,11 +193,12 @@ mutable struct SavingIntegrandGKAffect{
     gk_pts::Vector{Vector{QuadratureType}}
     gk_ws::Vector{Vector{QuadratureType}}
     g_ws::Vector{Vector{QuadratureType}}
+    tol_warned::Bool
 end
 
 function integrate_gk!(
         affect!::SavingIntegrandGKAffect, integrator,
-        bound_l, bound_r; order = 7, tol = 1.0e-7
+        bound_l, bound_r; order = 7, tol = 1.0e-7, depth = 0
     )
     affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)
     affect!.gk_err_cache = recursive_zero!(affect!.gk_err_cache)
@@ -223,18 +244,31 @@ function integrate_gk!(
             end
         end
     end
-    return if sum(abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)) < tol
-        affect!.accumulation_cache = recursive_axpy!(
-            1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
-        )
-    else
-        integrate_gk!(
-            affect!, integrator, bound_l, (bound_l + bound_r) / 2, order = order, tol = tol / 2
-        )
-        integrate_gk!(
-            affect!, integrator, (bound_l + bound_r) / 2, bound_r, order = order, tol = tol / 2
-        )
+    err_est = sum(
+        abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)
+    )
+    bound_m = (bound_l + bound_r) / 2
+    if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r
+        scale = sum(abs.(affect!.gk_step_cache .* (bound_r - bound_l) ./ 2))
+        if err_est > GK_ROUNDOFF_FACTOR * eps(Float64) * scale
+            integrate_gk!(
+                affect!, integrator, bound_l, bound_m,
+                order = order, tol = tol / 2, depth = depth + 1
+            )
+            integrate_gk!(
+                affect!, integrator, bound_m, bound_r,
+                order = order, tol = tol / 2, depth = depth + 1
+            )
+            return nothing
+        end
     end
+    if err_est > tol
+        warn_gk_tol_unmet!(affect!)
+    end
+    affect!.accumulation_cache = recursive_axpy!(
+        1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
+    )
+    return nothing
 end
 
 function (affect!::SavingIntegrandGKAffect)(integrator)
@@ -274,7 +308,9 @@ so higher-precision integrands such as `BigFloat` are not capped at `Float64` pr
   - `integrand_prototype`: representative integrand output used to allocate the
     in-place cache.
   - `tol::Real = 1.0e-7`: absolute error tolerance for adaptive quadrature on each accepted
-    solver step.
+    solver step. A tolerance below the floating-point roundoff level of the integrand
+    cannot be reached by further subdivision: subdivision stops at that level, a
+    warning states that the tolerance was not met, and the best estimate is used.
 
 # Returns
 
@@ -319,7 +355,7 @@ function IntegratingGKCallback(
     affect! = SavingIntegrandGKAffect(
         integrand_func, integrand_values, integrand_prototype,
         allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), tol,
-        gk_pts, gk_ws, g_ws
+        gk_pts, gk_ws, g_ws, false
     )
     condition = true_condition
     return DiscreteCallback(condition, affect!, save_positions = (false, false))
