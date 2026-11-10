@@ -2,13 +2,17 @@ using SciMLTesting, DiffEqCallbacks, Test
 
 # Package extensions only exist as modules once their trigger weakdep is loaded, and
 # ExplicitImports skips extensions it cannot resolve via `Base.get_extension`. Loading
-# Functors here is what puts `DiffEqCallbacksFunctorsExt` in scope for the QA checks.
-using Functors
+# Functors and ForwardDiff here is what puts `DiffEqCallbacksFunctorsExt` and
+# `DiffEqCallbacksForwardDiffExt` in scope for the QA checks.
+using ForwardDiff, Functors
 
 # ExplicitImports silently skips an extension that fails to load, so assert the
 # extension modules actually exist rather than trusting a green run_qa.
 @testset "Extensions loaded" begin
     @test Base.get_extension(DiffEqCallbacks, :DiffEqCallbacksFunctorsExt) !== nothing
+    @test Base.get_extension(
+        DiffEqCallbacks, :DiffEqCallbacksForwardDiffExt
+    ) !== nothing
 end
 
 run_qa(
@@ -25,6 +29,10 @@ run_qa(
             ignore = (
                 :QRCompactWY,  # LinearAlgebra internal concrete factorization type
                 :RefValue,     # Base internal concrete Ref type
+                # `ForwardDiff` exports neither spelling; both are only used in
+                # `DiffEqCallbacksForwardDiffExt`:
+                :Dual,  # the concrete dual-number type, dispatched on
+                :value,  # the primal-value accessor
             ),
         ),
         # `DiffEqCallbacksFunctorsExt` exists to implement DiffEqCallbacks' own internal
@@ -32,9 +40,12 @@ run_qa(
         # import them from the parent package; they are deliberately internal and have no
         # public spelling. ExplicitImports' `allow_internal_imports` does not cover this
         # because it exempts only imports sharing a `Base.moduleroot`, and an extension
-        # module is its own root rather than the parent package's.
+        # module is its own root rather than the parent package's. The same holds for
+        # the `AutoAbstol` primal-value hook imported by
+        # `DiffEqCallbacksForwardDiffExt`.
         all_explicit_imports_are_public = (;
             ignore = (
+                :_autoabstol_value,
                 :allocate_vjp,
                 :allocate_vjp_internal,
                 :allocate_zeros,
