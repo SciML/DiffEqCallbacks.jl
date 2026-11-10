@@ -111,7 +111,7 @@ gk_weights = [
         0.011694638867371846, 0.03255816230796465, 0.05475589657435192,
         0.07503967481091997, 0.09312545458369768, 0.10938715880229767,
         0.12349197626206591, 0.1347092173114734, 0.14277593857706, 0.1477391049013384,
-        0.0, 0.1477391049013384, 0.14277593857706, 0.1347092173114734,
+        0.1494455540029169, 0.1477391049013384, 0.14277593857706, 0.1347092173114734,
         0.12349197626206591, 0.10938715880229767, 0.09312545458369768, 0.07503967481091997,
         0.05475589657435192, 0.03255816230796465, 0.011694638867371846,
     ],
@@ -160,6 +160,8 @@ mutable struct SavingIntegrandGKAffect{
         tType,
         IntegrandType,
         IntegrandCacheType,
+        tolType,
+        QuadratureType,
     }
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValues{tType, IntegrandType}
@@ -167,7 +169,10 @@ mutable struct SavingIntegrandGKAffect{
     accumulation_cache::IntegrandCacheType
     gk_step_cache::IntegrandCacheType
     gk_err_cache::IntegrandCacheType
-    tol::Float64
+    tol::tolType
+    gk_pts::Vector{Vector{QuadratureType}}
+    gk_ws::Vector{Vector{QuadratureType}}
+    g_ws::Vector{Vector{QuadratureType}}
 end
 
 function integrate_gk!(
@@ -177,42 +182,42 @@ function integrate_gk!(
     affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)
     affect!.gk_err_cache = recursive_zero!(affect!.gk_err_cache)
     for i in 1:(2 * order + 1)
-        t_temp = (gk_points[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
+        t_temp = (affect!.gk_pts[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
         if SciMLBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing
                 affect!.gk_step_cache = recursive_axpy!(
-                    gk_weights[order][i],
+                    affect!.gk_ws[order][i],
                     affect!.integrand_func(curu, t_temp, integrator), affect!.gk_step_cache
                 )
                 if i % 2 == 0
                     affect!.gk_err_cache = recursive_axpy!(
-                        g_weights[order][div(i, 2)],
+                        affect!.g_ws[order][div(i, 2)],
                         affect!.integrand_func(curu, t_temp, integrator), affect!.gk_err_cache
                     )
                 end
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
                 affect!.gk_step_cache = recursive_axpy!(
-                    gk_weights[order][i],
+                    affect!.gk_ws[order][i],
                     affect!.integrand_cache, affect!.gk_step_cache
                 )
                 if i % 2 == 0
                     affect!.gk_err_cache = recursive_axpy!(
-                        g_weights[order][div(i, 2)],
+                        affect!.g_ws[order][div(i, 2)],
                         affect!.integrand_cache, affect!.gk_err_cache
                     )
                 end
             end
         else
             affect!.gk_step_cache = recursive_axpy!(
-                gk_weights[order][i],
+                affect!.gk_ws[order][i],
                 affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_step_cache
             )
             if i % 2 == 0
                 affect!.gk_err_cache = recursive_axpy!(
-                    g_weights[order][div(i, 2)],
+                    affect!.g_ws[order][div(i, 2)],
                     affect!.integrand_func(integrator(t_temp), t_temp, integrator), affect!.gk_err_cache
                 )
             end
@@ -253,7 +258,9 @@ end
         integrand_prototype, tol = 1.0e-7) -> DiscreteCallback
 
 Construct a callback that uses adaptive Gauss-Kronrod quadrature to save one integral
-estimate over each accepted solver step in `integrand_values.integrand`.
+estimate over each accepted solver step in `integrand_values.integrand`. Quadrature nodes
+and weights are evaluated in the element type of the integrand and the integration time,
+so higher-precision integrands such as `BigFloat` are not capped at `Float64` precision.
 
 # Arguments
 
@@ -304,9 +311,15 @@ integrals_by_step = values.integrand
 function IntegratingGKCallback(
         integrand_func, integrand_values::IntegrandValues, integrand_prototype, tol = 1.0e-7
     )
+    integrand_el = eltype(eltype(integrand_values.integrand))
+    time_el = eltype(integrand_values.ts)
+    prototype_el = integrand_prototype === nothing ? integrand_el : eltype(integrand_prototype)
+    quadrature_el = _quadrature_eltype(integrand_el, time_el, prototype_el)
+    gk_pts, gk_ws, g_ws = _gk_tables(quadrature_el)
     affect! = SavingIntegrandGKAffect(
         integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), tol
+        allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype), tol,
+        gk_pts, gk_ws, g_ws
     )
     condition = true_condition
     return DiscreteCallback(condition, affect!, save_positions = (false, false))
