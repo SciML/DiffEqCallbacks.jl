@@ -18,9 +18,11 @@ SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 
 [weakdeps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
 
 [extensions]
+DiffEqCallbacksForwardDiffExt = "ForwardDiff"
 DiffEqCallbacksFunctorsExt = "Functors"
 
 [compat]
