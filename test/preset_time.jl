@@ -1,4 +1,4 @@
-using OrdinaryDiffEqTsit5, DiffEqCallbacks, Test
+using OrdinaryDiffEqTsit5, DiffEqCallbacks, ForwardDiff, Test
 
 function some_dynamics(u, p, t)
     du = zeros(length(u))
@@ -98,3 +98,53 @@ _some_test_func(integrator) = derivative_discontinuity!(integrator, false)
 @inferred PresetTimeCallback(
     collect(range(0, 10, 100)), _some_test_func, save_positions = (false, false)
 )
+
+# Callable tstops depending on the model parameters
+# https://github.com/SciML/DiffEqCallbacks.jl/issues/178
+decay_preset!(du, u, p, t) = (du[1] = -u[1])
+
+hits = Float64[]
+cb = PresetTimeCallback(integrator -> integrator.p, integrator -> push!(hits, integrator.t))
+@inferred PresetTimeCallback(integrator -> integrator.p, integrator -> nothing)
+prob = ODEProblem(decay_preset!, [1.0], (0.0, 1.0), [0.6, 0.3])
+sol = solve(prob, Tsit5(), callback = cb)
+@test hits == [0.3, 0.6]
+@test 0.3 ∈ sol.t && 0.6 ∈ sol.t
+@test prob.p == [0.6, 0.3]
+
+# The same callback picks up new stops after a remake with updated parameters.
+empty!(hits)
+sol = solve(remake(prob; p = [0.75]), Tsit5(), callback = cb)
+@test hits == [0.75]
+@test 0.75 ∈ sol.t
+
+# A callable may return a single time, and stops outside the interval are filtered.
+empty!(hits)
+cb_scalar = PresetTimeCallback(
+    integrator -> integrator.p[1], integrator -> push!(hits, integrator.t)
+)
+solve(remake(prob; p = [0.4]), Tsit5(), callback = cb_scalar)
+@test hits == [0.4]
+empty!(hits)
+solve(remake(prob; p = [1.2]), Tsit5(), callback = cb_scalar)
+@test isempty(hits)
+
+@test_throws ArgumentError PresetTimeCallback("0.5", integrator -> nothing)
+cb_bad = PresetTimeCallback(integrator -> "0.5", integrator -> nothing)
+@test_throws ArgumentError solve(prob, Tsit5(), callback = cb_bad)
+
+# ForwardDiff through a parameter-dependent stop: u' = -u with u += 1 at
+# t = p[1] gives u(1) = exp(-1) + exp(-(1 - p[1])).
+function preset_fd_solve(pval)
+    cb_fd = PresetTimeCallback(
+        integrator -> integrator.p, integrator -> (integrator.u[1] += 1)
+    )
+    prob_fd = ODEProblem(decay_preset!, [1 + 0 * pval], (0 * pval, 1 + 0 * pval), [pval])
+    sol_fd = solve(
+        prob_fd, Tsit5(), callback = cb_fd, save_everystep = false,
+        abstol = 1.0e-12, reltol = 1.0e-12
+    )
+    return sol_fd.u[end][1]
+end
+@test preset_fd_solve(0.4) ≈ exp(-1) + exp(-0.6) atol = 1.0e-8
+@test ForwardDiff.derivative(preset_fd_solve, 0.4) ≈ exp(-0.6) atol = 1.0e-6
