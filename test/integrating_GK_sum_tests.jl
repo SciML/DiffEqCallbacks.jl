@@ -235,3 +235,34 @@ sol = solve(
     (out, u, t, integrator) -> nothing, IntegrandValuesSum(zeros(1)), nothing;
     integrand_inplace = true
 )
+
+# A tolerance below the roundoff level of the integrand terminates with a
+# warning instead of recursing until the stack overflows
+prob_tol = ODEProblem((du, u, p, t) -> (du .= -u; nothing), [1.0], (0.0, 1.0))
+exact_tol = (1 - exp(-2)) / 2
+integrated_tol = IntegrandValuesSum([0.0])
+solve(
+    prob_tol, Tsit5(),
+    callback = IntegratingGKSumCallback(
+        (out, u, t, integrator) -> (out .= u .^ 2), integrated_tol, [0.0], 1.0e-12
+    )
+)
+reference_tol = integrated_tol.integrand[1]
+for tol in (1.0e-17, 0.0)
+    integrated_unattainable = IntegrandValuesSum([0.0])
+    @test_logs (:warn, r"stopped before reaching the requested tolerance") match_mode = :any solve(
+        prob_tol, Tsit5(),
+        callback = IntegratingGKSumCallback(
+            (out, u, t, integrator) -> (out .= u .^ 2), integrated_unattainable, [0.0], tol
+        )
+    )
+    @test integrated_unattainable.integrand[1] ≈ exact_tol atol = 1.0e-5
+    @test integrated_unattainable.integrand[1] ≈ reference_tol atol = 1.0e-10
+end
+integrated_attainable = IntegrandValuesSum([0.0])
+@test_logs solve(
+    prob_tol, Tsit5(),
+    callback = IntegratingGKSumCallback(
+        (out, u, t, integrator) -> (out .= u .^ 2), integrated_attainable, [0.0], 1.0e-10
+    )
+)
