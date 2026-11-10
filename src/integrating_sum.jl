@@ -86,19 +86,27 @@ function Base.show(io::IO, integrand_values::IntegrandValuesSum)
     )
 end
 
-mutable struct SavingIntegrandSumAffect{IntegrandFunc, integrandType, IntegrandCacheType}
+mutable struct SavingIntegrandSumAffect{
+        IntegrandFunc,
+        integrandType,
+        IntegrandCacheType,
+        QuadratureType,
+    }
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValuesSum{integrandType}
     integrand_cache::IntegrandCacheType
     accumulation_cache::IntegrandCacheType
+    gauss_pts::Vector{Vector{QuadratureType}}
+    gauss_ws::Vector{Vector{QuadratureType}}
     integrand_inplace::Union{Nothing, Bool}
 end
 
 function SavingIntegrandSumAffect(
-        integrand_func, integrand_values, integrand_cache, accumulation_cache
+        integrand_func, integrand_values, integrand_cache, accumulation_cache, gauss_pts, gauss_ws
     )
     return SavingIntegrandSumAffect(
-        integrand_func, integrand_values, integrand_cache, accumulation_cache, nothing
+        integrand_func, integrand_values, integrand_cache, accumulation_cache,
+        gauss_pts, gauss_ws, nothing
     )
 end
 
@@ -115,7 +123,7 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
         (isinplace_prob && affect!.integrand_cache !== nothing) :
         affect!.integrand_inplace
     for i in 1:n
-        t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] + (integrator.t + integrator.tprev) / 2
+        t_temp = ((integrator.t - integrator.tprev) / 2) * affect!.gauss_pts[n][i] + (integrator.t + integrator.tprev) / 2
         if isinplace_prob
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
@@ -125,11 +133,11 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
         if inplace_integrand
             affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
             accumulation_cache = recursive_axpy!(
-                gauss_weights[n][i], affect!.integrand_cache, accumulation_cache
+                affect!.gauss_ws[n][i], affect!.integrand_cache, accumulation_cache
             )
         else
             accumulation_cache = recursive_axpy!(
-                gauss_weights[n][i],
+                affect!.gauss_ws[n][i],
                 affect!.integrand_func(curu, t_temp, integrator), accumulation_cache
             )
         end
@@ -148,7 +156,9 @@ end
         integrand_prototype; integrand_inplace = nothing) -> DiscreteCallback
 
 Construct a callback that uses fixed-order Gaussian quadrature to accumulate the integral of
-`integrand_func` over accepted solver steps in `integrand_values.integrand`.
+`integrand_func` over accepted solver steps in `integrand_values.integrand`. Quadrature
+nodes and weights are evaluated in the element type of the integrand, so higher-precision
+integrands such as `BigFloat` are not capped at `Float64` precision.
 
 # Arguments
 
@@ -207,9 +217,13 @@ function IntegratingSumCallback(
             )
         )
     end
+    integrand_el = eltype(eltype(integrand_values.integrand))
+    prototype_el = integrand_prototype === nothing ? integrand_el : eltype(integrand_prototype)
+    quadrature_el = _quadrature_eltype(integrand_el, prototype_el)
+    gauss_pts, gauss_ws = _gauss_tables(quadrature_el)
     affect! = SavingIntegrandSumAffect(
         integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype), integrand_inplace
+        allocate_zeros(integrand_prototype), gauss_pts, gauss_ws, integrand_inplace
     )
     condition = true_condition
     return DiscreteCallback(condition, affect!, save_positions = (false, false))

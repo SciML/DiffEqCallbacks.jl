@@ -195,11 +195,14 @@ mutable struct SavingIntegrandAffect{
         tType,
         IntegrandType,
         IntegrandCacheType,
+        QuadratureType,
     }
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValues{tType, IntegrandType}
     integrand_cache::IntegrandCacheType
     accumulation_cache::IntegrandCacheType
+    gauss_pts::Vector{Vector{QuadratureType}}
+    gauss_ws::Vector{Vector{QuadratureType}}
 end
 
 function (affect!::SavingIntegrandAffect)(integrator)
@@ -211,25 +214,25 @@ function (affect!::SavingIntegrandAffect)(integrator)
     end
     accumulation_cache = recursive_zero!(affect!.accumulation_cache)
     for i in 1:n
-        t_temp = ((integrator.t - integrator.tprev) / 2) * gauss_points[n][i] +
+        t_temp = ((integrator.t - integrator.tprev) / 2) * affect!.gauss_pts[n][i] +
             (integrator.t + integrator.tprev) / 2
         if SciMLBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
             if affect!.integrand_cache == nothing
                 accumulation_cache = recursive_axpy!(
-                    gauss_weights[n][i],
+                    affect!.gauss_ws[n][i],
                     affect!.integrand_func(curu, t_temp, integrator), accumulation_cache
                 )
             else
                 affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
                 accumulation_cache = recursive_axpy!(
-                    gauss_weights[n][i], affect!.integrand_cache, accumulation_cache
+                    affect!.gauss_ws[n][i], affect!.integrand_cache, accumulation_cache
                 )
             end
         else
             accumulation_cache = recursive_axpy!(
-                gauss_weights[n][i],
+                affect!.gauss_ws[n][i],
                 affect!.integrand_func(integrator(t_temp), t_temp, integrator),
                 accumulation_cache
             )
@@ -251,7 +254,9 @@ end
 Construct a callback that uses fixed-order Gaussian quadrature to save the integral of
 `integrand_func` over each accepted solver step. The callback appends the step end time to
 `integrand_values.ts` and the corresponding integral estimate to
-`integrand_values.integrand`.
+`integrand_values.integrand`. Quadrature nodes and weights are evaluated in the element
+type of the integrand and the integration time, so higher-precision integrands such as
+`BigFloat` are not capped at `Float64` precision.
 
 # Arguments
 
@@ -293,9 +298,14 @@ integrals_by_step = values.integrand
 function IntegratingCallback(
         integrand_func, integrand_values::IntegrandValues, integrand_prototype
     )
+    integrand_el = eltype(eltype(integrand_values.integrand))
+    time_el = eltype(integrand_values.ts)
+    prototype_el = integrand_prototype === nothing ? integrand_el : eltype(integrand_prototype)
+    quadrature_el = _quadrature_eltype(integrand_el, time_el, prototype_el)
+    gauss_pts, gauss_ws = _gauss_tables(quadrature_el)
     affect! = SavingIntegrandAffect(
         integrand_func, integrand_values, integrand_prototype,
-        allocate_zeros(integrand_prototype)
+        allocate_zeros(integrand_prototype), gauss_pts, gauss_ws
     )
     condition = true_condition
     return DiscreteCallback(condition, affect!, save_positions = (false, false))
