@@ -1,17 +1,12 @@
-# Strip numeric wrappers (e.g. `ForwardDiff.Dual`, unwrapped by the ForwardDiff
-# extension) so the tracked maximum stays at the plain float type and remains
-# assignable to `curmax`. The fallback is the identity.
-_autoabstol_value(x) = x
-
 mutable struct AutoAbstolAffect{T}
     curmax::T
 end
 # Now make `affect!` for this:
 function (p::AutoAbstolAffect)(integrator)
     if p.curmax isa AbstractArray
-        @. p.curmax = max(p.curmax, _autoabstol_value(abs(integrator.u)))
+        @. p.curmax = max(p.curmax, SciMLBase.value(abs(integrator.u)))
     else
-        p.curmax = max(p.curmax, _autoabstol_value(maximum(abs, integrator.u)))
+        p.curmax = max(p.curmax, SciMLBase.value(maximum(abs, integrator.u)))
     end
 
     if integrator.opts.abstol isa AbstractArray
@@ -25,7 +20,11 @@ end
 
 function AutoAbstol_initialize(cb, u, t, integrator)
     if cb.affect!.curmax == zero(integrator.opts.abstol)
-        cb.affect!.curmax = _autoabstol_value(integrator.opts.abstol)
+        # No broadcast: for plain tolerances `value` is the identity, so an array
+        # `abstol` is adopted by reference and a scalar `Dual` `abstol` is still
+        # unwrapped. `Dual` state and `Dual` `init_curmax` are unwrapped above and
+        # in the constructor.
+        cb.affect!.curmax = SciMLBase.value(integrator.opts.abstol)
     end
     return derivative_discontinuity!(integrator, false)
 end
@@ -66,7 +65,7 @@ sol = solve(prob, Tsit5(); callback = cb, reltol = 1.0e-6)
 ```
 """
 function AutoAbstol(save = true; init_curmax = 0.0)
-    affect! = AutoAbstolAffect(abs.(init_curmax))
+    affect! = AutoAbstolAffect(SciMLBase.value.(abs.(init_curmax)))
     condition = true_condition
     save_positions = (save, false)
     return DiscreteCallback(

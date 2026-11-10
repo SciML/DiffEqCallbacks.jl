@@ -79,3 +79,31 @@ function _autoabstol_forwarddiff_array_loss(p)
 end
 @test ForwardDiff.gradient(_autoabstol_forwarddiff_array_loss, [0.5]) ≈
     [-3 * exp(-0.5)] rtol = 1.0e-3
+
+# Differentiating wrt the initial state `x` with an `init_curmax` derived from
+# `x` must work: during AD `init_curmax` holds `Dual`s, which the constructor
+# unwraps to the primal float type (issue #351). With `du = -0.5u`,
+# `sum(u(end)) = (x[1] + x[2]) * exp(-0.5)`, so the gradient at `[1.0, 2.0]` is
+# `[exp(-0.5), exp(-0.5)]`.
+function _autoabstol_forwarddiff_u0_max_loss(x)
+    f!(du, u, p, t) = (du .= -0.5 .* u; nothing)
+    sol = solve(
+        ODEProblem(f!, x, (0.0, 1.0)), Tsit5();
+        callback = AutoAbstol(; init_curmax = maximum(abs, x))
+    )
+    return sum(sol.u[end])
+end
+@test ForwardDiff.gradient(_autoabstol_forwarddiff_u0_max_loss, [1.0, 2.0]) ≈
+    fill(exp(-0.5), 2) rtol = 1.0e-3
+
+function _autoabstol_forwarddiff_u0_abs_loss(x)
+    f!(du, u, p, t) = (du .= -0.5 .* u; nothing)
+    sol = solve(
+        ODEProblem(f!, x, (0.0, 1.0)), Tsit5();
+        callback = AutoAbstol(; init_curmax = abs.(x)),
+        abstol = fill(1.0e-6, 2)
+    )
+    return sum(sol.u[end])
+end
+@test ForwardDiff.gradient(_autoabstol_forwarddiff_u0_abs_loss, [1.0, 2.0]) ≈
+    fill(exp(-0.5), 2) rtol = 1.0e-3
