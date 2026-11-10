@@ -4,9 +4,9 @@ end
 # Now make `affect!` for this:
 function (p::AutoAbstolAffect)(integrator)
     if p.curmax isa AbstractArray
-        @. p.curmax = max(p.curmax, abs(integrator.u))
+        @. p.curmax = max(p.curmax, SciMLBase.value(abs(integrator.u)))
     else
-        p.curmax = max(p.curmax, maximum(abs, integrator.u))
+        p.curmax = max(p.curmax, SciMLBase.value(maximum(abs, integrator.u)))
     end
 
     if integrator.opts.abstol isa AbstractArray
@@ -20,7 +20,11 @@ end
 
 function AutoAbstol_initialize(cb, u, t, integrator)
     if cb.affect!.curmax == zero(integrator.opts.abstol)
-        cb.affect!.curmax = integrator.opts.abstol
+        # No broadcast: for plain tolerances `value` is the identity, so an array
+        # `abstol` is adopted by reference and a scalar `Dual` `abstol` is still
+        # unwrapped. `Dual` state and `Dual` `init_curmax` are unwrapped above and
+        # in the constructor.
+        cb.affect!.curmax = SciMLBase.value(integrator.opts.abstol)
     end
     return derivative_discontinuity!(integrator, false)
 end
@@ -30,6 +34,8 @@ end
 
 Construct a callback that updates `integrator.opts.abstol` after every accepted step to the
 largest magnitude observed in the state so far, multiplied by `integrator.opts.reltol`.
+Only the primal values of the state feed the tracked maximum, so a solve using
+this callback remains differentiable with `ForwardDiff.jl`.
 
 # Arguments
 
@@ -59,7 +65,7 @@ sol = solve(prob, Tsit5(); callback = cb, reltol = 1.0e-6)
 ```
 """
 function AutoAbstol(save = true; init_curmax = 0.0)
-    affect! = AutoAbstolAffect(abs.(init_curmax))
+    affect! = AutoAbstolAffect(SciMLBase.value.(abs.(init_curmax)))
     condition = true_condition
     save_positions = (save, false)
     return DiscreteCallback(
