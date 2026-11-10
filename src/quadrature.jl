@@ -1,15 +1,13 @@
-"""
-Quadrature rules for the integrating callbacks.
-
-`_GAUSS_POINTS_STR` and the related tables store the Gauss and Gauss–Kronrod
-nodes and weights for orders 1:10 on the reference interval `[-1, 1]` as
-decimal strings with 84 significant digits. They are computed with
-QuadGK.jl's `gauss`/`kronrod` at 2048-bit `BigFloat` precision and converted
-to the element type of the integrand when an integrating callback is
-constructed, so integrands in higher-precision types such as `BigFloat` are
-not capped at `Float64` precision. For `Float64` integrands the reference
-literal tables (`gauss_points` and friends) are used unchanged.
-"""
+# Quadrature rules for the integrating callbacks.
+#
+# `_GAUSS_POINTS_STR` and the related tables store the Gauss and Gauss-Kronrod
+# nodes and weights for orders 1:10 on the reference interval `[-1, 1]` as
+# decimal strings with 84 significant digits. They are computed with
+# QuadGK.jl's `gauss`/`kronrod` at 2048-bit `BigFloat` precision and converted
+# to the element type of the integrand when an integrating callback is
+# constructed, so integrands in higher-precision types such as `BigFloat` are
+# not capped at `Float64` precision. For `Float64` integrands the reference
+# literal tables (`gauss_points` and friends) are used unchanged.
 const _GAUSS_POINTS_STR = [
     ["0.0"],
     ["-5.77350269189625764509148780501957455647601751270126876018602326483977672302933345694e-01", "5.77350269189625764509148780501957455647601751270126876018602326483977672302933345694e-01"],
@@ -98,12 +96,61 @@ function _gk_tables(::Type{T}) where {T}
     )
 end
 
+function _quadrature_leaf_eltype(::Type{T}) where {T}
+    if T === Any
+        return Float64
+    elseif T <: Number
+        return real(T)
+    elseif T <: AbstractArray
+        return _quadrature_leaf_eltype(eltype(T))
+    elseif T <: NamedTuple
+        fts = fieldtypes(T)
+        if isempty(fts)
+            return Float64
+        end
+        leaf = _quadrature_leaf_eltype(first(fts))
+        for ft in fts[2:end]
+            leaf = promote_type(leaf, _quadrature_leaf_eltype(ft))
+        end
+        return leaf
+    elseif T <: Tuple
+        fts = fieldtypes(T)
+        if isempty(fts)
+            return Float64
+        end
+        leaf = _quadrature_leaf_eltype(first(fts))
+        for ft in fts[2:end]
+            leaf = promote_type(leaf, _quadrature_leaf_eltype(ft))
+        end
+        return leaf
+    else
+        may_et = try
+            et = eltype(T)
+            (et === Any || et === T || et === Nothing || et === Missing) ? nothing : et
+        catch
+            nothing
+        end
+        if may_et === nothing
+            return Float64
+        else
+            return _quadrature_leaf_eltype(may_et)
+        end
+    end
+end
+
 function _quadrature_eltype(integrand_el::Type, time_el::Type, prototype_el::Type)
-    T = promote_type(real(integrand_el), real(time_el), real(prototype_el))
+    T = promote_type(
+        _quadrature_leaf_eltype(integrand_el),
+        _quadrature_leaf_eltype(time_el),
+        _quadrature_leaf_eltype(prototype_el)
+    )
     return T <: AbstractFloat ? T : Float64
 end
 
 function _quadrature_eltype(integrand_el::Type, prototype_el::Type)
-    T = promote_type(real(integrand_el), real(prototype_el))
+    T = promote_type(
+        _quadrature_leaf_eltype(integrand_el),
+        _quadrature_leaf_eltype(prototype_el)
+    )
     return T <: AbstractFloat ? T : Float64
 end

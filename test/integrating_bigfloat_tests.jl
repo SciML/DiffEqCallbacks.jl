@@ -1,4 +1,4 @@
-using OrdinaryDiffEqLowOrderRK, DiffEqCallbacks
+using OrdinaryDiffEqLowOrderRK, DiffEqCallbacks, Functors
 using Test
 
 # u' = 1 gives u = t exactly, so the integral of u^2 over [0, 1] is exactly
@@ -95,4 +95,44 @@ for n in 1:10
     @test abs(sum(gauss_ws[n]) - 2) < big"1e-70"
     @test abs(sum(gk_ws[n]) - 2) < big"1e-70"
     @test isapprox(sum(gk_pts[n]), big(0.0); atol = big"1e-70")
+end
+
+@testset "quadrature eltype handles NamedTuple and Any" begin
+    # Direct unit tests for _quadrature_eltype with Any and nested containers
+    @test DiffEqCallbacks._quadrature_eltype(Any, Float64, Any) === Float64
+    @test DiffEqCallbacks._quadrature_eltype(Any, Any) === Float64
+    let p_nt = (; x = (; αβ = [1.5, 1.0]), δγ = [3.0, 1.0])
+        @test eltype(p_nt) === Any
+        @test DiffEqCallbacks._quadrature_leaf_eltype(typeof(p_nt)) === Float64
+        values_nt = IntegrandValues(Float64, typeof(p_nt))
+        integrand_el = eltype(eltype(values_nt.integrand))
+        time_el = eltype(values_nt.ts)
+        prototype_el = eltype(p_nt)
+        @test DiffEqCallbacks._quadrature_eltype(integrand_el, time_el, prototype_el) ===
+            Float64
+        @test DiffEqCallbacks._quadrature_eltype(integrand_el, prototype_el) === Float64
+    end
+    let p_nt_big = (; a = [big(1.0)], b = [big(2.0)])
+        @test DiffEqCallbacks._quadrature_leaf_eltype(typeof(p_nt_big)) === BigFloat
+        @test DiffEqCallbacks._quadrature_eltype(BigFloat, Float64, BigFloat) === BigFloat
+    end
+    # Mixed nested types promote to higher precision
+    @test DiffEqCallbacks._quadrature_leaf_eltype(typeof((; u = [1.0], v = [big(1.0)]))) === BigFloat
+end
+
+@testset "IntegratingCallback accepts NamedTuple prototype" begin
+    p_nt = (; x = (; αβ = [1.5, 1.0]), δγ = [3.0, 1.0])
+    for T in ("IntegratingCallback", "IntegratingGKCallback")
+        if T == "IntegratingCallback"
+            vals = IntegrandValues(Float64, typeof(p_nt))
+            cb = IntegratingCallback((u, t, integrator) -> p_nt, vals, p_nt)
+        else
+            vals = IntegrandValues(Float64, typeof(p_nt))
+            cb = IntegratingGKCallback((u, t, integrator) -> p_nt, vals, p_nt)
+        end
+        @test cb !== nothing
+    end
+    vals_sum = IntegrandValuesSum(p_nt)
+    @test_nowarn IntegratingSumCallback(((u, t, integrator) -> p_nt), vals_sum, p_nt)
+    @test_nowarn IntegratingGKSumCallback(((u, t, integrator) -> p_nt), vals_sum, p_nt)
 end
