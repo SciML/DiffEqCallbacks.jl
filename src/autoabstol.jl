@@ -75,4 +75,9 @@ function AutoAbstol(save = true; init_curmax = 0.0)
     )
 end
 
+# Each integrator tracks its own maximum
+function SciMLBase.instantiate_callback(cb::DiscreteCallback{<:Any, <:AutoAbstolAffect})
+    return SciMLBase.remake(cb; affect! = AutoAbstolAffect(copy(cb.affect!.curmax)))
+end
+
 export AutoAbstol
