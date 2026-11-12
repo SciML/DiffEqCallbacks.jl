@@ -239,7 +239,7 @@ sol = solve(
 using LinearAlgebra, SciMLBase
 const _gk_A = [-0.001 1.0 0 0; -1.0 -0.001 0 0; 0 0 -0.001 2.0; 0 0 -2.0 -0.001]
 _gk_osc!(du, u, p, t) = mul!(du, _gk_A, u)
-_gk_intg!(out, u, t, integ) = (out .= u .^ 2; nothing)
+_gk_intg!(out, u, t, integ) = (out .= u .* u; nothing)
 function _gk_step_n!(integ, n)
     for _ in 1:n
         step!(integ)
