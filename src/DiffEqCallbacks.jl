@@ -10,7 +10,7 @@ using PrecompileTools: PrecompileTools
 using Random: Random, randn!
 using RecipesBase: @recipe
 using RecursiveArrayTools: RecursiveArrayTools, DiffEqArray, copyat_or_push!
-using SciMLBase: SciMLBase, CallbackSet, DiscreteCallback, DiscreteProblem,
+using SciMLBase: SciMLBase, CallbackSet, ContinuousCallback, DiscreteCallback, DiscreteProblem,
     NonlinearFunction, NonlinearProblem, RODEProblem,
     ReturnCode, SDEProblem, add_tstop!, check_error, get_du,
     get_proposed_dt, get_tmp_cache,
@@ -57,6 +57,7 @@ include("integrating_sum.jl")
 include("iterative_and_periodic.jl")
 include("terminatesteadystate.jl")
 include("preset_time.jl")
+include("crossing.jl")
 include("probints.jl")
 include("integrating_GK_affect.jl")
 include("integrating_GK_sum.jl")
