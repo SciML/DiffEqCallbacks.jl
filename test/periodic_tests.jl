@@ -136,14 +136,25 @@ end
         return ticks
     end
     @test 270 * 0.005 != 1 / 60 + 40 * (1 / 30)
-    ticks1 = tick_times(1 // 200, 0 // 1)
-    ticks2 = tick_times(1 // 30, 1 // 60)
+    # Both callbacks in one integrator: the coincident tick is one tstop, and
+    # no step between the two ticks is taken.
+    ticks1, ticks2 = Float64[], Float64[]
+    cb1 = PeriodicCallback(i -> push!(ticks1, i.t), 1 // 200)
+    cb2 = PeriodicCallback(i -> push!(ticks2, i.t), 1 // 30; phase = 1 // 60)
+    sol = solve(prob_rat, Tsit5(); callback = CallbackSet(cb1, cb2))
     @test 1.35 in ticks1
     @test 1.35 in ticks2
-    @test ticks2[1:3] == [1 // 60, 1 // 60 + 1 // 30, 1 // 60 + 2 // 30] .|> Float64
-    # A Float64 start of the time span is converted to a rational.
-    ticks3 = tick_times(1 // 30, 1 // 60, (0.1, 1.0))
-    @test ticks3[1] == Float64(1 // 10 + 1 // 60)
+    @test isempty(intersect(ticks2, prevfloat.(ticks1)) ∪ intersect(ticks2, nextfloat.(ticks1)))
+    @test all(Δ -> iszero(Δ) || Δ > 1.0e-6, diff(sol.t))
+    @test ticks2[1:3] == Float64.([1 // 60, 1 // 60 + 1 // 30, 1 // 60 + 2 // 30])
+    # The start time is used as it is, and only the offset is rounded.
+    t_start = nextfloat(1.0)
+    ticks3 = tick_times(1 // 10, 1 // 2, (t_start, 2.0))
+    @test ticks3[1] == t_start + 0.5
+    # A start time without a small rational representation does not overflow.
+    ticks4 = tick_times(1 // 1, 1 // 10^12, (sqrt(2.0), 4.0))
+    @test length(ticks4) == 3
+    @test ticks4[1] == sqrt(2.0) + Float64(1 // 10^12)
 end
 
 # Fix indexing repeats
