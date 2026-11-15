@@ -126,13 +126,13 @@ const _PeriodicCache{T, S} = NamedTuple{
 end
 
 # Offsets from the start time are computed in exact arithmetic when the period is
-# rational and the phase is rational or an integer. The tick with index `k` is
+# rational and the phase is rational, an integer or zero. The tick with index `k` is
 # then `tstart + convert(S, phase + k*Δt)`: the offset is rounded once, and the
 # start time is used as it is. Ticks of different callbacks of one integrator that
 # coincide mathematically are then equal as floating-point numbers, which avoids
 # steps of a few ulps between them. In all other cases `t0 = tstart + phase` is
 # stored in the type of the period and the tick is `convert(S, t0 + k*Δt)`.
-_exact_offset(Δt, phase) = Δt isa Rational && (phase isa Rational || phase isa Integer)
+_exact_offset(Δt, phase) = Δt isa Rational && (phase isa Rational || phase isa Integer || iszero(phase))
 
 @inline function _periodic_tick(cache, k, Δt, exact, ::Type{S}) where {S}
     return if exact

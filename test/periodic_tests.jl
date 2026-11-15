@@ -155,6 +155,10 @@ end
     ticks4 = tick_times(1 // 1, 1 // 10^12, (sqrt(2.0), 4.0))
     @test length(ticks4) == 3
     @test ticks4[1] == sqrt(2.0) + Float64(1 // 10^12)
+    # A zero Float64 phase with a rational period takes the exact path, also for a
+    # start time that has no small rational representation.
+    ticks5 = tick_times(1 // 200, 0.0, (sqrt(2.0), 2.0))
+    @test ticks5[1:2] == [sqrt(2.0) + 0.005, sqrt(2.0) + 0.01]
 end
 
 # Fix indexing repeats
