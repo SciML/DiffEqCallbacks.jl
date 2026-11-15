@@ -155,10 +155,18 @@ end
     ticks4 = tick_times(1 // 1, 1 // 10^12, (sqrt(2.0), 4.0))
     @test length(ticks4) == 3
     @test ticks4[1] == sqrt(2.0) + Float64(1 // 10^12)
-    # A zero Float64 phase with a rational period takes the exact path, also for a
-    # start time that has no small rational representation.
-    ticks5 = tick_times(1 // 200, 0.0, (sqrt(2.0), 2.0))
-    @test ticks5[1:2] == [sqrt(2.0) + 0.005, sqrt(2.0) + 0.01]
+    # A Float64 phase with a rational period takes the exact path: a zero phase
+    # (as ModelingToolkit passes it for a clock without phase) and a phase equal to
+    # a rational number give the same ticks as the rational phase.
+    # Exact arithmetic of the start time and the offset together gives
+    # 0.39999999999999997 here.
+    ticks5 = tick_times(1 // 10, 0.0, (0.3, 1.0))
+    @test ticks5[1] === 0.3 + Float64(1 // 10)
+    ticks6 = tick_times(1 // 10, 0.5, (0.1, 1.0))
+    @test ticks6 == tick_times(1 // 10, 1 // 2, (0.1, 1.0))
+    # A Float64 phase is converted exactly, without overflow of Rational{Int}.
+    ticks7 = tick_times(1 // 10^12, 0.1, (sqrt(2.0), sqrt(2.0) + 0.1 + 1.0e-11))
+    @test ticks7[1] == sqrt(2.0) + 0.1
 end
 
 # Fix indexing repeats
