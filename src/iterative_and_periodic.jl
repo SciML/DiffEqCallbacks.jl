@@ -122,6 +122,21 @@ const _PeriodicCache{T} = NamedTuple{(:t0, :index), Tuple{Base.RefValue{T}, Base
     return task_local_storage(key)::_PeriodicCache{T}
 end
 
+# Start time of the periodic ticks. For a rational period the start time and the
+# phase are converted to rationals before they are added, such that every tick
+# `t0 + index*Δt` is evaluated in exact arithmetic and is rounded to the
+# integrator time type only once. Ticks of different callbacks that coincide
+# mathematically are then equal as floating-point numbers, which avoids steps of
+# a few ulps between them. Other period types add in the time type of `t` first.
+_periodic_t0(::Type{T}, t, phase) where {T} = convert(T, t + phase)
+function _periodic_t0(::Type{Rational{I}}, t, phase) where {I}
+    return _exact_rational(I, t) + _exact_rational(I, phase)
+end
+_exact_rational(::Type{I}, x::Rational) where {I} = Rational{I}(x)
+_exact_rational(::Type{I}, x::Integer) where {I} = Rational{I}(x)
+_exact_rational(::Type{I}, x::AbstractFloat) where {I} = rationalize(I, x)
+_exact_rational(::Type{I}, x) where {I} = Rational{I}(x)
+
 function (S::PeriodicCallbackAffect)(integrator)
     add_next_tstop!(integrator, S)
 
@@ -244,7 +259,7 @@ function PeriodicCallback(
         else
             existing::_PeriodicCache{typeof(Δt)}
         end
-        cache.t0[] = convert(typeof(Δt), t + phase)
+        cache.t0[] = _periodic_t0(typeof(Δt), t, phase)
         cache.index[] = iszero(phase) ? 0 : -1
         return if initial_affect
             affect!(integrator)

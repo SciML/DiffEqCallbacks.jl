@@ -124,6 +124,28 @@ sol = solve(prob, Tsit5(), callback = cb)
     @test all(isapprox(firings[i], (i - 1) / 10; atol = 1.0e-12) for i in eachindex(firings) if firings[i] <= 1.0)
 end
 
+# Coincident ticks of periodic callbacks with rational periods and phases are
+# equal as floating-point numbers, while the same ticks computed with floating-point
+# periods differ by one ulp.
+@testset "Rational PeriodicCallback phase and coincident ticks" begin
+    prob_rat = ODEProblem((du, u, p, t) -> (du[1] = -u[1]), [1.0], (0.0, 2.0))
+    function tick_times(Δt, phase, tspan = prob_rat.tspan)
+        ticks = Float64[]
+        cb = PeriodicCallback(i -> push!(ticks, i.t), Δt; phase)
+        solve(remake(prob_rat; tspan), Tsit5(); callback = cb)
+        return ticks
+    end
+    @test 270 * 0.005 != 1 / 60 + 40 * (1 / 30)
+    ticks1 = tick_times(1 // 200, 0 // 1)
+    ticks2 = tick_times(1 // 30, 1 // 60)
+    @test 1.35 in ticks1
+    @test 1.35 in ticks2
+    @test ticks2[1:3] == [1 // 60, 1 // 60 + 1 // 30, 1 // 60 + 2 // 30] .|> Float64
+    # A Float64 start of the time span is converted to a rational.
+    ticks3 = tick_times(1 // 30, 1 // 60, (0.1, 1.0))
+    @test ticks3[1] == Float64(1 // 10 + 1 // 60)
+end
+
 # Fix indexing repeats
 # https://github.com/SciML/ModelingToolkit.jl/issues/2528
 
