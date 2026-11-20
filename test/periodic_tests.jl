@@ -147,7 +147,9 @@ end
     @test isempty(intersect(ticks2, prevfloat.(ticks1)) ∪ intersect(ticks2, nextfloat.(ticks1)))
     @test all(Δ -> iszero(Δ) || Δ > 1.0e-6, diff(sol.t))
     @test ticks2[1:3] == Float64.([1 // 60, 1 // 60 + 1 // 30, 1 // 60 + 2 // 30])
-    # The start time is used as it is, and only the offset is rounded.
+    # Each tick is the exactly rounded value of start time + phase + k*Δt.
+    exact(x) = Rational{BigInt}(x)
+    exact_tick(t0, phase, k, Δt) = Float64(exact(t0) + exact(phase) + k * exact(Δt))
     t_start = nextfloat(1.0)
     ticks3 = tick_times(1 // 10, 1 // 2, (t_start, 2.0))
     @test ticks3[1] == t_start + 0.5
@@ -155,19 +157,46 @@ end
     # literal is an Int64 also on 32-bit systems, where 10^12 overflows Int32.
     ticks4 = tick_times(1 // 1, 1 // 1_000_000_000_000, (sqrt(2.0), 4.0))
     @test length(ticks4) == 3
-    @test ticks4[1] == sqrt(2.0) + Float64(1 // 1_000_000_000_000)
+    @test ticks4[1] == exact_tick(sqrt(2.0), 1 // 1_000_000_000_000, 0, 1 // 1)
     # A Float64 phase with a rational period takes the exact path: a zero phase
     # (as ModelingToolkit passes it for a clock without phase) and a phase equal to
     # a rational number give the same ticks as the rational phase.
-    # Exact arithmetic of the start time and the offset together gives
-    # 0.39999999999999997 here.
     ticks5 = tick_times(1 // 10, 0.0, (0.3, 1.0))
-    @test ticks5[1] === 0.3 + Float64(1 // 10)
+    @test ticks5[1] === exact_tick(0.3, 0, 1, 1 // 10) === 0.39999999999999997
     ticks6 = tick_times(1 // 10, 0.5, (0.1, 1.0))
     @test ticks6 == tick_times(1 // 10, 1 // 2, (0.1, 1.0))
     # A Float64 phase is converted exactly, without overflow of Rational{Int}.
     ticks7 = tick_times(1 // 1_000_000_000_000, 0.1, (sqrt(2.0), sqrt(2.0) + 0.1 + 1.0e-11))
-    @test ticks7[1] == sqrt(2.0) + 0.1
+    @test ticks7[1] == exact_tick(sqrt(2.0), 0.1, 0, 1 // 1_000_000_000_000)
+    # The increments survive cancellation of the start time and the phase.
+    ticks8 = Float64[]
+    cb8 = PeriodicCallback(i -> push!(ticks8, i.t), 1 // Int64(10)^16; phase = 1)
+    solve(
+        remake(prob_rat; tspan = (-1.0, 3.5e-16)), Tsit5(); callback = cb8,
+        adaptive = false, dt = 1.0
+    )
+    @test ticks8 == Float64.([0, 1 // 10^16, 2 // 10^16, 3 // 10^16])
+    # Equal periods stored with different integer types tick at the same time;
+    # `Float64(::Rational{Int})` would round the denominator first and give
+    # 0.5000000000000001.
+    p = (Int64(2)^52 + 1) // (Int64(2)^53 + 1)
+    ticks9, ticks10 = Float64[], Float64[]
+    sol = solve(
+        remake(prob_rat; tspan = (0.0, 0.75)), Tsit5();
+        callback = CallbackSet(
+            PeriodicCallback(i -> push!(ticks9, i.t), p),
+            PeriodicCallback(i -> push!(ticks10, i.t), big(p))
+        )
+    )
+    @test ticks9 == ticks10 == [0.5]
+    @test all(Δ -> iszero(Δ) || Δ > 1.0e-6, diff(sol.t))
+    # Narrow integer types do not overflow.
+    @test tick_times(Int32(1) // Int32(65537), Int32(1) // Int32(65536), (0.0, 5.0e-5)) ==
+        [exact_tick(0.0, 1 // 65536, k, 1 // 65537) for k in 0:2]
+    @test tick_times(1 // 3, (Int64(2)^61 + 1) // Int64(2)^62, (0.0, 1.0)) ==
+        [exact_tick(0.0, (big(2)^61 + 1) // big(2)^62, k, 1 // 3) for k in 0:1]
+    # A floating-point phase with an integer period is added to the start time first.
+    @test tick_times(1, 0.5, (0.5, 2.5)) == [1.0, 2.0]
 end
 
 # Fix indexing repeats
