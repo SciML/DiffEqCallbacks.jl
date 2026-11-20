@@ -151,10 +151,11 @@ end
     t_start = nextfloat(1.0)
     ticks3 = tick_times(1 // 10, 1 // 2, (t_start, 2.0))
     @test ticks3[1] == t_start + 0.5
-    # A start time without a small rational representation does not overflow.
-    ticks4 = tick_times(1 // 1, 1 // 10^12, (sqrt(2.0), 4.0))
+    # A start time without a small rational representation does not overflow. The
+    # literal is an Int64 also on 32-bit systems, where 10^12 overflows Int32.
+    ticks4 = tick_times(1 // 1, 1 // 1_000_000_000_000, (sqrt(2.0), 4.0))
     @test length(ticks4) == 3
-    @test ticks4[1] == sqrt(2.0) + Float64(1 // 10^12)
+    @test ticks4[1] == sqrt(2.0) + Float64(1 // 1_000_000_000_000)
     # A Float64 phase with a rational period takes the exact path: a zero phase
     # (as ModelingToolkit passes it for a clock without phase) and a phase equal to
     # a rational number give the same ticks as the rational phase.
@@ -165,7 +166,7 @@ end
     ticks6 = tick_times(1 // 10, 0.5, (0.1, 1.0))
     @test ticks6 == tick_times(1 // 10, 1 // 2, (0.1, 1.0))
     # A Float64 phase is converted exactly, without overflow of Rational{Int}.
-    ticks7 = tick_times(1 // 10^12, 0.1, (sqrt(2.0), sqrt(2.0) + 0.1 + 1.0e-11))
+    ticks7 = tick_times(1 // 1_000_000_000_000, 0.1, (sqrt(2.0), sqrt(2.0) + 0.1 + 1.0e-11))
     @test ticks7[1] == sqrt(2.0) + 0.1
 end
 
