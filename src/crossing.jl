@@ -7,10 +7,15 @@ mutable struct CrossingState{X, A}
     arrival::Int    # side `x` reached zero from; 0 if it started at zero
     seen::Int       # sign of `x` at the latest evaluation off `side`
     pending::Bool   # the last tick was located before `x` took its new sign
-    tpend::Any      # time of that tick
+    tclear::Any     # first time at which `x` is known to have that sign
 end
 
 signof(state::CrossingState, u, t, integrator) = Int(sign(state.x(u, t, integrator)))
+
+# Between a pending tick and `tclear`, `x` may still show its old sign; the conditions
+# then report the new one, so the next step neither re-detects the tick nor misses roots.
+crossing_suppressed(state::CrossingState, t, integrator) =
+    state.pending && integrator.tdir * (t - state.tclear) <= 0
 
 # Record that the sign of `x` became `next`, and tick if that kind of change is a tick.
 function crossing_transition!(state::CrossingState, integrator, next)
@@ -36,7 +41,8 @@ struct CrossingSideCondition{S}
 end
 function (c::CrossingSideCondition)(u, t, integrator)
     state = c.state
-    (iszero(state.side) || state.pending) && return 1.0
+    iszero(state.side) && return 1.0
+    crossing_suppressed(state, t, integrator) && return float(state.side)
     x = state.x(u, t, integrator)
     x * state.side > 0 && return float(x)
     state.seen = Int(sign(x))
@@ -61,7 +67,8 @@ struct CrossingZeroCondition{S}
 end
 function (c::CrossingZeroCondition)(u, t, integrator)
     state = c.state
-    (!iszero(state.side) || state.pending) && return 1.0
+    !iszero(state.side) && return 1.0
+    crossing_suppressed(state, t, integrator) && return -1.0
     x = state.x(u, t, integrator)
     iszero(x) && return -1.0
     state.seen = Int(sign(x))
@@ -77,17 +84,24 @@ function (a::CrossingAffect)(integrator)
     state = a.state
     actual = signof(state, integrator.u, integrator.t, integrator)
     # A left root-find stops where `x` still has its old sign: take the new one from the
-    # other end of the bracket, and stay out of the way until `x` gets there.
+    # other end of the bracket.
     next = actual == state.side ? state.seen : actual
+    tclear = crossing_rightfloat(integrator.t, integrator)
     if iszero(next) && !iszero(state.side)
-        # `x` may be zero at a single float in passing: look one float beyond the zero.
-        t = iszero(actual) ? integrator.t : crossing_rightfloat(integrator.t, integrator)
+        # `x` may be zero at a single float in passing: look one float beyond the zero,
+        # unless that is past the end of the solve.
+        t = iszero(actual) ? integrator.t : tclear
         t = crossing_rightfloat(t, integrator)
-        signof(state, integrator(t), t, integrator) == -state.side && (next = -state.side)
+        tend = last(integrator.sol.prob.tspan)
+        if integrator.tdir * (t - tend) <= 0 &&
+                signof(state, integrator(t), t, integrator) == -state.side
+            next = -state.side
+            tclear = t
+        end
     end
     if actual != next
         state.pending = true
-        state.tpend = integrator.t
+        state.tclear = tclear
     end
     return crossing_transition!(state, integrator, next)
 end
@@ -99,7 +113,7 @@ struct CrossingSync{S}
 end
 function (c::CrossingSync)(u, t, integrator)
     state = c.state
-    state.pending && return t != state.tpend
+    state.pending && return !crossing_suppressed(state, t, integrator)
     return signof(state, u, t, integrator) != state.side
 end
 function (c::CrossingSync)(integrator)
@@ -150,7 +164,8 @@ velocity sits at exactly zero for a while.
 
 The integrator still stops where a continuation leaves zero, without calling `affect!`.
 An `x` that is exactly zero at only one representable time on its way through is a
-crossing, not a landing; with `right = true` that tick is at the zero itself.
+crossing, not a landing; with `right = true` that tick is at the zero itself. Reaching
+zero at the end of the solve is a landing.
 
 # Returns
 
