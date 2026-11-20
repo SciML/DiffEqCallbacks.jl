@@ -4,7 +4,7 @@ using SciMLBase: SciMLBase
 # Ticks recorded as (t, prev, next, sign of x at the tick)
 function crossing_ticks(
         x, tspan; f = (u, p, t) -> [0.0], u0 = [0.0], p = nothing,
-        before = nothing, solve_kwargs = (; dtmax = 0.1), kwargs...
+        before = nothing, after = nothing, solve_kwargs = (; dtmax = 0.1), kwargs...
     )
     ticks = Tuple{Float64, Int, Int, Int}[]
     affect! = (integrator, prev, next) -> push!(
@@ -13,6 +13,7 @@ function crossing_ticks(
     )
     cb = CrossingCallback(x, affect!; kwargs...)
     cb = before === nothing ? cb : CallbackSet(before, cb)
+    cb = after === nothing ? cb : CallbackSet(cb, after)
     sol = solve(ODEProblem(f, u0, tspan, p), Tsit5(); callback = cb, solve_kwargs...)
     @test SciMLBase.successful_retcode(sol)
     return ticks
@@ -154,6 +155,77 @@ end
     end
 end
 
+@testset "end time after reinit!" begin
+    ticks = Tuple{Float64, Int, Int}[]
+    cb = CrossingCallback(
+        (u, t, integrator) -> t - 2, (integrator, prev, next) -> push!(ticks, (integrator.t, prev, next))
+    )
+    integrator = init(ODEProblem((u, p, t) -> [0.0], [0.0], (0.0, 1.0)), Tsit5(); callback = cb, dtmax = 0.1)
+    reinit!(integrator, [0.0]; tf = 4.0)
+    solve!(integrator)
+    @test ticks == [(2.0, -1, 1)]
+end
+
+@testset "recrossing right after a crossing" begin
+    # Sign-valued x: the next step must not skip its start, about dt/100 = 1e-3, as the root
+    # just handled. The interpolation points are dense enough to see the gap.
+    x = (u, t, integrator) -> sign((t - 1) * (t - 1.0005))
+    @test crossing_ticks(x, (0.0, 2.0); interp_points = 1000) ==
+        [(1.0, 1, -1, 0), (1.0005, -1, 1, 0)]
+end
+
+@testset "affect! that reverses the motion" begin
+    # A bouncing ball: with right = false the tick is before the floor, and the reflected
+    # ball never goes below it, so there is no tick back up
+    for right in (false, true)
+        ticks = Tuple{Float64, Int, Int}[]
+        affect! = function (integrator, prev, next)
+            push!(ticks, (integrator.t, prev, next))
+            prev > 0 && (integrator.u[2] = -integrator.u[2])
+            return nothing
+        end
+        cb = CrossingCallback((u, t, integrator) -> u[1], affect!; right)
+        prob = ODEProblem((u, p, t) -> [u[2], -9.81], [1.0, 0.0], (0.0, 2.0))
+        sol = solve(prob, Tsit5(); callback = cb, abstol = 1.0e-10, reltol = 1.0e-10)
+        @test SciMLBase.successful_retcode(sol)
+        impact = sqrt(2 / 9.81)
+        if right
+            # Beyond the floor, the reflected ball crosses back up
+            @test [tick[2:3] for tick in ticks] == [(1, -1), (-1, 1), (1, -1), (-1, 1)]
+        else
+            @test [tick[2:3] for tick in ticks] == [(1, -1), (1, -1)]
+            @test minimum(sol[1, :]) >= 0
+        end
+        @test ticks[1][1] ≈ impact atol = 1.0e-6
+        @test ticks[end - right][1] ≈ 3impact atol = 1.0e-6
+    end
+end
+
+@testset "change made after CrossingSync" begin
+    # Another callback, after this one in the CallbackSet, stops the motion at 0.5 and
+    # restarts it backward at 1.5: the landing is found just after 0.5, the return at 1.5
+    x = (u, t, integrator) -> u[1]
+    f = (u, p, t) -> [p[1]]
+    stick = PresetTimeCallback(0.5, integrator -> (integrator.u[1] = 0.0; integrator.p[1] = 0.0))
+    slip = PresetTimeCallback(1.5, integrator -> (integrator.p[1] = -1.0))
+    ticks = crossing_ticks(
+        x, (0.0, 2.0); f, u0 = [-1.0], p = [1.0], after = CallbackSet(stick, slip)
+    )
+    @test length(ticks) == 2
+    @test 0.5 < ticks[1][1] <= 0.5 + 1.0e-12 && ticks[1][2:4] == (-1, 0, 0)
+    @test 1.5 < ticks[2][1] <= 1.5 + 1.0e-12 && ticks[2][2:4] == (0, -1, -1)
+end
+
+@testset "NaN and reserved keywords" begin
+    # A NaN x is no sign change
+    @test isempty(crossing_ticks((u, t, integrator) -> t < 1 ? 1.0 : NaN, (0.0, 2.0)))
+    for k in (:initialize, :rootfind, :affect_neg!, :idxs)
+        @test_throws ArgumentError CrossingCallback(
+            (u, t, integrator) -> t, (integrator, prev, next) -> nothing; (k => nothing,)...
+        )
+    end
+end
+
 # The sign held after a tick by a consumer that keeps the direction of a crossing as the
 # sign of a function that lands on zero
 held_sign(prev, next) = iszero(next) ? -prev : next
@@ -183,7 +255,7 @@ held_sign(prev, next) = iszero(next) ? -prev : next
         # w' = -p[1], with p[1] switched from 0 to 1 at the initial tick
         on = DiscreteCallback(
             Returns(false), Returns(nothing); save_positions = (false, false),
-            initialize = (c, u, t, integrator) -> (integrator.p[1] = 1.0; SciMLBase.u_modified!(integrator, true))
+            initialize = (c, u, t, integrator) -> (integrator.p[1] = 1.0; SciMLBase.derivative_discontinuity!(integrator, true))
         )
         ticks = crossing_ticks(
             (u, t, integrator) -> u[1], (0.0, 1.0); f = (u, p, t) -> [-p[1]], p = [0.0],
