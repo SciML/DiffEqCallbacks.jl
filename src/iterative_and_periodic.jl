@@ -105,13 +105,11 @@ end
 
 export IterativeCallback
 
-struct PeriodicCallbackAffect{A, dT, K, P}
+struct PeriodicCallbackAffect{A, dT, K, Ph}
     affect!::A
     Δt::dT
     cache_key::K
-    exact::Bool
-    # type of `t0` in the per-task cache
-    t0_type::Type{P}
+    phase::Ph
 end
 
 # The cache is stored per-Task in `task_local_storage`, keyed by a
@@ -127,23 +125,48 @@ const _PeriodicCache{T, S} = NamedTuple{
     return task_local_storage(key)::_PeriodicCache{T, S}
 end
 
-# For a rational period and a phase that is an integer, a rational or a
-# floating-point number, the tick with index `k` is `convert(S, t0 + k*Δt)` with
-# `t0 = tstart + phase`, all in `Rational{BigInt}`: floating-point values are
-# converted exactly, the sum cannot overflow or cancel, and each tick is rounded
-# once. Ticks of different callbacks of one integrator that coincide
+# For a rational period, a phase and a start time that are integers, rationals or
+# floating-point numbers, the tick with index `k` is `t0 + k*Δt` with
+# `t0 = tstart + phase`, all in `Rational{BigInt}`, rounded to the nearest value of
+# the time type: floating-point values are converted exactly, the sum cannot
+# overflow or cancel, and each tick is rounded once, independently of the BigFloat
+# precision. Ticks of different callbacks of one integrator that coincide
 # mathematically are then equal as floating-point numbers, which avoids steps of a
 # few ulps between them, and the result does not depend on the integer type of the
-# rationals. In all other cases `t0 = tstart + phase` is stored in the type of the
-# period and the tick is `convert(S, t0 + k*Δt)`. The time of the scheduled tick is
-# kept in the cache, so the condition does not repeat the arithmetic.
+# rationals. For a rational period and another time type, such as a dual number,
+# `t0` is stored in the time type. In all other cases `t0` is stored in the type of
+# the period. The tick is then `convert(S, t0 + k*Δt)`. The time of the scheduled
+# tick is kept in the cache, so the condition does not repeat the arithmetic.
 const _ExactReal = Union{Integer, Rational, AbstractFloat}
-_exact_ticks(Δt, phase) = Δt isa Rational && phase isa _ExactReal
+function _exact_ticks(Δt, phase, ::Type{T}) where {T}
+    return Δt isa Rational && phase isa _ExactReal && T <: _ExactReal
+end
+function _t0_type(Δt, phase, ::Type{T}) where {T}
+    return _exact_ticks(Δt, phase, T) ? Rational{BigInt} :
+        Δt isa Rational ? T : typeof(Δt)
+end
 _exact(x::_ExactReal) = Rational{BigInt}(x)
 
-@inline function _periodic_tick(cache, k, Δt, exact, ::Type{S}) where {S}
-    return if exact
-        convert(S, cache.t0[] + k * _exact(Δt))
+# Nearest value of `S` to `x`, ties to even, computed with integer arithmetic.
+# `Float64(::Rational{BigInt})` rounds twice when it divides in BigFloat.
+function _round_exact(::Type{S}, x::Rational{BigInt}) where {S <: Base.IEEEFloat}
+    iszero(x) && return zero(S)
+    n, d = abs(numerator(x)), denominator(x)
+    # 2^e <= n/d < 2^(e+1)
+    e = ndigits(n; base = 2) - ndigits(d; base = 2)
+    (e >= 0 ? n < d << e : n << -e < d) && (e -= 1)
+    # exponent of the unit in the last place, limited to that of subnormal numbers
+    shift = max(e, exponent(floatmin(S))) - (precision(S) - 1)
+    n, d = shift <= 0 ? (n << -shift, d) : (n, d << shift)
+    q, r = divrem(n, d)
+    (2r > d || (2r == d && isodd(q))) && (q += 1)
+    return copysign(ldexp(S(q), shift), S(sign(x)))
+end
+_round_exact(::Type{S}, x) where {S} = convert(S, x)
+
+@inline function _periodic_tick(cache, k, Δt, ::Type{S}) where {S}
+    return if cache.t0[] isa Rational{BigInt}
+        _round_exact(S, cache.t0[] + k * _exact(Δt))
     else
         convert(S, cache.t0[] + k * Δt)
     end
@@ -156,11 +179,12 @@ function (S::PeriodicCallbackAffect)(integrator)
 end
 
 function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
-    cache = _periodic_cache(S.cache_key, S.t0_type, typeof(integrator.t))
+    T = typeof(integrator.t)
+    cache = _periodic_cache(S.cache_key, _t0_type(S.Δt, S.phase, T), T)
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever.
     # Convert into the integrator time type so Rational Δt produces Float64
     # tstops that match the condition comparison (DifferentialEquations.jl #878).
-    tnew = _periodic_tick(cache, cache.index[] + 1, S.Δt, S.exact, typeof(integrator.t))
+    tnew = _periodic_tick(cache, cache.index[] + 1, S.Δt, T)
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -239,11 +263,9 @@ function PeriodicCallback(
     phase < 0 && throw(ArgumentError("phase offset must be non-negative"))
     # Unique per-callback key for the per-Task cache (see `_periodic_cache`).
     cache_key = gensym(:PeriodicCallback_cache)
-    exact = _exact_ticks(Δt, phase)
-    P = exact ? Rational{BigInt} : typeof(Δt)
 
     condition = function (u, t, integrator)
-        cache = _periodic_cache(cache_key, P, typeof(t))
+        cache = _periodic_cache(cache_key, _t0_type(Δt, phase, typeof(t)), typeof(t))
         fin = isfinished(integrator)
         # The scheduled tick in the integrator's time type. Exact
         # `t == t0 + index*Δt` fails when `t::Float64` and `Δt::Rational` because
@@ -253,7 +275,7 @@ function PeriodicCallback(
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
-    affect! = PeriodicCallbackAffect(f, Δt, cache_key, exact, P)
+    affect! = PeriodicCallbackAffect(f, Δt, cache_key, phase)
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_periodic = function (c, u, t, integrator)
@@ -265,6 +287,7 @@ function PeriodicCallback(
         # first time a given Task initializes this callback; subsequent solves
         # on the same Task reuse the Refs and just rewrite their contents.
         storage = task_local_storage()
+        P = _t0_type(Δt, phase, typeof(t))
         existing = get(storage, cache_key, nothing)
         cache = if existing isa _PeriodicCache{P, typeof(t)}
             existing
@@ -273,9 +296,11 @@ function PeriodicCallback(
             storage[cache_key] = c
             c
         end
-        cache.t0[] = exact ? _exact(t) + _exact(phase) : convert(P, t + phase)
+        cache.t0[] = P === Rational{BigInt} ? _exact(t) + _exact(phase) :
+            convert(P, t + phase)
+        # `add_next_tstop!` below schedules the tick with index `index + 1` and
+        # stores its time in `tnext`.
         cache.index[] = iszero(phase) ? 0 : -1
-        cache.tnext[] = _periodic_tick(cache, cache.index[], Δt, exact, typeof(t))
         return if initial_affect
             affect!(integrator)
         else

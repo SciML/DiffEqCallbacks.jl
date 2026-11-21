@@ -1,4 +1,5 @@
 using Test, OrdinaryDiffEqTsit5, DiffEqCallbacks
+using OrdinaryDiffEqLowOrderRK: Euler
 using SciMLBase: EnsembleProblem, EnsembleThreads, remake, ReturnCode
 
 tmin = 0.1
@@ -147,9 +148,14 @@ end
     @test isempty(intersect(ticks2, prevfloat.(ticks1)) ∪ intersect(ticks2, nextfloat.(ticks1)))
     @test all(Δ -> iszero(Δ) || Δ > 1.0e-6, diff(sol.t))
     @test ticks2[1:3] == Float64.([1 // 60, 1 // 60 + 1 // 30, 1 // 60 + 2 // 30])
-    # Each tick is the exactly rounded value of start time + phase + k*Δt.
+    # Each tick is the nearest Float64 to start time + phase + k*Δt, ties to even.
     exact(x) = Rational{BigInt}(x)
-    exact_tick(t0, phase, k, Δt) = Float64(exact(t0) + exact(phase) + k * exact(Δt))
+    function nearest(x)
+        c = (prevfloat(Float64(x)), Float64(x), nextfloat(Float64(x)))
+        dist = map(y -> abs(exact(y) - x), c)
+        return argmin(i -> (dist[i], isodd(reinterpret(UInt64, c[i]))), 1:3) |> i -> c[i]
+    end
+    exact_tick(t0, phase, k, Δt) = nearest(exact(t0) + exact(phase) + k * exact(Δt))
     t_start = nextfloat(1.0)
     ticks3 = tick_times(1 // 10, 1 // 2, (t_start, 2.0))
     @test ticks3[1] == t_start + 0.5
@@ -197,6 +203,39 @@ end
         [exact_tick(0.0, (big(2)^61 + 1) // big(2)^62, k, 1 // 3) for k in 0:1]
     # A floating-point phase with an integer period is added to the start time first.
     @test tick_times(1, 0.5, (0.5, 2.5)) == [1.0, 2.0]
+    # The conversion of a tick to Float64 rounds once and does not depend on the
+    # BigFloat precision.
+    @test setprecision(() -> tick_times(1 // 10, 0, (0.0, nextfloat(0.1))), BigFloat, 24) ==
+        [0.1]
+    # The period is the midpoint of the two smallest Float64 numbers above 0.5. The
+    # tick, one period after the slightly negative start time, is the lower neighbor;
+    # rounding the midpoint to even gives the end time instead.
+    p = (Int64(2)^53 + 3) // Int64(2)^54
+    t_start = -0x1p-300
+    ticks11 = tick_times(p, 0, (t_start, nextfloat(0.5, 2)))
+    @test ticks11 == [exact_tick(t_start, 0, 1, p)] == [nextfloat(0.5)]
+end
+
+# The first tick with a nonzero phase is computed without the preceding index.
+@testset "PeriodicCallback with an unsigned rational time" begin
+    ticks = Rational{UInt}[]
+    prob = ODEProblem((u, p, t) -> zero(u), 1.0, (UInt(0) // UInt(1), UInt(2) // UInt(1)))
+    cb = PeriodicCallback(i -> push!(ticks, i.t), 2; phase = 1)
+    sol = solve(prob, Euler(); dt = UInt(1) // UInt(1), callback = cb)
+    @test sol.retcode == ReturnCode.Success
+    @test ticks == [1]
+end
+
+# A rational period with a dual-number time keeps the partial derivatives.
+@testset "Rational PeriodicCallback with dual-number time" begin
+    using ForwardDiff: Dual, partials, value
+    ticks = []
+    prob = ODEProblem((u, p, t) -> zero(u), 1.0, (Dual(0.0, 1.0), Dual(0.75, 1.0)))
+    cb = PeriodicCallback(i -> push!(ticks, i.t), 1 // 4)
+    sol = solve(prob, Tsit5(); callback = cb)
+    @test sol.retcode == ReturnCode.Success
+    @test value.(ticks) == [0.25, 0.5]
+    @test all(t -> partials(t)[1] == 1, ticks)
 end
 
 # Fix indexing repeats
