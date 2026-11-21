@@ -175,7 +175,7 @@ end
         remake(prob_rat; tspan = (-1.0, 3.5e-16)), Tsit5(); callback = cb8,
         adaptive = false, dt = 1.0
     )
-    @test ticks8 == Float64.([0, 1 // 10^16, 2 // 10^16, 3 // 10^16])
+    @test ticks8 == Float64.((0:3) .// Int64(10)^16)
     # Equal periods stored with different integer types tick at the same time;
     # `Float64(::Rational{Int})` would round the denominator first and give
     # 0.5000000000000001.
