@@ -238,6 +238,17 @@ end
     @test all(t -> partials(t)[1] == 1, ticks)
 end
 
+# A floating-point period retains the precision of a BigFloat time.
+@testset "PeriodicCallback with a BigFloat time" begin
+    ticks = BigFloat[]
+    t0 = big(2.0)^53 + 1
+    prob = ODEProblem((u, p, t) -> zero(u), big(1.0), (t0, t0 + 3))
+    cb = PeriodicCallback(i -> push!(ticks, i.t), 1.0; phase = 0.5)
+    sol = solve(prob, Euler(); dt = big(0.5), callback = cb)
+    @test sol.retcode == ReturnCode.Success
+    @test ticks == t0 .+ [0.5, 1.5, 2.5]
+end
+
 # Fix indexing repeats
 # https://github.com/SciML/ModelingToolkit.jl/issues/2528
 

@@ -133,17 +133,17 @@ end
 # precision. Ticks of different callbacks of one integrator that coincide
 # mathematically are then equal as floating-point numbers, which avoids steps of a
 # few ulps between them, and the result does not depend on the integer type of the
-# rationals. For a rational period and another time type, such as a dual number,
-# `t0` is stored in the time type. In all other cases `t0` is stored in the type of
-# the period. The tick is then `convert(S, t0 + k*Δt)`. The time of the scheduled
-# tick is kept in the cache, so the condition does not repeat the arithmetic.
+# rationals. In all other cases, for example for a floating-point period or a time
+# that is a dual number, `t0` is stored in the promoted type of the period and the
+# time, which retains the precision of the time, and the tick is
+# `convert(S, t0 + k*Δt)`. The time of the scheduled tick is kept in the cache, so
+# the condition does not repeat the arithmetic.
 const _ExactReal = Union{Integer, Rational, AbstractFloat}
 function _exact_ticks(Δt, phase, ::Type{T}) where {T}
     return Δt isa Rational && phase isa _ExactReal && T <: _ExactReal
 end
 function _t0_type(Δt, phase, ::Type{T}) where {T}
-    return _exact_ticks(Δt, phase, T) ? Rational{BigInt} :
-        Δt isa Rational ? T : typeof(Δt)
+    return _exact_ticks(Δt, phase, T) ? Rational{BigInt} : promote_type(typeof(Δt), T)
 end
 _exact(x::_ExactReal) = Rational{BigInt}(x)
 
