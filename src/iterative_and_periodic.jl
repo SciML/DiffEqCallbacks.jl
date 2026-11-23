@@ -149,7 +149,7 @@ _exact(x::_ExactReal) = Rational{BigInt}(x)
 
 # Nearest value of `S` to `x`, ties to even, computed with integer arithmetic.
 # `Float64(::Rational{BigInt})` rounds twice when it divides in BigFloat.
-function _round_exact(::Type{S}, x::Rational{BigInt}) where {S <: Base.IEEEFloat}
+function _round_exact(::Type{S}, x::Rational{BigInt}) where {S <: Union{Float16, Float32, Float64}}
     iszero(x) && return zero(S)
     n, d = abs(numerator(x)), denominator(x)
     # 2^e <= n/d < 2^(e+1)
