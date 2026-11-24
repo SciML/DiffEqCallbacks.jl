@@ -151,6 +151,8 @@ _exact(x::_ExactReal) = Rational{BigInt}(x)
 # `Float64(::Rational{BigInt})` rounds twice when it divides in BigFloat.
 function _round_exact(::Type{S}, x::Rational{BigInt}) where {S <: Union{Float16, Float32, Float64}}
     iszero(x) && return zero(S)
+    # an infinite scheduled time, from an infinite phase or period
+    iszero(denominator(x)) && return convert(S, x)
     n, d = abs(numerator(x)), denominator(x)
     # 2^e <= n/d < 2^(e+1)
     e = ndigits(n; base = 2) - ndigits(d; base = 2)

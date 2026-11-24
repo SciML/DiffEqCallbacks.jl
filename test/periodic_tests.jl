@@ -216,6 +216,23 @@ end
     @test ticks11 == [exact_tick(t_start, 0, 1, p)] == [nextfloat(0.5)]
 end
 
+# An infinite phase or period schedules no tick within the interval.
+@testset "Rational PeriodicCallback with an infinite scheduled time" begin
+    for (Δt, phase, tspan) in (
+            (1 // 4, Inf, (0.0, 1.0)),
+            (1 // 0, 0, (0.0, 1.0)),
+            (-1 // 0, 0, (1.0, 0.0)),
+        )
+        ticks = Float64[]
+        prob = ODEProblem((u, p, t) -> zero(u), 1.0, tspan)
+        cb = PeriodicCallback(i -> push!(ticks, i.t), Δt; phase)
+        sol = solve(prob, Tsit5(); callback = cb)
+        @test sol.retcode == ReturnCode.Success
+        @test sol.t[end] == tspan[2]
+        @test isempty(ticks)
+    end
+end
+
 # The first tick with a nonzero phase is computed without the preceding index.
 @testset "PeriodicCallback with an unsigned rational time" begin
     ticks = Rational{UInt}[]
