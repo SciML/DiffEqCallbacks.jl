@@ -116,55 +116,15 @@ end
 # `gensym`-unique symbol per callback instance. `initialize_periodic` is the
 # only place that creates/overwrites the entry, so concurrent integrators
 # running the same callback on separate Tasks (e.g. `EnsembleThreads`) each
-# get their own independent `t0`/`index`. See #99.
-const _PeriodicCache{T, S} = NamedTuple{
-    (:t0, :index, :tnext), Tuple{Base.RefValue{T}, Base.RefValue{Int}, Base.RefValue{S}},
+# get their own independent schedule and index. See #99. The tick times are
+# those of `SciMLBase.periodic_schedule`, which indexed clocks share.
+const _PeriodicCache{P, T} = NamedTuple{
+    (:schedule, :index, :tnext), Tuple{Base.RefValue{P}, Base.RefValue{Int}, Base.RefValue{T}},
 }
 
-@inline function _periodic_cache(key::Symbol, ::Type{T}, ::Type{S}) where {T, S}
-    return task_local_storage(key)::_PeriodicCache{T, S}
-end
-
-# Rational ticks are computed exactly in `Rational{BigInt}` and rounded once, which
-# preserves small increments and makes coincident ticks of different callbacks equal.
-# Otherwise `t0` is stored in the promoted type of the period and the time.
-const _ExactReal = Union{Integer, Rational, AbstractFloat}
-function _exact_ticks(Δt, phase, ::Type{T}) where {T}
-    return Δt isa Rational && phase isa _ExactReal && T <: _ExactReal
-end
-function _t0_type(Δt, phase, ::Type{T}) where {T}
-    return _exact_ticks(Δt, phase, T) ? Rational{BigInt} : promote_type(typeof(Δt), T)
-end
-_exact(x::_ExactReal) = Rational{BigInt}(x)
-
-# Nearest value of `S` to `x`, ties to even, computed with integer arithmetic.
-# `Float64(::Rational{BigInt})` and `BigFloat(::Rational{BigInt})` round twice.
-function _round_exact(
-        ::Type{S}, x::Rational{BigInt}
-    ) where {S <: Union{Float16, Float32, Float64, BigFloat}}
-    iszero(x) && return zero(S)
-    # an infinite scheduled time, from an infinite phase or period
-    iszero(denominator(x)) && return convert(S, x)
-    n, d = abs(numerator(x)), denominator(x)
-    # 2^e <= n/d < 2^(e+1)
-    e = ndigits(n; base = 2) - ndigits(d; base = 2)
-    (e >= 0 ? n < d << e : n << -e < d) && (e -= 1)
-    # exponent of the unit in the last place, limited to that of subnormal numbers
-    emin = S === BigFloat ? e : exponent(floatmin(S))
-    shift = max(e, emin) - (precision(S) - 1)
-    n, d = shift <= 0 ? (n << -shift, d) : (n, d << shift)
-    q, r = divrem(n, d)
-    (2r > d || (2r == d && isodd(q))) && (q += 1)
-    return copysign(ldexp(S(q), shift), S(sign(x)))
-end
-_round_exact(::Type{S}, x) where {S} = convert(S, x)
-
-@inline function _periodic_tick(cache, k, Δt, exact, ::Type{S}) where {S}
-    return if exact
-        _round_exact(S, cache.t0[] + k * _exact(Δt))
-    else
-        convert(S, cache.t0[] + k * Δt)
-    end
+@inline function _periodic_cache(key::Symbol, Δt, phase, ::Type{T}) where {T}
+    P = SciMLBase.periodic_schedule_type(T, typeof(phase), typeof(Δt))
+    return task_local_storage(key)::_PeriodicCache{P, T}
 end
 
 function (S::PeriodicCallbackAffect)(integrator)
@@ -175,12 +135,11 @@ end
 
 function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
     T = typeof(integrator.t)
-    cache = _periodic_cache(S.cache_key, _t0_type(S.Δt, S.phase, T), T)
+    cache = _periodic_cache(S.cache_key, S.Δt, S.phase, T)
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever.
     # Convert into the integrator time type so Rational Δt produces Float64
     # tstops that match the condition comparison (DifferentialEquations.jl #878).
-    exact = _exact_ticks(S.Δt, S.phase, T)
-    tnew = _periodic_tick(cache, cache.index[] + 1, S.Δt, exact, T)
+    tnew = SciMLBase.periodic_tick_time(T, cache.schedule[], cache.index[] + 1)
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -261,7 +220,7 @@ function PeriodicCallback(
     cache_key = gensym(:PeriodicCallback_cache)
 
     condition = function (u, t, integrator)
-        cache = _periodic_cache(cache_key, _t0_type(Δt, phase, typeof(t)), typeof(t))
+        cache = _periodic_cache(cache_key, Δt, phase, typeof(t))
         fin = isfinished(integrator)
         # The scheduled tick in the integrator's time type. Exact
         # `t == t0 + index*Δt` fails when `t::Float64` and `Δt::Rational` because
@@ -283,17 +242,16 @@ function PeriodicCallback(
         # first time a given Task initializes this callback; subsequent solves
         # on the same Task reuse the Refs and just rewrite their contents.
         storage = task_local_storage()
-        P = _t0_type(Δt, phase, typeof(t))
+        schedule = SciMLBase.periodic_schedule(typeof(t), t, phase, Δt)
         existing = get(storage, cache_key, nothing)
-        cache = if existing isa _PeriodicCache{P, typeof(t)}
+        cache = if existing isa _PeriodicCache{typeof(schedule), typeof(t)}
             existing
         else
-            c = (t0 = Ref{P}(), index = Ref(0), tnext = Ref{typeof(t)}())
+            c = (schedule = Ref(schedule), index = Ref(0), tnext = Ref{typeof(t)}())
             storage[cache_key] = c
             c
         end
-        cache.t0[] = _exact_ticks(Δt, phase, typeof(t)) ? _exact(t) + _exact(phase) :
-            convert(P, t + phase)
+        cache.schedule[] = schedule
         cache.index[] = iszero(phase) ? 0 : -1
         return if initial_affect
             affect!(integrator)
