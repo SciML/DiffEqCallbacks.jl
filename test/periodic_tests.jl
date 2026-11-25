@@ -216,7 +216,6 @@ end
     @test ticks11 == [exact_tick(t_start, 0, 1, p)] == [nextfloat(0.5)]
 end
 
-# An infinite phase or period schedules no tick within the interval.
 @testset "Rational PeriodicCallback with an infinite scheduled time" begin
     for (Δt, phase, tspan) in (
             (1 // 4, Inf, (0.0, 1.0)),
@@ -243,7 +242,6 @@ end
     @test ticks == [1]
 end
 
-# A rational period with a dual-number time keeps the partial derivatives.
 @testset "Rational PeriodicCallback with dual-number time" begin
     using ForwardDiff: Dual, partials, value
     ticks = []
@@ -255,7 +253,6 @@ end
     @test all(t -> partials(t)[1] == 1, ticks)
 end
 
-# A floating-point period retains the precision of a BigFloat time.
 @testset "PeriodicCallback with a BigFloat time" begin
     ticks = BigFloat[]
     t0 = big(2.0)^53 + 1
@@ -264,6 +261,29 @@ end
     sol = solve(prob, Euler(); dt = big(0.5), callback = cb)
     @test sol.retcode == ReturnCode.Success
     @test ticks == t0 .+ [0.5, 1.5, 2.5]
+    # A rational tick is rounded once to the nearest BigFloat; rounding the
+    # numerator first places it at the end time.
+    setprecision(BigFloat, 24) do
+        ticks = BigFloat[]
+        expected = ldexp(BigFloat(13981014), -23)
+        tstart = nextfloat(BigFloat(1))
+        prob = ODEProblem((u, p, t) -> zero(u), big(1.0), (tstart, nextfloat(expected)))
+        cb = PeriodicCallback(i -> push!(ticks, i.t), 1 // 1; phase = 2 // 3)
+        sol = solve(prob, Euler(); dt = BigFloat(0.25), callback = cb)
+        @test sol.retcode == ReturnCode.Success
+        @test ticks == [expected]
+    end
+end
+
+# A phase that is neither an integer, a rational nor a floating-point number.
+@testset "Rational PeriodicCallback with an irrational phase" begin
+    ticks = Rational{Int64}[]
+    tspan = (Rational{Int64}(0), Rational{Int64}(4))
+    prob = ODEProblem((u, p, t) -> zero(u), 1.0, tspan)
+    cb = PeriodicCallback(i -> push!(ticks, i.t), big(1) // 1; phase = π)
+    sol = solve(prob, Euler(); dt = Rational{Int64}(1, 2), callback = cb)
+    @test sol.retcode == ReturnCode.Success
+    @test ticks == [Rational{Int64}(Float64(π))]
 end
 
 # Fix indexing repeats

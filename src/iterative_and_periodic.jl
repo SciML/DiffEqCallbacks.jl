@@ -125,19 +125,9 @@ const _PeriodicCache{T, S} = NamedTuple{
     return task_local_storage(key)::_PeriodicCache{T, S}
 end
 
-# For a rational period, a phase and a start time that are integers, rationals or
-# floating-point numbers, the tick with index `k` is `t0 + k*Δt` with
-# `t0 = tstart + phase`, all in `Rational{BigInt}`, rounded to the nearest value of
-# the time type: floating-point values are converted exactly, the sum cannot
-# overflow or cancel, and each tick is rounded once, independently of the BigFloat
-# precision. Ticks of different callbacks of one integrator that coincide
-# mathematically are then equal as floating-point numbers, which avoids steps of a
-# few ulps between them, and the result does not depend on the integer type of the
-# rationals. In all other cases, for example for a floating-point period or a time
-# that is a dual number, `t0` is stored in the promoted type of the period and the
-# time, which retains the precision of the time, and the tick is
-# `convert(S, t0 + k*Δt)`. The time of the scheduled tick is kept in the cache, so
-# the condition does not repeat the arithmetic.
+# Rational ticks are computed exactly in `Rational{BigInt}` and rounded once, which
+# preserves small increments and makes coincident ticks of different callbacks equal.
+# Otherwise `t0` is stored in the promoted type of the period and the time.
 const _ExactReal = Union{Integer, Rational, AbstractFloat}
 function _exact_ticks(Δt, phase, ::Type{T}) where {T}
     return Δt isa Rational && phase isa _ExactReal && T <: _ExactReal
@@ -148,8 +138,10 @@ end
 _exact(x::_ExactReal) = Rational{BigInt}(x)
 
 # Nearest value of `S` to `x`, ties to even, computed with integer arithmetic.
-# `Float64(::Rational{BigInt})` rounds twice when it divides in BigFloat.
-function _round_exact(::Type{S}, x::Rational{BigInt}) where {S <: Union{Float16, Float32, Float64}}
+# `Float64(::Rational{BigInt})` and `BigFloat(::Rational{BigInt})` round twice.
+function _round_exact(
+        ::Type{S}, x::Rational{BigInt}
+    ) where {S <: Union{Float16, Float32, Float64, BigFloat}}
     iszero(x) && return zero(S)
     # an infinite scheduled time, from an infinite phase or period
     iszero(denominator(x)) && return convert(S, x)
@@ -158,7 +150,8 @@ function _round_exact(::Type{S}, x::Rational{BigInt}) where {S <: Union{Float16,
     e = ndigits(n; base = 2) - ndigits(d; base = 2)
     (e >= 0 ? n < d << e : n << -e < d) && (e -= 1)
     # exponent of the unit in the last place, limited to that of subnormal numbers
-    shift = max(e, exponent(floatmin(S))) - (precision(S) - 1)
+    emin = S === BigFloat ? e : exponent(floatmin(S))
+    shift = max(e, emin) - (precision(S) - 1)
     n, d = shift <= 0 ? (n << -shift, d) : (n, d << shift)
     q, r = divrem(n, d)
     (2r > d || (2r == d && isodd(q))) && (q += 1)
@@ -166,8 +159,8 @@ function _round_exact(::Type{S}, x::Rational{BigInt}) where {S <: Union{Float16,
 end
 _round_exact(::Type{S}, x) where {S} = convert(S, x)
 
-@inline function _periodic_tick(cache, k, Δt, ::Type{S}) where {S}
-    return if cache.t0[] isa Rational{BigInt}
+@inline function _periodic_tick(cache, k, Δt, exact, ::Type{S}) where {S}
+    return if exact
         _round_exact(S, cache.t0[] + k * _exact(Δt))
     else
         convert(S, cache.t0[] + k * Δt)
@@ -186,7 +179,8 @@ function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever.
     # Convert into the integrator time type so Rational Δt produces Float64
     # tstops that match the condition comparison (DifferentialEquations.jl #878).
-    tnew = _periodic_tick(cache, cache.index[] + 1, S.Δt, T)
+    exact = _exact_ticks(S.Δt, S.phase, T)
+    tnew = _periodic_tick(cache, cache.index[] + 1, S.Δt, exact, T)
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -298,10 +292,8 @@ function PeriodicCallback(
             storage[cache_key] = c
             c
         end
-        cache.t0[] = P === Rational{BigInt} ? _exact(t) + _exact(phase) :
+        cache.t0[] = _exact_ticks(Δt, phase, typeof(t)) ? _exact(t) + _exact(phase) :
             convert(P, t + phase)
-        # `add_next_tstop!` below schedules the tick with index `index + 1` and
-        # stores its time in `tnext`.
         cache.index[] = iszero(phase) ? 0 : -1
         return if initial_affect
             affect!(integrator)
