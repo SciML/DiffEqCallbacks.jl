@@ -229,14 +229,20 @@ end
 A `GeneralDomain` callback in DiffEqCallbacks.jl generalizes the concept of
 a `PositiveDomain` callback to arbitrary domains.
 
-Domains are specified by
-  - in-place functions `g(resid, u, p)` or `g(resid, u, p, t)` if the corresponding
-    ODEProblem is an inplace problem, or
-  - out-of-place functions `g(u, p)` or `g(u, p, t)` if the corresponding ODEProblem is
-    an out-of-place problem.
+Domains are specified by a residual function `g` with one of the following signatures:
 
-The function calculates residuals of a state vector `u` at time `t` relative to that domain,
-with `p` the parameters of the corresponding integrator.
+  - in-place problem: `g(resid, u, p)` (autonomous) or `g(resid, u, p, t)` (non-autonomous),
+  - out-of-place problem: `g(u, p)` (autonomous) or `g(u, p, t)` (non-autonomous).
+
+Here `resid` is a mutable buffer that must be filled with the residuals of the
+nonlinear system `g(u) = 0` and `u` is the state vector; `resid` is zero
+(within tolerance) when the state lies in the domain. For the step-acceptance
+check the buffer has the same type and shape as `u` (`typeof(resid) == typeof(u)`),
+while for the coupled `ManifoldProjection` its shape is determined by
+`resid_prototype` if provided, otherwise it defaults to the same shape as `u`.
+`p` is `integrator.p` (the parameters of the problem); there is no other way to
+pass extra parameters except via a closure. Use the `t` argument only in the
+non-autonomous forms.
 
 As for `PositiveDomain`, steps are accepted if residuals of the extrapolated values at the
 next time step are below a certain tolerance. Moreover, this callback is automatically
@@ -247,8 +253,13 @@ inside the domain. Thus, a `PositiveDomain` callback should generally be preferr
 
 # Arguments
 
-  - `g`: the implicit definition of the domain as a function as described above which is
-    zero when the value is in the domain.
+  - `g`: the implicit definition of the domain as a function with signature
+    `g(resid, u, p)` / `g(resid, u, p, t)` for in-place problems or `g(u, p)` /
+    `g(u, p, t)` for out-of-place problems. `resid` is the mutable residual buffer
+    (return value for out-of-place), `u` the current state, `p` is `integrator.p`,
+    and `t` is the current time (only in the non-autonomous forms). The residual
+    is zero when the value is in the domain and positive otherwise; its entries are
+    compared element-wise against `abstol`.
   - `u = nothing`: a prototype of the state vector of the integrator. A copy is saved and
     extrapolated values are written to it. If it is not specified, the state buffer uses the
     integrator's temporary cache for in-place problems (or a fresh array otherwise); the
@@ -264,8 +275,11 @@ inside the domain. Thus, a `PositiveDomain` callback should generally be preferr
   - `scalefactor = nothing`: factor by which an unaccepted time step is reduced. If it is
     not specified, time steps are halved.
   - `autonomous = nothing`: whether `g` is an autonomous function of the form
-    `g(resid, u, p)` or `g(u, p)`.
-    If it is not specified, it is determined automatically.
+    `g(resid, u, p)` (in-place) or `g(u, p)` (out-of-place).
+    If it is not specified (`nothing`), it is inferred during initialization as
+    `maximum(SciMLBase.numargs(g)) == 2 + SciMLBase.isinplace(integrator.f)`
+    (i.e. `== 3` for in-place problems, `== 2` for out-of-place problems).
+    Pass `Val(true)` / `Val(false)` or `true` / `false` to fix the branch.
   - `domain_jacobian = nothing`: analytic Jacobian of `g` with respect to the state, using
     the same calling form as `g` and a leading Jacobian output for an in-place problem.
   - `manifold_jacobian = missing`: unsupported compatibility keyword. Supplying any value

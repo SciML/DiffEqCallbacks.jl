@@ -2,6 +2,8 @@ mutable struct SavingIntegrandGKSumAffect{
         IntegrandFunc,
         integrandType,
         IntegrandCacheType,
+        tolType,
+        QuadratureType,
     }
     integrand_func::IntegrandFunc
     integrand_values::IntegrandValuesSum{integrandType}
@@ -9,13 +11,17 @@ mutable struct SavingIntegrandGKSumAffect{
     accumulation_cache::IntegrandCacheType
     gk_step_cache::IntegrandCacheType
     gk_err_cache::IntegrandCacheType
-    tol::Float64
+    tol::tolType
+    gk_pts::Vector{Vector{QuadratureType}}
+    gk_ws::Vector{Vector{QuadratureType}}
+    g_ws::Vector{Vector{QuadratureType}}
     integrand_inplace::Union{Nothing, Bool}
+    tol_warned::Bool
 end
 
 function integrate_gk!(
         affect!::SavingIntegrandGKSumAffect, integrator,
-        bound_l, bound_r; order = 7, tol = 1.0e-7
+        bound_l, bound_r; order = 7, tol = 1.0e-7, depth = 0
     )
     affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)
     affect!.gk_err_cache = recursive_zero!(affect!.gk_err_cache)
@@ -23,8 +29,10 @@ function integrate_gk!(
     inplace_integrand = affect!.integrand_inplace === nothing ?
         (isinplace_prob && affect!.integrand_cache !== nothing) :
         affect!.integrand_inplace
+    width = bound_r - bound_l
+    half_width = width / 2
     for i in 1:(2 * order + 1)
-        t_temp = (gk_points[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
+        t_temp = (affect!.gk_pts[order][i] + 1) * half_width + bound_l
         if isinplace_prob
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
@@ -34,42 +42,51 @@ function integrate_gk!(
         if inplace_integrand
             affect!.integrand_func(affect!.integrand_cache, curu, t_temp, integrator)
             affect!.gk_step_cache = recursive_axpy!(
-                gk_weights[order][i],
+                affect!.gk_ws[order][i],
                 affect!.integrand_cache, affect!.gk_step_cache
             )
             if i % 2 == 0
                 affect!.gk_err_cache = recursive_axpy!(
-                    g_weights[order][div(i, 2)],
+                    affect!.g_ws[order][div(i, 2)],
                     affect!.integrand_cache, affect!.gk_err_cache
                 )
             end
         else
             affect!.gk_step_cache = recursive_axpy!(
-                gk_weights[order][i],
+                affect!.gk_ws[order][i],
                 affect!.integrand_func(curu, t_temp, integrator), affect!.gk_step_cache
             )
             if i % 2 == 0
                 affect!.gk_err_cache = recursive_axpy!(
-                    g_weights[order][div(i, 2)],
+                    affect!.g_ws[order][div(i, 2)],
                     affect!.integrand_func(curu, t_temp, integrator), affect!.gk_err_cache
                 )
             end
         end
     end
-    return if _gk_err_sum(
-            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
-        ) < tol
-        affect!.accumulation_cache = _gk_accumulate!(
-            affect!.accumulation_cache, affect!.gk_step_cache, bound_r - bound_l
-        )
-    else
-        integrate_gk!(
-            affect!, integrator, bound_l, (bound_l + bound_r) / 2, order = order, tol = tol / 2
+    err_est = _gk_err_sum(affect!.gk_step_cache, affect!.gk_err_cache, width)
+    bound_m = (bound_l + bound_r) / 2
+    if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r &&
+            gk_has_resolvable_error(
+            affect!.gk_step_cache, affect!.gk_err_cache, half_width
         )
         integrate_gk!(
-            affect!, integrator, (bound_l + bound_r) / 2, bound_r, order = order, tol = tol / 2
+            affect!, integrator, bound_l, bound_m,
+            order = order, tol = tol / 2, depth = depth + 1
         )
+        integrate_gk!(
+            affect!, integrator, bound_m, bound_r,
+            order = order, tol = tol / 2, depth = depth + 1
+        )
+        return nothing
     end
+    if err_est > tol
+        warn_gk_tol_unmet!(affect!)
+    end
+    affect!.accumulation_cache = _gk_accumulate!(
+        affect!.accumulation_cache, affect!.gk_step_cache, width
+    )
+    return nothing
 end
 
 function (affect!::SavingIntegrandGKSumAffect)(integrator)
@@ -89,12 +106,19 @@ function (affect!::SavingIntegrandGKSumAffect)(integrator)
     return derivative_discontinuity!(integrator, false)
 end
 
+function IntegratingGKSum_initialize(cb, u, t, integrator)
+    cb.affect!.tol_warned = false
+    return INITIALIZE_DEFAULT(cb, u, t, integrator)
+end
+
 """
     IntegratingGKSumCallback(integrand_func, integrand_values::IntegrandValuesSum,
         integrand_prototype, tol = 1.0e-7; integrand_inplace = nothing) -> DiscreteCallback
 
 Construct a callback that uses adaptive Gauss-Kronrod quadrature to accumulate the integral
-of `integrand_func` over accepted solver steps in `integrand_values.integrand`.
+of `integrand_func` over accepted solver steps in `integrand_values.integrand`. Quadrature
+nodes and weights are evaluated in the element type of the integrand, so higher-precision
+integrands such as `BigFloat` are not capped at `Float64` precision.
 
 # Arguments
 
@@ -107,7 +131,9 @@ of `integrand_func` over accepted solver steps in `integrand_values.integrand`.
   - `integrand_prototype`: representative integrand output used as an in-place output
     buffer.
   - `tol::Real = 1.0e-7`: absolute error tolerance for adaptive quadrature on each accepted
-    solver step.
+    solver step. A tolerance below the floating-point roundoff level of every integrand
+    component cannot be reached by further subdivision: subdivision stops at that level, a
+    warning states that the tolerance was not met, and the best estimate is used.
 
 # Keywords
 
@@ -159,13 +185,20 @@ function IntegratingGKSumCallback(
             )
         )
     end
+    integrand_el = eltype(eltype(integrand_values.integrand))
+    prototype_el = integrand_prototype === nothing ? integrand_el : eltype(integrand_prototype)
+    quadrature_el = _quadrature_eltype(integrand_el, prototype_el)
+    gk_pts, gk_ws, g_ws = _gk_tables(quadrature_el)
     affect! = SavingIntegrandGKSumAffect(
         integrand_func, integrand_values, integrand_prototype,
         allocate_zeros(integrand_prototype), allocate_zeros(integrand_prototype),
-        allocate_zeros(integrand_prototype), tol, integrand_inplace
+        allocate_zeros(integrand_prototype), tol, gk_pts, gk_ws, g_ws, integrand_inplace, false
     )
     condition = true_condition
-    return DiscreteCallback(condition, affect!, save_positions = (false, false))
+    return DiscreteCallback(
+        condition, affect!, save_positions = (false, false),
+        initialize = IntegratingGKSum_initialize
+    )
 end
 
 export IntegratingGKSumCallback

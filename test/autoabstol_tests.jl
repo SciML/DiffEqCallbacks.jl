@@ -1,5 +1,6 @@
 using OrdinaryDiffEqLowOrderRK, OrdinaryDiffEqTsit5, Test, DiffEqBase, DiffEqCallbacks,
     SciMLBase
+using ForwardDiff
 import ODEProblemLibrary: prob_ode_2Dlinear, prob_ode_linear
 
 prob = prob_ode_linear
@@ -53,3 +54,56 @@ function _autoabstol_affect_bytes()
     return @allocated affect!(integ)
 end
 @test _autoabstol_affect_bytes() == 0
+
+# Differentiating through a solve that uses `AutoAbstol` must work: the tracked
+# maximum stays at the primal float type instead of erroring on `Float64(::Dual)`
+# (issue #351). The loss `sum(u(end))` with `du = -p*u` is `3*exp(-p)`, so the
+# gradient at `p = 0.5` is `-3*exp(-0.5)`; the `1.0e-3` tolerance is loose
+# relative to the solver's default tolerances.
+function _autoabstol_forwarddiff_loss(p)
+    f!(du, u, p, t) = (du .= -p[1] .* u; nothing)
+    sol = solve(
+        ODEProblem(f!, [1.0, 2.0], (0.0, 1.0), p), Tsit5(); callback = AutoAbstol()
+    )
+    return sum(sol.u[end])
+end
+@test ForwardDiff.gradient(_autoabstol_forwarddiff_loss, [0.5]) ≈ [-3 * exp(-0.5)] rtol = 1.0e-3
+
+function _autoabstol_forwarddiff_array_loss(p)
+    f!(du, u, p, t) = (du .= -p[1] .* u; nothing)
+    sol = solve(
+        ODEProblem(f!, [1.0, 2.0], (0.0, 1.0), p), Tsit5();
+        callback = AutoAbstol(; init_curmax = zeros(2)), abstol = fill(1.0e-6, 2)
+    )
+    return sum(sol.u[end])
+end
+@test ForwardDiff.gradient(_autoabstol_forwarddiff_array_loss, [0.5]) ≈
+    [-3 * exp(-0.5)] rtol = 1.0e-3
+
+# Differentiating wrt the initial state `x` with an `init_curmax` derived from
+# `x` must work: during AD `init_curmax` holds `Dual`s, which the constructor
+# unwraps to the primal float type (issue #351). With `du = -0.5u`,
+# `sum(u(end)) = (x[1] + x[2]) * exp(-0.5)`, so the gradient at `[1.0, 2.0]` is
+# `[exp(-0.5), exp(-0.5)]`.
+function _autoabstol_forwarddiff_u0_max_loss(x)
+    f!(du, u, p, t) = (du .= -0.5 .* u; nothing)
+    sol = solve(
+        ODEProblem(f!, x, (0.0, 1.0)), Tsit5();
+        callback = AutoAbstol(; init_curmax = maximum(abs, x))
+    )
+    return sum(sol.u[end])
+end
+@test ForwardDiff.gradient(_autoabstol_forwarddiff_u0_max_loss, [1.0, 2.0]) ≈
+    fill(exp(-0.5), 2) rtol = 1.0e-3
+
+function _autoabstol_forwarddiff_u0_abs_loss(x)
+    f!(du, u, p, t) = (du .= -0.5 .* u; nothing)
+    sol = solve(
+        ODEProblem(f!, x, (0.0, 1.0)), Tsit5();
+        callback = AutoAbstol(; init_curmax = abs.(x)),
+        abstol = fill(1.0e-6, 2)
+    )
+    return sum(sol.u[end])
+end
+@test ForwardDiff.gradient(_autoabstol_forwarddiff_u0_abs_loss, [1.0, 2.0]) ≈
+    fill(exp(-0.5), 2) rtol = 1.0e-3
