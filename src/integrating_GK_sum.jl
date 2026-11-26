@@ -112,8 +112,10 @@ function IntegratingGKSum_initialize(cb, u, t, integrator)
 end
 
 """
-    IntegratingGKSumCallback(integrand_func, integrand_values::IntegrandValuesSum,
-        integrand_prototype, tol = 1.0e-7; integrand_inplace = nothing) -> DiscreteCallback
+    IntegratingGKSumCallback(
+            integrand_func, integrand_values::IntegrandValuesSum,
+            integrand_prototype, tol = 1.0e-7; integrand_inplace = nothing
+        ) -> DiscreteCallback
 
 Construct a callback that uses adaptive Gauss-Kronrod quadrature to accumulate the integral
 of `integrand_func` over accepted solver steps in `integrand_values.integrand`. Quadrature

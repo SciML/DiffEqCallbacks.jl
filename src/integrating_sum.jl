@@ -152,8 +152,10 @@ function (affect!::SavingIntegrandSumAffect)(integrator)
 end
 
 """
-    IntegratingSumCallback(integrand_func, integrand_values::IntegrandValuesSum,
-        integrand_prototype; integrand_inplace = nothing) -> DiscreteCallback
+    IntegratingSumCallback(
+            integrand_func, integrand_values::IntegrandValuesSum,
+            integrand_prototype; integrand_inplace = nothing
+        ) -> DiscreteCallback
 
 Construct a callback that uses fixed-order Gaussian quadrature to accumulate the integral of
 `integrand_func` over accepted solver steps in `integrand_values.integrand`. Quadrature

@@ -222,9 +222,10 @@ end
 
 """
     GeneralDomain(
-        g, u = nothing; save = true, abstol = nothing, scalefactor = nothing,
-        autonomous = nothing, domain_jacobian = nothing, manifold_jacobian = missing,
-        nlsolve_kwargs = (; abstol = 10 * eps()), kwargs...) -> CallbackSet
+            g, u = nothing; save = true, abstol = nothing, scalefactor = nothing,
+            autonomous = nothing, domain_jacobian = nothing, manifold_jacobian = missing,
+            nlsolve_kwargs = (; abstol = 10 * eps()), kwargs...
+        ) -> CallbackSet
 
 A `GeneralDomain` callback in DiffEqCallbacks.jl generalizes the concept of
 a `PositiveDomain` callback to arbitrary domains.
@@ -315,7 +316,7 @@ Non-negative solutions of ODEs. Applied Mathematics and Computation 170
 using ADTypes, DiffEqCallbacks, OrdinaryDiffEq
 
 function nonnegative_residual(resid, u, p, t)
-    @. resid = max(-u, 0)
+    return @. resid = max(-u, 0)
 end
 
 prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0, 2.0], (0.0, 2.0))
@@ -356,8 +357,10 @@ function GeneralDomain(
 end
 
 """
-    PositiveDomain(u = nothing; save = true, abstol = nothing,
-        scalefactor = nothing) -> DiscreteCallback
+    PositiveDomain(
+            u = nothing; save = true, abstol = nothing,
+            scalefactor = nothing
+        ) -> DiscreteCallback
 
 Especially in biology and other natural sciences, a desired property of
 dynamical systems is the positive invariance of the positive cone, i.e.

@@ -1,8 +1,9 @@
 """
     ManifoldProjection(
-        manifold; nlsolve = missing, save = true, autonomous = nothing,
-        manifold_jacobian = nothing, autodiff = nothing,
-        resid_prototype = nothing, kwargs...) -> DiscreteCallback
+            manifold; nlsolve = missing, save = true, autonomous = nothing,
+            manifold_jacobian = nothing, autodiff = nothing,
+            resid_prototype = nothing, kwargs...
+        ) -> DiscreteCallback
 
 In many cases, you may want to declare a manifold on which a solution lives. Mathematically,
 a manifold `M` is defined by a function `g` as the set of points where `g(u) = 0`. An
@@ -82,11 +83,13 @@ using ADTypes, DiffEqCallbacks, OrdinaryDiffEq
 
 function unit_circle(resid, u, p, t)
     resid[1] = sum(abs2, u) - 1
+    return
 end
 
 function rotation!(du, u, p, t)
     du[1] = -u[2]
     du[2] = u[1]
+    return
 end
 
 prob = ODEProblem(rotation!, [1.0, 0.0], (0.0, 10.0))

@@ -60,11 +60,13 @@ function functioncalling_initialize(cb, u, t, integrator)
 end
 
 """
-    FunctionCallingCallback(func;
-        funcat = Vector{Float64}(),
-        func_everystep = isempty(funcat),
-        func_start = true,
-        tdir = 1) -> DiscreteCallback
+    FunctionCallingCallback(
+            func;
+            funcat = Vector{Float64}(),
+            func_everystep = isempty(funcat),
+            func_start = true,
+            tdir = 1
+        ) -> DiscreteCallback
 
 The function calling callback lets you define a function `func(u,t,integrator)`
 which gets called at the time points of interest.

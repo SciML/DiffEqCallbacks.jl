@@ -300,8 +300,10 @@ function IntegratingGK_initialize(cb, u, t, integrator)
 end
 
 """
-    IntegratingGKCallback(integrand_func, integrand_values::IntegrandValues,
-        integrand_prototype, tol = 1.0e-7) -> DiscreteCallback
+    IntegratingGKCallback(
+            integrand_func, integrand_values::IntegrandValues,
+            integrand_prototype, tol = 1.0e-7
+        ) -> DiscreteCallback
 
 Construct a callback that uses adaptive Gauss-Kronrod quadrature to save one integral
 estimate over each accepted solver step in `integrand_values.integrand`. Quadrature nodes

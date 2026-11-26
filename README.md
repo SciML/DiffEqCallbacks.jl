@@ -32,6 +32,7 @@ u0 = ones(2)
 function f(du, u, p, t)
     du[1] = u[2]
     du[2] = -u[1]
+    return
 end
 prob = ODEProblem(f, u0, (0.0, 100.0))
 ```
@@ -42,6 +43,7 @@ to conserve the sum of squares:
 ```julia
 function g(resid, u, p, t)
     resid[1] = u[2]^2 + u[1]^2 - 2
+    return
 end
 ```
 
