@@ -22,6 +22,7 @@ function fitz(du, u, p, t)
     a, b, c = p
     du[1] = c * (V - V^3 / 3 + R)
     du[2] = -(1 / c) * (V - a - b * R)
+    return
 end
 u0 = [-1.0; 1.0]
 tspan = (0.0, 20.0)
@@ -97,8 +98,10 @@ In this case, we see that the default tolerances give us a very good solution. H
 cb = AdaptiveProbIntsUncertainty(5)
 sol = solve(prob, Tsit5())
 ensemble_prob = EnsembleProblem(prob)
-sim = solve(ensemble_prob, Tsit5(), trajectories = 100, callback = cb, abstol = 1e-3,
-    reltol = 1e-1)
+sim = solve(
+    ensemble_prob, Tsit5(), trajectories = 100, callback = cb,
+    abstol = 1.0e-3, reltol = 1.0e-1
+)
 plot(sim, idxs = (0, 1), linealpha = 0.4)
 ```
 
@@ -118,6 +121,7 @@ function g(du, u, p, t)
     du[1] = p[1] * (u[2] - u[1])
     du[2] = u[1] * (p[2] - u[3]) - u[2]
     du[3] = u[1] * u[2] - p[3] * u[3]
+    return
 end
 u0 = [1.0; 0.0; 0.0]
 tspan = (0.0, 30.0)
@@ -149,7 +153,7 @@ tspan = (0.0, 40.0)
 prob = ODEProblem(g, u0, tspan, p)
 cb = AdaptiveProbIntsUncertainty(7)
 ensemble_prob = EnsembleProblem(prob)
-sim = solve(ensemble_prob, Vern7(), trajectories = 100, callback = cb, reltol = 1e-6)
+sim = solve(ensemble_prob, Vern7(), trajectories = 100, callback = cb, reltol = 1.0e-6)
 plot(sim, idxs = (0, 1), linealpha = 0.4)
 ```
 

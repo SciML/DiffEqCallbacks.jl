@@ -1,5 +1,5 @@
 """
-    SavedValues{tType<:Real, savevalType}
+    SavedValues{tType <: Real, savevalType}
 
 Container used by [`SavingCallback`](@ref) to store saved time points and
 user-defined values.
@@ -148,12 +148,14 @@ function saving_initialize(cb, u, t, integrator)
 end
 
 """
-    SavingCallback(save_func, saved_values::SavedValues;
-        saveat = Vector{eltype(saved_values.t)}(),
-        save_everystep = isempty(saveat),
-        save_start = save_everystep || isempty(saveat) || saveat isa Number,
-        save_end = save_everystep || isempty(saveat) || saveat isa Number,
-        tdir = 1) -> DiscreteCallback
+    SavingCallback(
+            save_func, saved_values::SavedValues;
+            saveat = Vector{eltype(saved_values.t)}(),
+            save_everystep = isempty(saveat),
+            save_start = save_everystep || isempty(saveat) || saveat isa Number,
+            save_end = save_everystep || isempty(saveat) || saveat isa Number,
+            tdir = 1
+        ) -> DiscreteCallback
 
 The saving callback lets you define a function `save_func(u, t, integrator)` which
 returns quantities of interest that shall be saved.
@@ -397,8 +399,9 @@ function with_cache(f::Function, cache::CachePool{T}) where {T}
 end
 
 """
-    LinearizingSavingCallback(ils::IndependentlyLinearizedSolution;
-        kwargs...) -> DiscreteCallback
+    LinearizingSavingCallback(
+            ils::IndependentlyLinearizedSolution; kwargs...
+        ) -> DiscreteCallback
 
 Return a saving callback that inserts interpolation points so that linear interpolation
 of the saved values is within `abstol`/`reltol` of the integrator interpolation.

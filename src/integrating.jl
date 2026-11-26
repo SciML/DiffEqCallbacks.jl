@@ -248,8 +248,10 @@ function (affect!::SavingIntegrandAffect)(integrator)
 end
 
 """
-    IntegratingCallback(integrand_func, integrand_values::IntegrandValues,
-        integrand_prototype) -> DiscreteCallback
+    IntegratingCallback(
+            integrand_func, integrand_values::IntegrandValues,
+            integrand_prototype
+        ) -> DiscreteCallback
 
 Construct a callback that uses fixed-order Gaussian quadrature to save the integral of
 `integrand_func` over each accepted solver step. The callback appends the step end time to

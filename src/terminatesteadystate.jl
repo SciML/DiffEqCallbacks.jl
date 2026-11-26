@@ -56,8 +56,10 @@ end
 # test function must take integrator, time, followed by absolute
 #   and relative tolerance and return true/false
 """
-    TerminateSteadyState(abstol = 1.0e-8, reltol = 1.0e-6, test = allDerivPass;
-        min_t = nothing, wrap_test::Val = Val(true)) -> DiscreteCallback
+    TerminateSteadyState(
+            abstol = 1.0e-8, reltol = 1.0e-6, test = allDerivPass;
+            min_t = nothing, wrap_test::Val = Val(true)
+        ) -> DiscreteCallback
 
 `TerminateSteadyState` can be used to solve the problem for the steady-state
 by running the solver until the derivatives of the problem converge to 0 or

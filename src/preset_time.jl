@@ -76,8 +76,10 @@ function (f::PresetTimeFunction)(c, u, t, integrator)
 end
 
 """
-    PresetTimeCallback(tstops, user_affect!; initialize = INITIALIZE_DEFAULT,
-        filter_tstops = true, sort_inplace = false, kwargs...) -> DiscreteCallback
+    PresetTimeCallback(
+            tstops, user_affect!; initialize = INITIALIZE_DEFAULT,
+            filter_tstops = true, sort_inplace = false, kwargs...
+        ) -> DiscreteCallback
 
 Construct a callback that schedules `user_affect!` at the supplied integration-time stops.
 

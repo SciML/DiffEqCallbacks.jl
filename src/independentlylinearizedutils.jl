@@ -157,8 +157,10 @@ end
 
 """
     IndependentlyLinearizedSolution{T, S}
-    IndependentlyLinearizedSolution(prob::SciMLBase.AbstractDEProblem,
-        num_derivatives = 0) -> IndependentlyLinearizedSolution
+    IndependentlyLinearizedSolution(
+            prob::SciMLBase.AbstractDEProblem,
+            num_derivatives = 0
+        ) -> IndependentlyLinearizedSolution
 
 Efficient storage for independently linearized state components obtained from
 [`LinearizingSavingCallback`](@ref). It stores a single time vector with a packed

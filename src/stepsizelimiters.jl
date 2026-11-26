@@ -27,8 +27,10 @@ function StepsizeLimiter_initialize(cb, u, t, integrator)
 end
 
 """
-    StepsizeLimiter(dtFE; safety_factor = 9 // 10, max_step = false,
-        cached_dtcache = 0.0) -> DiscreteCallback
+    StepsizeLimiter(
+            dtFE; safety_factor = 9 // 10, max_step = false,
+            cached_dtcache = 0.0
+        ) -> DiscreteCallback
 
 In many cases, there is a known maximal stepsize for which the computation is
 stable and produces correct results. For example, in hyperbolic PDEs one normally
