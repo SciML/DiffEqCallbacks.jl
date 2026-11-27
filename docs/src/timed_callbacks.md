@@ -11,7 +11,13 @@ on the model parameters can be read from the integrator, for example
 event times. The same callback then works unchanged for a problem updated with
 `remake(prob; p = ...)`, without rebuilding the callback for each parameter vector.
 
+`CrossingCallback` times its `affect!` by the sign of a continuous expression instead. It
+ticks when the expression crosses zero, when it reaches exactly zero and stays, and when
+it leaves zero again, which is the pattern of a model switching between sliding and static
+friction.
+
 ```@docs
+CrossingCallback
 PresetTimeCallback
 PeriodicCallback
 IterativeCallback
