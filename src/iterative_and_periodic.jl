@@ -1,3 +1,68 @@
+# Condition, affect and initialization of an `IterativeCallback`. They share `tnext`, the
+# time at which `user_affect!` is applied next.
+mutable struct IterativeCallbackFunctor{F, A, I, T}
+    time_choice::F
+    user_affect!::A
+    initialize::I
+    initial_affect::Bool
+    tnext::Union{Nothing, T}
+end
+
+# A functor with no time scheduled yet
+function fresh_iterative_functor(
+        time_choice, user_affect!, initialize, initial_affect, ::Type{T}
+    ) where {T}
+    F, A, I = typeof(time_choice), typeof(user_affect!), typeof(initialize)
+    return IterativeCallbackFunctor{F, A, I, T}(
+        time_choice, user_affect!, initialize, initial_affect, typemax(T)
+    )
+end
+
+(f::IterativeCallbackFunctor)(u, t, integrator) = t == f.tnext
+
+# Call f, update tnext, and make sure we stop at the new tnext
+function (f::IterativeCallbackFunctor)(integrator)
+    f.user_affect!(integrator)
+
+    # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
+    tnew = f.time_choice(integrator)
+    tnew === nothing && (f.tnext = tnew; return)
+    tstops = get_tstops(integrator)
+    #=
+    Okay yeah, this is nasty
+    the comparer is always less than for type stability, so in order
+    for this to actually check the correct direction we multiply by
+    tdir
+    =#
+    tdir_tnew = integrator.tdir * tnew
+    tstops_array = get_tstops_array(integrator)
+    for i in length(tstops):-1:1 # reverse iterate to encounter large elements earlier
+        if tdir_tnew < tstops_array[i]
+            f.tnext = tnew
+            add_tstop!(integrator, tnew)
+            break
+        elseif tdir_tnew == tstops_array[i]
+            # If it's already a tstop, no need to re-add! This is for the final point
+            f.tnext = tnew
+        end
+    end
+    return nothing
+end
+
+# Initialization: first call to `f` should be *before* any time steps have been taken:
+function (f::IterativeCallbackFunctor)(c, u, t, integrator)
+    f.initialize(c, u, t, integrator)
+    return if f.initial_affect
+        f.tnext = t
+        f(integrator)
+    else
+        f.tnext = f.time_choice(integrator)
+        if f.tnext !== nothing
+            add_tstop!(integrator, f.tnext)
+        end
+    end
+end
+
 """
     IterativeCallback(time_choice, user_affect!, tType = Float64;
         initial_affect = false, initialize = ..., kwargs...) -> DiscreteCallback
@@ -52,88 +117,81 @@ function IterativeCallback(
         ),
         kwargs...
     )
-    # Value of `t` at which `f` should be called next:
-    tnext = Ref{Union{Nothing, eltype(tType)}}(typemax(tType))
-    condition = function (u, t, integrator)
-        return t == tnext[]
-    end
+    f = fresh_iterative_functor(
+        time_choice, user_affect!, initialize, initial_affect, eltype(tType)
+    )
+    return DiscreteCallback(f, f; initialize = f, kwargs...)
+end
 
-    # Call f, update tnext, and make sure we stop at the new tnext
-    affect! = function (integrator)
-        user_affect!(integrator)
-
-        # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever
-        tnew = time_choice(integrator)
-        tnew === nothing && (tnext[] = tnew; return)
-        tstops = get_tstops(integrator)
-        #=
-        Okay yeah, this is nasty
-        the comparer is always less than for type stability, so in order
-        for this to actually check the correct direction we multiply by
-        tdir
-        =#
-        tdir_tnew = integrator.tdir * tnew
-        tstops_array = get_tstops_array(integrator)
-        for i in length(tstops):-1:1 # reverse iterate to encounter large elements earlier
-            if tdir_tnew < tstops_array[i]
-                tnext[] = tnew
-                add_tstop!(integrator, tnew)
-                break
-            elseif tdir_tnew == tstops_array[i]
-                # If it's already a tstop, no need to re-add! This is for the final point
-                tnext[] = tnew
-            end
-        end
-        return nothing
-    end
-
-    # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize_iterative = function (c, u, t, integrator)
-        initialize(c, u, t, integrator)
-        return if initial_affect
-            tnext[] = t
-            affect!(integrator)
-        else
-            tnext[] = time_choice(integrator)
-            if tnext[] != nothing
-                add_tstop!(integrator, tnext[])
-            end
-        end
-    end
-    return DiscreteCallback(condition, affect!; initialize = initialize_iterative, kwargs...)
+# Each integrator schedules its own times
+function SciMLBase.instantiate_callback(
+        cb::DiscreteCallback{<:IterativeCallbackFunctor{F, A, I, T}}
+    ) where {F, A, I, T}
+    f = cb.condition
+    g = fresh_iterative_functor(
+        f.time_choice, f.user_affect!, f.initialize, f.initial_affect, T
+    )
+    return SciMLBase.remake(cb; condition = g, affect! = g, initialize = g)
 end
 
 export IterativeCallback
 
-struct PeriodicCallbackAffect{A, dT, K}
+# Condition, affect and initialization of a `PeriodicCallback`. They share `t0`, the time of
+# the first periodic stop, and `index`, the number of the next one.
+mutable struct PeriodicCallbackAffect{A, dT, P, I}
     affect!::A
     Δt::dT
-    cache_key::K
+    phase::P
+    initial_affect::Bool
+    final_affect::Bool
+    initialize::I
+    t0::dT
+    index::Int
 end
 
-# The cache is stored per-Task in `task_local_storage`, keyed by a
-# `gensym`-unique symbol per callback instance. `initialize_periodic` is the
-# only place that creates/overwrites the entry, so concurrent integrators
-# running the same callback on separate Tasks (e.g. `EnsembleThreads`) each
-# get their own independent `t0`/`index`. See #99.
-const _PeriodicCache{T} = NamedTuple{(:t0, :index), Tuple{Base.RefValue{T}, Base.RefValue{Int}}}
-
-@inline function _periodic_cache(key::Symbol, ::Type{T}) where {T}
-    return task_local_storage(key)::_PeriodicCache{T}
+function PeriodicCallbackAffect(
+        affect!, Δt, phase, initial_affect, final_affect, initialize
+    )
+    return PeriodicCallbackAffect(
+        affect!, Δt, phase, initial_affect, final_affect, initialize, zero(Δt), 0
+    )
 end
 
+function (S::PeriodicCallbackAffect)(u, t, integrator)
+    fin = isfinished(integrator)
+    # Convert the Rational (or other) period target into the integrator's
+    # time type. Exact `t == t0 + index*Δt` fails when `t::Float64` and
+    # `Δt::Rational` because e.g. `Float64(3//10) == 3//10` is false
+    # (DifferentialEquations.jl #878).
+    t_target = convert(typeof(t), S.t0 + S.index * S.Δt)
+    return (t == t_target && !fin) || (S.final_affect && fin)
+end
+
+# Call f, update tnext, and make sure we stop at the new tnext
 function (S::PeriodicCallbackAffect)(integrator)
     add_next_tstop!(integrator, S)
 
     return S.affect!(integrator)
 end
 
+# Initialization: first call to `f` should be *before* any time steps have been taken:
+function (S::PeriodicCallbackAffect)(c, u, t, integrator)
+    @assert integrator.tdir == sign(S.Δt)
+    S.initialize(c, u, t, integrator)
+    S.t0 = convert(typeof(S.Δt), t + S.phase)
+    S.index = iszero(S.phase) ? 0 : -1
+    return if S.initial_affect
+        S(integrator)
+    else
+        add_next_tstop!(integrator, S)
+    end
+end
+
 function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
-    cache = _periodic_cache(S.cache_key, typeof(S.Δt))
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever.
     # Convert into the integrator time type so Rational Δt produces Float64
     # tstops that match the condition comparison (DifferentialEquations.jl #878).
-    tnew = convert(typeof(integrator.t), cache.t0[] + (cache.index[] + 1) * S.Δt)
+    tnew = convert(typeof(integrator.t), S.t0 + (S.index + 1) * S.Δt)
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -141,10 +199,19 @@ function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
     tdir
     =#
     tdir_tnew = integrator.tdir * tnew
-    cache.index[] += 1
+    S.index += 1
     return if tdir_tnew < get_tstops_max(integrator)
         add_tstop!(integrator, tnew)
     end
+end
+
+# Each integrator keeps its own schedule, also when integrators run on the same task
+function SciMLBase.instantiate_callback(cb::DiscreteCallback{<:PeriodicCallbackAffect})
+    S = cb.condition
+    fresh = PeriodicCallbackAffect(
+        S.affect!, S.Δt, S.phase, S.initial_affect, S.final_affect, S.initialize
+    )
+    return SciMLBase.remake(cb; condition = fresh, affect! = fresh, initialize = fresh)
 end
 
 """
@@ -209,51 +276,8 @@ function PeriodicCallback(
         kwargs...
     )
     phase < 0 && throw(ArgumentError("phase offset must be non-negative"))
-    # Unique per-callback key for the per-Task cache (see `_periodic_cache`).
-    cache_key = gensym(:PeriodicCallback_cache)
-
-    condition = function (u, t, integrator)
-        cache = _periodic_cache(cache_key, typeof(Δt))
-        fin = isfinished(integrator)
-        # Convert the Rational (or other) period target into the integrator's
-        # time type. Exact `t == t0 + index*Δt` fails when `t::Float64` and
-        # `Δt::Rational` because e.g. `Float64(3//10) == 3//10` is false
-        # (DifferentialEquations.jl #878).
-        t_target = convert(typeof(t), cache.t0[] + cache.index[] * Δt)
-        return (t == t_target && !fin) || (final_affect && fin)
-    end
-
-    # Call f, update tnext, and make sure we stop at the new tnext
-    affect! = PeriodicCallbackAffect(f, Δt, cache_key)
-
-    # Initialization: first call to `f` should be *before* any time steps have been taken:
-    initialize_periodic = function (c, u, t, integrator)
-        @assert integrator.tdir == sign(Δt)
-        initialize(c, u, t, integrator)
-        # Look up or create this Task's cache. The cache lives in
-        # `task_local_storage` so each Task running this callback (e.g. ensemble
-        # threads) has its own `t0`/`index` Refs. Allocation only happens the
-        # first time a given Task initializes this callback; subsequent solves
-        # on the same Task reuse the Refs and just rewrite their contents.
-        storage = task_local_storage()
-        existing = get(storage, cache_key, nothing)
-        cache = if existing === nothing
-            c = (t0 = Ref{typeof(Δt)}(), index = Ref(0))
-            storage[cache_key] = c
-            c
-        else
-            existing::_PeriodicCache{typeof(Δt)}
-        end
-        cache.t0[] = convert(typeof(Δt), t + phase)
-        cache.index[] = iszero(phase) ? 0 : -1
-        return if initial_affect
-            affect!(integrator)
-        else
-            add_next_tstop!(integrator, affect!)
-        end
-    end
-
-    return DiscreteCallback(condition, affect!; initialize = initialize_periodic, kwargs...)
+    S = PeriodicCallbackAffect(f, Δt, phase, initial_affect, final_affect, initialize)
+    return DiscreteCallback(S, S; initialize = S, kwargs...)
 end
 
 @inline function isfinished(integrator)
