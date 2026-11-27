@@ -105,21 +105,26 @@ end
 
 export IterativeCallback
 
-struct PeriodicCallbackAffect{A, dT, K}
+struct PeriodicCallbackAffect{A, dT, K, Ph}
     affect!::A
     Δt::dT
     cache_key::K
+    phase::Ph
 end
 
 # The cache is stored per-Task in `task_local_storage`, keyed by a
 # `gensym`-unique symbol per callback instance. `initialize_periodic` is the
 # only place that creates/overwrites the entry, so concurrent integrators
 # running the same callback on separate Tasks (e.g. `EnsembleThreads`) each
-# get their own independent `t0`/`index`. See #99.
-const _PeriodicCache{T} = NamedTuple{(:t0, :index), Tuple{Base.RefValue{T}, Base.RefValue{Int}}}
+# get their own independent schedule and index. See #99. The tick times are
+# those of `SciMLBase.periodic_schedule`, which indexed clocks share.
+const _PeriodicCache{P, T} = NamedTuple{
+    (:schedule, :index, :tnext), Tuple{Base.RefValue{P}, Base.RefValue{Int}, Base.RefValue{T}},
+}
 
-@inline function _periodic_cache(key::Symbol, ::Type{T}) where {T}
-    return task_local_storage(key)::_PeriodicCache{T}
+@inline function _periodic_cache(key::Symbol, Δt, phase, ::Type{T}) where {T}
+    P = SciMLBase.periodic_schedule_type(T, typeof(phase), typeof(Δt))
+    return task_local_storage(key)::_PeriodicCache{P, T}
 end
 
 function (S::PeriodicCallbackAffect)(integrator)
@@ -129,11 +134,12 @@ function (S::PeriodicCallbackAffect)(integrator)
 end
 
 function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
-    cache = _periodic_cache(S.cache_key, typeof(S.Δt))
+    T = typeof(integrator.t)
+    cache = _periodic_cache(S.cache_key, S.Δt, S.phase, T)
     # Schedule next call to `f` using `add_tstops!`, but be careful not to keep integrating forever.
     # Convert into the integrator time type so Rational Δt produces Float64
     # tstops that match the condition comparison (DifferentialEquations.jl #878).
-    tnew = convert(typeof(integrator.t), cache.t0[] + (cache.index[] + 1) * S.Δt)
+    tnew = SciMLBase.periodic_tick_time(T, cache.schedule[], cache.index[] + 1)
     #=
     Okay yeah, this is nasty
     the comparer is always less than for type stability, so in order
@@ -142,6 +148,7 @@ function add_next_tstop!(integrator, S::PeriodicCallbackAffect)
     =#
     tdir_tnew = integrator.tdir * tnew
     cache.index[] += 1
+    cache.tnext[] = tnew
     return if tdir_tnew < get_tstops_max(integrator)
         add_tstop!(integrator, tnew)
     end
@@ -213,18 +220,17 @@ function PeriodicCallback(
     cache_key = gensym(:PeriodicCallback_cache)
 
     condition = function (u, t, integrator)
-        cache = _periodic_cache(cache_key, typeof(Δt))
+        cache = _periodic_cache(cache_key, Δt, phase, typeof(t))
         fin = isfinished(integrator)
-        # Convert the Rational (or other) period target into the integrator's
-        # time type. Exact `t == t0 + index*Δt` fails when `t::Float64` and
-        # `Δt::Rational` because e.g. `Float64(3//10) == 3//10` is false
-        # (DifferentialEquations.jl #878).
-        t_target = convert(typeof(t), cache.t0[] + cache.index[] * Δt)
+        # The scheduled tick in the integrator's time type. Exact
+        # `t == t0 + index*Δt` fails when `t::Float64` and `Δt::Rational` because
+        # e.g. `Float64(3//10) == 3//10` is false (DifferentialEquations.jl #878).
+        t_target = cache.tnext[]
         return (t == t_target && !fin) || (final_affect && fin)
     end
 
     # Call f, update tnext, and make sure we stop at the new tnext
-    affect! = PeriodicCallbackAffect(f, Δt, cache_key)
+    affect! = PeriodicCallbackAffect(f, Δt, cache_key, phase)
 
     # Initialization: first call to `f` should be *before* any time steps have been taken:
     initialize_periodic = function (c, u, t, integrator)
@@ -236,15 +242,16 @@ function PeriodicCallback(
         # first time a given Task initializes this callback; subsequent solves
         # on the same Task reuse the Refs and just rewrite their contents.
         storage = task_local_storage()
+        schedule = SciMLBase.periodic_schedule(typeof(t), t, phase, Δt)
         existing = get(storage, cache_key, nothing)
-        cache = if existing === nothing
-            c = (t0 = Ref{typeof(Δt)}(), index = Ref(0))
+        cache = if existing isa _PeriodicCache{typeof(schedule), typeof(t)}
+            existing
+        else
+            c = (schedule = Ref(schedule), index = Ref(0), tnext = Ref{typeof(t)}())
             storage[cache_key] = c
             c
-        else
-            existing::_PeriodicCache{typeof(Δt)}
         end
-        cache.t0[] = convert(typeof(Δt), t + phase)
+        cache.schedule[] = schedule
         cache.index[] = iszero(phase) ? 0 : -1
         return if initial_affect
             affect!(integrator)
