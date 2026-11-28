@@ -29,8 +29,10 @@ function integrate_gk!(
     inplace_integrand = affect!.integrand_inplace === nothing ?
         (isinplace_prob && affect!.integrand_cache !== nothing) :
         affect!.integrand_inplace
+    width = bound_r - bound_l
+    half_width = width / 2
     for i in 1:(2 * order + 1)
-        t_temp = (affect!.gk_pts[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
+        t_temp = (affect!.gk_pts[order][i] + 1) * half_width + bound_l
         if isinplace_prob
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
@@ -62,13 +64,11 @@ function integrate_gk!(
             end
         end
     end
-    err_est = sum(
-        abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)
-    )
+    err_est = _gk_err_sum(affect!.gk_step_cache, affect!.gk_err_cache, width)
     bound_m = (bound_l + bound_r) / 2
     if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r &&
             gk_has_resolvable_error(
-            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
+            affect!.gk_step_cache, affect!.gk_err_cache, half_width
         )
         integrate_gk!(
             affect!, integrator, bound_l, bound_m,
@@ -83,8 +83,8 @@ function integrate_gk!(
     if err_est > tol
         warn_gk_tol_unmet!(affect!)
     end
-    affect!.accumulation_cache = recursive_axpy!(
-        1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
+    affect!.accumulation_cache = _gk_accumulate!(
+        affect!.accumulation_cache, affect!.gk_step_cache, width
     )
     return nothing
 end

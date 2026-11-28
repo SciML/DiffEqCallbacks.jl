@@ -4,7 +4,7 @@
 Precomputed Gaussian-Kronrod nodes up to degree 3*10-1 = 29.
 Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[1] for i in 1:10]`
 """
-gk_points = [
+const gk_points = [
     [-0.7745966692414833, 0.0, 0.7745966692414834],
     [-0.9258200997725514, -0.5773502691896257, 0.0, 0.5773502691896257, 0.9258200997725514],
     [
@@ -61,7 +61,7 @@ gk_points = [
 Precomputed Gaussian-Kronrod node weights up to degree 3*10-1 = 29.
 Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[2] for i in 1:10]`
 """
-gk_weights = [
+const gk_weights = [
     [0.5555555555555556, 0.8888888888888888, 0.5555555555555556],
     [
         0.19797979797979798, 0.4909090909090911, 0.6222222222222223,
@@ -122,7 +122,7 @@ gk_weights = [
 Precomputed respective Gaussian node weights up to degree 2*10-1 = 19.
 Computed using QuadGK.jl with the command `[kronrod(i,-1,1)[3] for i in 1:10]`
 """
-g_weights = [
+const g_weights = [
     [2.0],
     [1.0000000000000002, 1.0000000000000002],
     [0.5555555555555556, 0.8888888888888885, 0.5555555555555556],
@@ -155,6 +155,21 @@ g_weights = [
     ],
 ]
 
+@inline function _gk_err_sum(step::AbstractArray, err, width)
+    if isempty(step)
+        return zero(abs((zero(eltype(step)) - zero(eltype(err))) * width / 2))
+    end
+    return sum(i -> abs((step[i] - err[i]) * width / 2), eachindex(step, err))
+end
+@inline _gk_err_sum(step, err, width) = abs((step - err) * width / 2)
+
+# Scale before adding to avoid BLAS FMA and narrowing h to the accumulator's eltype.
+@inline function _gk_accumulate!(acc::AbstractArray, step, h)
+    acc .+= step .* h ./ 2
+    return acc
+end
+@inline _gk_accumulate!(acc, step, h) = recursive_axpy!(1, step .* h ./ 2, acc)
+
 # Bisection past this depth cannot improve a Float64 quadrature estimate:
 # the subinterval width is then at the resolution of the interval endpoints.
 const GK_MAX_DEPTH = 50
@@ -163,6 +178,14 @@ const GK_MAX_DEPTH = 50
 # component's integral scale is floating-point noise that bisection cannot
 # reduce, so subdivision stops once every component is at that level.
 const GK_ROUNDOFF_FACTOR = 100
+
+function gk_has_resolvable_error(step::StridedArray, err::StridedArray, half_width)
+    roundoff = GK_ROUNDOFF_FACTOR * eps(real(eltype(step)))
+    return any(eachindex(step, err)) do i
+        value = step[i]
+        return abs((value - err[i]) * half_width) > roundoff * abs(value * half_width)
+    end
+end
 
 function gk_has_resolvable_error(gk_step_cache, gk_err_cache, half_width)
     err = abs.((gk_step_cache .- gk_err_cache) .* half_width)
@@ -209,8 +232,10 @@ function integrate_gk!(
     )
     affect!.gk_step_cache = recursive_zero!(affect!.gk_step_cache)
     affect!.gk_err_cache = recursive_zero!(affect!.gk_err_cache)
+    width = bound_r - bound_l
+    half_width = width / 2
     for i in 1:(2 * order + 1)
-        t_temp = (affect!.gk_pts[order][i] + 1) * ((bound_r - bound_l) / 2) + bound_l
+        t_temp = (affect!.gk_pts[order][i] + 1) * half_width + bound_l
         if SciMLBase.isinplace(integrator.sol.prob)
             curu = first(get_tmp_cache(integrator))
             integrator(curu, t_temp)
@@ -251,13 +276,11 @@ function integrate_gk!(
             end
         end
     end
-    err_est = sum(
-        abs.((affect!.gk_step_cache .- affect!.gk_err_cache) .* (bound_r - bound_l) ./ 2)
-    )
+    err_est = _gk_err_sum(affect!.gk_step_cache, affect!.gk_err_cache, width)
     bound_m = (bound_l + bound_r) / 2
     if err_est > tol && depth < GK_MAX_DEPTH && bound_m != bound_l && bound_m != bound_r &&
             gk_has_resolvable_error(
-            affect!.gk_step_cache, affect!.gk_err_cache, (bound_r - bound_l) / 2
+            affect!.gk_step_cache, affect!.gk_err_cache, half_width
         )
         integrate_gk!(
             affect!, integrator, bound_l, bound_m,
@@ -272,8 +295,8 @@ function integrate_gk!(
     if err_est > tol
         warn_gk_tol_unmet!(affect!)
     end
-    affect!.accumulation_cache = recursive_axpy!(
-        1, affect!.gk_step_cache .* (bound_r - bound_l) ./ 2, affect!.accumulation_cache
+    affect!.accumulation_cache = _gk_accumulate!(
+        affect!.accumulation_cache, affect!.gk_step_cache, width
     )
     return nothing
 end
